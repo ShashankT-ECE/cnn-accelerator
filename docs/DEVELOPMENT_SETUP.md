@@ -80,6 +80,17 @@ Required versions:
 
 The exact verified Python package versions are recorded in `python/requirements.txt`.
 
+## 3.1 Install packages
+
+Install the verified package versions:
+
+```bash
+python -m pip install numpy==1.26.4
+python -m pip install torch==2.1.2+cpu torchvision==0.16.2+cpu --index-url https://download.pytorch.org/whl/cpu
+```
+
+The second command uses the official PyTorch CPU wheel index because the project uses a CPU-only development environment.
+
 The project uses a CPU-only Python environment. CUDA is not required for the development host.
 
 Do not blindly upgrade the ML stack. Preserve the required versions unless compatibility testing demonstrates that a change is necessary.
