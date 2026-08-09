@@ -18,3 +18,6 @@ xelab.pb
 xvlog.pb
 
 .claude/skills/research/bench/
+
+# Local architecture reference
+/docs/reference/architecture_major_project.pdf
