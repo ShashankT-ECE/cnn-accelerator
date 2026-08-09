@@ -1,0 +1,13 @@
+.venv/
+build/
+.xil/
+*.log
+*.jou
+*.str
+*.runs/
+*.cache/
+*.gen/
+*.hw/
+__pycache__/
+*.pyc
+.vscode/
