@@ -11,3 +11,10 @@ build/
 __pycache__/
 *.pyc
 .vscode/
+
+graphify-out/
+
+xelab.pb
+xvlog.pb
+
+.claude/skills/research/bench/
