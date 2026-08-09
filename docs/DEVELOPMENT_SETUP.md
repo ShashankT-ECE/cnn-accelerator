@@ -78,6 +78,8 @@ Required versions:
 - torchvision: 0.16.2+cpu
 - NumPy: 1.26.4
 
+The exact verified Python package versions are recorded in `python/requirements.txt`.
+
 The project uses a CPU-only Python environment. CUDA is not required for the development host.
 
 Do not blindly upgrade the ML stack. Preserve the required versions unless compatibility testing demonstrates that a change is necessary.
@@ -248,7 +250,17 @@ Keep generated Vivado files out of Git.
 
 ## 10. Environment Verification
 
-A new developer should be able to verify the core environment with:
+The quickest way to verify the environment is to run the repository script:
+
+```bash
+./scripts/verify_environment.sh
+```
+
+It checks the Python version and the required Python packages, the Vivado
+2023.1 tools, and the KV260/XCK26 target device. The expected final result
+is `Result: PASS`; a failure should be diagnosed rather than ignored.
+
+A new developer should also be able to verify the core environment with:
 
 ```bash
 # Python
