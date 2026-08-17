@@ -13,7 +13,11 @@ development team.
 
 **Current engineering phase:** V1 PE implemented (`rtl/common/pe.sv`) and
 functionally verified by its unit testbench (`sim/tb_pe.sv`, 55/55 checks PASS
-in Vivado ML 2023.1). Synthesis/DSP inference and array-level integration remain.
+in Vivado ML 2023.1). The V1 systolic array specification
+(`docs/specs/SYSTOLIC_ARRAY_SPEC.md`) is drafted; the dataflow decision
+(Decision 7) and the array scheduling decisions (Decision 8) are recorded, so
+`systolic_array.sv` is unblocked. Systolic array RTL, the input-feed/line-buffer
+module, synthesis, and array-level integration remain.
 
 ## Verified Development Environment
 
@@ -81,6 +85,22 @@ The V1 PE is implemented and functionally verified:
 Synthesis (DSP48E2 inference) and array-level (`systolic_array.sv`) integration
 remain future work.
 
+### Systolic Array Specification
+
+The V1 systolic array specification has been drafted:
+
+`docs/specs/SYSTOLIC_ARRAY_SPEC.md` — Systolic Array Specification (V1 Baseline)
+
+It records the resolved V1 dataflow (Decision 7): **Output-Stationary** —
+weight-broadcast + activation-shift + local PE accumulation. It defines the 8×8
+topology, the row/column mapping, the cycle-level schedule, the array interface,
+and the verification requirements. It amends the roadmap's "fixed
+weight-stationary" wording as historical/source context.
+
+The five array scheduling decisions (Decision 8 — padding, skew, drain, tap
+order, peak-vs-sustained) are also recorded, leaving `systolic_array.sv`
+unblocked. The input-feed / line-buffer unit is a separate upcoming module.
+
 ## Decisions
 
 ### Established V1 PE Requirements (from Roadmap)
@@ -101,6 +121,10 @@ The architecture roadmap (§3.2, §4) establishes these V1 PE requirements:
   activations shift)
 
 These are recorded in `docs/specs/PE_SPEC.md` §3.1 as R1–R9.
+
+> Note: the "Weight-Stationary" dataflow label above is the roadmap's original
+> wording. The V1 array dataflow was subsequently reclassified to
+> Output-Stationary — see Decision 7.
 
 ### Numerical Format Status
 
@@ -218,6 +242,57 @@ eliminates pipeline alignment complexity. 2-cycle latency acceptable for CNN
 inference (throughput matters, not latency). DSP48E2 inferred from behavioral
 RTL. Fixed depth avoids premature parameterization.
 
+### Decision 7 — V1 Dataflow Reclassification — RESOLVED (2026-08-17)
+
+**The V1 array dataflow is Output-Stationary, not fixed spatial
+Weight-Stationary.**
+
+The architecture roadmap (§3.2, §4) describes V1 as "fixed weight-stationary:
+weights held in place, activations shift." The finalized PE
+(`rtl/common/pe.sv`) has a pinned local accumulator and no `psum_in`/`psum_out`
+partial-sum path, so a literal fixed-weight dataflow would compute
+`weight × Σ activations`, which is not a convolution. The completed array
+specification (`docs/specs/SYSTOLIC_ARRAY_SPEC.md` §3) therefore establishes:
+
+| Parameter | Value |
+|-----------|-------|
+| V1 dataflow | Output-Stationary (tap-serial) |
+| Weight movement | broadcast per row, reloaded every tap |
+| Activation movement | shift across columns (array-level registers) |
+| Partial-sum path | none in V1 |
+| PE status | unchanged, verified (55/55) |
+| True spatial Weight-Stationary | deferred to V2 / PE v1.1 (psum cascade) |
+
+This **replaces** the earlier interpretation of V1 as fixed spatial
+Weight-Stationary. The roadmap's "weight-stationary" wording is preserved as
+historical/source context; the roadmap did not originally specify
+Output-Stationary. This is an explicit architectural decision, not a silent
+relabeling.
+
+**Rationale:** the Output-Stationary mapping (weight-broadcast +
+activation-shift + local accumulation) is the only dataflow that is both
+mathematically correct for convolution and compatible with the locked PE; it
+sustains one MAC/cycle/PE after pipeline fill. See
+`docs/specs/SYSTOLIC_ARRAY_SPEC.md` §3 and §9.
+
+### Decision 8 — V1 Array Scheduling Decisions — RESOLVED (2026-08-17)
+
+Five array scheduling decisions are finalized (see
+`docs/specs/SYSTOLIC_ARRAY_SPEC.md` §10, §11, §14–§17). `systolic_array.sv` is
+now unblocked.
+
+| # | Decision | Resolution | Rationale |
+|---|----------|-----------|-----------|
+| 1 | Conv1 output dimension / padding | 24×24 valid (no padding) | Standard LeNet-5/MNIST; 24 = 3×8 → no partial tile |
+| 2 | Weight/activation skew | weight stream leads activation by one cycle | Absorbs the PE BREG stage; §16 schedule |
+| 3 | Result drain | column-sequential, 8 cycles | Matches `result_request` protocol; 256-bit bus |
+| 4 | Tap serialization | row-major `t = K·k_y + k_x` | Deterministic; shared by weight ROM and input feed |
+| 5 | "64 MACs/cycle" | peak capability, not sustained | Conv1 sustains 48 (6 rows); rows 6–7 idle (75%) |
+
+**Note:** the input-feed / line-buffer unit is a **separate upcoming module**
+with its own specification. Its interface to the array (`act_in` sequence, tap
+order, skew) is fully defined by the array spec; only its internals remain.
+
 ### Unresolved PE Decisions
 
 The following decisions block `rtl/common/pe.sv` implementation (see
@@ -239,8 +314,13 @@ These are **not** finalized:
 
 ### V1 / V2 Distinction
 
-- **V1** is the shared baseline: Weight-Stationary dataflow, no sparsity.
-- **Team B Output-Stationary** is a V2 extension.
+- **V1** is the shared baseline: **Output-Stationary** dataflow
+  (weight-broadcast + activation-shift + local accumulation), no sparsity
+  (Decision 7).
+- **True spatial Weight-Stationary** (partial-sum cascade, `psum_in`/`psum_out`)
+  is deferred to V2 / PE v1.1.
+- **Team B reconfigurable dataflow** (per-layer WS/OS mode switching) is a V2
+  extension; its Weight-Stationary mode requires the deferred psum cascade.
 - **Team A sparsity** is a V2 extension. The V1 PE has the `zero_skip`
   port, but its functional connection to the Sparsity Manager is a V2
   Team A concern.
@@ -250,7 +330,7 @@ These are **not** finalized:
 | Parameter | Previous Status | Current Status |
 |-----------|----------------|----------------|
 | PE count | Undecided | **Established:** 64 (8×8 grid) per roadmap §3.2 |
-| V1 dataflow mode | Undecided | **Established:** Weight-Stationary per roadmap §3.2, §4 |
+| V1 dataflow mode | Undecided | **Established:** Output-Stationary (weight-broadcast + activation-shift + local accumulation) per Decision 7; roadmap §3.2 "weight-stationary" wording superseded |
 | Numerical format | Undecided | **Established:** Signed 8-bit two's-complement, scale 1/256 (Decision 1, 2026-08-10) |
 | Accumulator width | Undecided | **Established:** 32-bit signed two's-complement (Decision 2, 2026-08-10) |
 | Overflow behaviour | Undecided | **Established:** Overflow impossible by construction; no handling logic (Decision 3, 2026-08-10) |
@@ -258,6 +338,11 @@ These are **not** finalized:
 | Reset semantics | Undecided | **Established:** synchronous, active-high (rst) (Decision 5, 2026-08-10) |
 | Pipeline architecture | Undecided | **Established:** registered MAC (MREG+PREG), combinational forwarding, fixed depth (Decision 6, 2026-08-10) |
 | PE forwarding direction | Undecided | **Established:** activations shift across rows per roadmap §3.2 |
+| Conv1 output dimension | Undecided | **Established:** 24×24 valid, no padding (Decision 8, 2026-08-17) |
+| Weight/activation skew | Undecided | **Established:** weight stream leads activation by one cycle (Decision 8, 2026-08-17) |
+| Result drain | Undecided | **Established:** column-sequential, 8 cycles (Decision 8, 2026-08-17) |
+| Tap serialization order | Undecided | **Established:** row-major `t = K·k_y + k_x` (Decision 8, 2026-08-17) |
+| "64 MACs/cycle" meaning | Undecided | **Established:** peak capability; Conv1 sustains 48 MACs/cycle (Decision 8, 2026-08-17) |
 
 ## Open Questions
 
@@ -274,8 +359,14 @@ arise.
 6. **All six PE-blocking decisions resolved.** RTL entry criteria satisfied.
 7. V1 PE RTL implementation (`rtl/common/pe.sv`) — **complete**
 8. V1 PE unit testbench (`sim/tb_pe.sv`) — **complete** (55/55 PASS in simulation)
-9. Synthesis/DSP inference and array integration — **pending**
-10. Team A / Team B V2 extensions — **pending**
+9. V1 systolic array specification (`docs/specs/SYSTOLIC_ARRAY_SPEC.md`) and
+   dataflow decision (Decision 7) — **complete** (2026-08-17)
+10. V1 array scheduling decisions (Decision 8) — **complete** (2026-08-17);
+    `systolic_array.sv` unblocked
+11. Systolic array RTL (`rtl/common/systolic_array.sv`) — **pending**
+12. Input-feed / line-buffer module (separate spec + RTL) — **pending**
+13. Synthesis/DSP inference and array integration — **pending**
+14. Team A / Team B V2 extensions — **pending**
 
 ## Next Planned Work
 
@@ -285,8 +376,13 @@ arise.
 4. ~~**V1 PE RTL implementation.**~~ **COMPLETE** — `rtl/common/pe.sv` implemented.
 5. ~~**V1 PE unit testbench.**~~ **COMPLETE** — `sim/tb_pe.sv`; Vivado 2023.1
    simulation passes 55/55.
-6. Vivado synthesis and DSP48E2 inference check on the target device.
-7. Systolic array (`systolic_array.sv`) integration and array-level verification.
+6. ~~**V1 systolic array specification + dataflow decision.**~~ **COMPLETE** —
+   `docs/specs/SYSTOLIC_ARRAY_SPEC.md` (draft); Decision 7 recorded (2026-08-17).
+7. ~~**Resolve the array's scheduling decisions.**~~ **COMPLETE** — Decision 8
+   (padding, skew, drain, tap order, peak-vs-sustained) recorded (2026-08-17).
+8. Systolic array (`systolic_array.sv`) implementation and array-level verification.
+9. Input-feed / line-buffer module specification and RTL.
+10. Vivado synthesis and DSP48E2 inference check on the target device.
 
 ## Research Discipline
 
