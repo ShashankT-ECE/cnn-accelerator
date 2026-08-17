@@ -160,6 +160,47 @@ DSP48E2 inference for the V1 PE and 8×8 array is established and verified
 64/array). Numerical format, accumulator width, and cycle-level behaviour are
 unchanged.
 
+### Post-Route Implementation Baseline
+
+A baseline post-synthesis/post-route implementation of the V1 8×8 array was run
+(Vivado ML 2023.1, top `systolic_array`, target `xck26-sfvc784-2LV-c`). This is
+a timing/implementation baseline only — no RTL, pipeline, or constraint-source
+changes were made.
+
+- **Clock target (analysis only):** 200 MHz (5.000 ns), applied as a baseline
+  constraint in the generated build flow only. This is **not** a finalized
+  project clock requirement — the clock frequency target remains an open
+  decision (`PE_SPEC.md` §11.6) until the controller/BRAM/input-feed
+  integration is timed.
+- **Implementation mode:** out-of-context (OOC). The flat `systolic_array`
+  top exposes 397 I/O ports (256-bit `result_out` + 128 data inputs + control),
+  which exceeds the ~189 bonded I/O sites available on the KV260/XCK26 package.
+  This is expected: the array is a datapath sub-block intended to be driven by
+  an on-chip controller/BRAM/PS-AXI interface, not by package pins. OOC isolates
+  the internal register-to-register timing of the array core.
+- **Post-route DSP count:** 64/64 DSP48E2 remain present after
+  placement/routing.
+- **DSP register configuration:** BREG=1, MREG=1, PREG=1 for all 64 DSPs.
+- **AREG distribution:** AREG=0 × 8, AREG=1 × 40, AREG=2 × 16. The AREG=1/2
+  DSPs reflect the array's activation shift-chain registers being absorbed into
+  the DSP A-input registers (AREG absorption); the inter-column activation
+  movement is realized via the DSP48E2 ACOUT→ACIN cascade.
+- **Critical setup path:** DSP48E2_X11Y11 → DSP48E2_X11Y12, the DSP
+  ACOUT→ACIN activation cascade between adjacent columns. The path is
+  routing-dominated (~66% route vs ~34% logic of the 1.471 ns data delay, 0
+  logic levels) and currently closes at the 200 MHz baseline target.
+- **Post-route timing (200 MHz baseline):** WNS +2.772 ns, TNS 0 ns,
+  WHS +0.115 ns. Setup, hold, and pulse-width constraints are all met (0 failing
+  endpoints). 200 MHz closes with margin (~449 MHz setup-limited capability,
+  with OOC clock skew estimated).
+- **Resources (post-route):** 64 DSP48E2, 1,032 LUT, 2,048 FF, 0 CARRY8,
+  0 BRAM, 0 URAM. The 2,048 FFs are the 64×32 `result_out` registers only; all
+  other datapath registers (weight/product/accumulator/shift) live inside the
+  DSPs.
+
+**RESOLVED:** the V1 array datapath is timing-clean at the 200 MHz baseline and
+DSP48E2 inference (64/64) is preserved through implementation.
+
 ## Decisions
 
 ### Established V1 PE Requirements (from Roadmap)
