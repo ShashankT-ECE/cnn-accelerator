@@ -11,8 +11,9 @@ Vivado ML 2023.1.
 The repository is hosted on GitHub and is the shared source of truth for the
 development team.
 
-**Current engineering phase:** PE specification complete; architectural
-decisions pending; no RTL has been written.
+**Current engineering phase:** V1 PE implemented (`rtl/common/pe.sv`) and
+functionally verified by its unit testbench (`sim/tb_pe.sv`, 55/55 checks PASS
+in Vivado ML 2023.1). Synthesis/DSP inference and array-level integration remain.
 
 ## Verified Development Environment
 
@@ -61,6 +62,24 @@ The first technical specification has been created and reviewed:
 This document records what the roadmap explicitly establishes, what external
 research informs, candidate architectures, and open decisions. It uses a label
 system: REQUIREMENT, RESEARCH FACT, CANDIDATE, IMPLIED, OPEN DECISION.
+
+### PE Implementation and Verification
+
+The V1 PE is implemented and functionally verified:
+
+- **RTL:** `rtl/common/pe.sv` — implements the finalized V1 contract
+  (`docs/specs/PE_SPEC.md` §5–§8; Decisions 1–6).
+- **Testbench:** `sim/tb_pe.sv` — self-checking, non-UVM unit testbench.
+- **Simulation:** Vivado ML 2023.1 (`xvlog`/`xelab`/`xsim`) — **55/55 checks
+  PASS, 0 FAIL**.
+- **Verified scenarios:** synchronous reset, weight load/retention/reload,
+  signed 8×8 arithmetic and corner cases, 16→32-bit accumulation, repeated and
+  back-to-back MAC, combinational activation forwarding, `zero_skip`,
+  `result_request` read-without-clear, `accum_clear` pipeline flush, the §5.7
+  control-priority combinations, and the finalized pipeline timing.
+
+Synthesis (DSP48E2 inference) and array-level (`systolic_array.sv`) integration
+remain future work.
 
 ## Decisions
 
@@ -252,21 +271,22 @@ arise.
 3. Numerical format decision — **complete** (2026-08-10)
 4. Accumulator width, overflow, result-read decisions — **complete** (2026-08-10)
 5. Reset semantics, pipeline architecture decisions — **complete** (2026-08-10)
-6. **All six PE-blocking decisions resolved.** RTL entry criteria satisfied — `rtl/common/pe.sv` can proceed.
-7. V1 shared baseline complete — **pending**
-6. V1 shared baseline complete — **pending**
-7. Team A / Team B V2 extensions — **pending**
+6. **All six PE-blocking decisions resolved.** RTL entry criteria satisfied.
+7. V1 PE RTL implementation (`rtl/common/pe.sv`) — **complete**
+8. V1 PE unit testbench (`sim/tb_pe.sv`) — **complete** (55/55 PASS in simulation)
+9. Synthesis/DSP inference and array integration — **pending**
+10. Team A / Team B V2 extensions — **pending**
 
 ## Next Planned Work
 
 1. ~~**Decision 1: numerical format.**~~ **COMPLETE (2026-08-10).**
 2. ~~**Decisions 2–4: accumulator width, overflow, result-read.**~~ **COMPLETE (2026-08-10).**
 3. ~~**Decisions 5–6: reset semantics, pipeline architecture.**~~ **COMPLETE (2026-08-10).**
-4. **All six PE-blocking decisions are resolved.** The RTL entry criteria in
-   `docs/specs/PE_SPEC.md` §12 are satisfied. `rtl/common/pe.sv` implementation
-   can begin.
-5. After PE implementation: Vivado synthesis, timing closure, PE unit testbench,
-   systolic array integration.
+4. ~~**V1 PE RTL implementation.**~~ **COMPLETE** — `rtl/common/pe.sv` implemented.
+5. ~~**V1 PE unit testbench.**~~ **COMPLETE** — `sim/tb_pe.sv`; Vivado 2023.1
+   simulation passes 55/55.
+6. Vivado synthesis and DSP48E2 inference check on the target device.
+7. Systolic array (`systolic_array.sv`) integration and array-level verification.
 
 ## Research Discipline
 

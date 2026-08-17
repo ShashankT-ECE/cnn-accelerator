@@ -21,3 +21,7 @@ xvlog.pb
 
 # Local architecture reference
 /docs/reference/architecture_major_project.pdf
+
+# Vivado simulation artifacts
+xsim.dir/
+*.wdb
