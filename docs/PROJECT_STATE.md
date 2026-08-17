@@ -11,13 +11,13 @@ Vivado ML 2023.1.
 The repository is hosted on GitHub and is the shared source of truth for the
 development team.
 
-**Current engineering phase:** V1 PE implemented (`rtl/common/pe.sv`) and
-functionally verified by its unit testbench (`sim/tb_pe.sv`, 55/55 checks PASS
-in Vivado ML 2023.1). The V1 systolic array specification
-(`docs/specs/SYSTOLIC_ARRAY_SPEC.md`) is drafted; the dataflow decision
-(Decision 7) and the array scheduling decisions (Decision 8) are recorded, so
-`systolic_array.sv` is unblocked. Systolic array RTL, the input-feed/line-buffer
-module, synthesis, and array-level integration remain.
+**Current engineering phase:** V1 systolic array implemented
+(`rtl/common/systolic_array.sv`) and verified by its integration testbench
+(`sim/tb_systolic_array.sv`, 379/379 checks PASS in Vivado ML 2023.1). Array
+compile/elaboration is verified (`xvlog`/`xelab` clean), and the V1 PE remains
+verified at 55/55 PASS. The systolic-array RTL + verification milestone is
+complete. The input-feed/line-buffer module is the next major module; synthesis
+and array-level integration remain future work.
 
 ## Verified Development Environment
 
@@ -100,6 +100,30 @@ weight-stationary" wording as historical/source context.
 The five array scheduling decisions (Decision 8 — padding, skew, drain, tap
 order, peak-vs-sustained) are also recorded, leaving `systolic_array.sv`
 unblocked. The input-feed / line-buffer unit is a separate upcoming module.
+
+### Systolic Array Implementation and Verification
+
+The V1 systolic array is implemented and functionally verified:
+
+- **RTL:** `rtl/common/systolic_array.sv` — an 8×8 grid of 64 verified PEs with
+  array-level activation-shift interconnect (7 registers per row), per-row weight
+  broadcast, array-wide control fan-out (`weight_load`/`accum_clear`/`zero_skip`),
+  and column-sequential result drain. No FSM, no partial-sum cascade, no sparsity
+  (per `docs/specs/SYSTOLIC_ARRAY_SPEC.md`).
+- **Testbench:** `sim/tb_systolic_array.sv` — self-checking, directed, non-UVM,
+  with an independent reference model (`PE(r,c) = Σ_t a_r[t]·w_r[t+c]`, streams
+  zero-padded).
+- **Simulation:** Vivado ML 2023.1 (`xvlog`/`xelab`/`xsim`) — **379/379 checks
+  PASS, 0 FAIL**. Covers synchronous reset, 64-PE structure, activation shift and
+  boundary columns, per-row weight broadcast, the one-cycle weight-lead skew,
+  signed 8×8 arithmetic, 32-bit accumulation, `zero_skip`, `accum_clear`,
+  column-sequential drain + read-without-clear, idle rows 6–7, back-to-back
+  groups, and a complete deterministic convolution.
+- **Compile/elaboration:** `xvlog -sv` and `xelab` on `pe.sv` + `systolic_array.sv`
+  (+ testbench) are clean (0 errors).
+
+The input-feed/line-buffer module is the next major module; synthesis and
+array-level integration remain future work.
 
 ## Decisions
 
@@ -363,10 +387,12 @@ arise.
    dataflow decision (Decision 7) — **complete** (2026-08-17)
 10. V1 array scheduling decisions (Decision 8) — **complete** (2026-08-17);
     `systolic_array.sv` unblocked
-11. Systolic array RTL (`rtl/common/systolic_array.sv`) — **pending**
-12. Input-feed / line-buffer module (separate spec + RTL) — **pending**
-13. Synthesis/DSP inference and array integration — **pending**
-14. Team A / Team B V2 extensions — **pending**
+11. Systolic array RTL (`rtl/common/systolic_array.sv`) — **complete**
+12. V1 systolic-array testbench (`sim/tb_systolic_array.sv`) — **complete**
+    (379/379 PASS in Vivado ML 2023.1)
+13. Input-feed / line-buffer module (separate spec + RTL) — **pending**
+14. Synthesis/DSP inference and array integration — **pending**
+15. Team A / Team B V2 extensions — **pending**
 
 ## Next Planned Work
 
@@ -380,7 +406,9 @@ arise.
    `docs/specs/SYSTOLIC_ARRAY_SPEC.md` (draft); Decision 7 recorded (2026-08-17).
 7. ~~**Resolve the array's scheduling decisions.**~~ **COMPLETE** — Decision 8
    (padding, skew, drain, tap order, peak-vs-sustained) recorded (2026-08-17).
-8. Systolic array (`systolic_array.sv`) implementation and array-level verification.
+8. ~~**Systolic array implementation + array-level verification.**~~ **COMPLETE** —
+   `rtl/common/systolic_array.sv` + `sim/tb_systolic_array.sv`; Vivado 2023.1
+   simulation passes 379/379.
 9. Input-feed / line-buffer module specification and RTL.
 10. Vivado synthesis and DSP48E2 inference check on the target device.
 
