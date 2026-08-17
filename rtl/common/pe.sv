@@ -26,7 +26,10 @@ module pe (
 
     // Internal state
     logic signed [7:0]  weight;       // weight register     (DSP48E2 BREG)
-    logic signed [15:0] product;      // registered product  (DSP48E2 MREG)
+    // use_dsp forces DSP48E2 inference: 8x8 operands fall below Vivado's
+    // auto-DSP threshold, so the MAC would otherwise map to fabric LUTs/CARRY8.
+    (* use_dsp = "yes" *) logic signed [15:0] product;
+                                      // registered product  (DSP48E2 MREG)
     logic signed [31:0] accumulator;  // accumulator         (DSP48E2 PREG)
 
     //--------------------------------------------------------------------------

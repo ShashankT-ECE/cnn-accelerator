@@ -16,8 +16,9 @@ development team.
 (`sim/tb_systolic_array.sv`, 379/379 checks PASS in Vivado ML 2023.1). Array
 compile/elaboration is verified (`xvlog`/`xelab` clean), and the V1 PE remains
 verified at 55/55 PASS. The systolic-array RTL + verification milestone is
-complete. The input-feed/line-buffer module is the next major module; synthesis
-and array-level integration remain future work.
+complete, and DSP48E2 inference is established (1 DSP/PE, 64/array). The
+input-feed/line-buffer module is the next major module; full array-level
+integration (controller/BRAM/input-feed wiring) remains future work.
 
 ## Verified Development Environment
 
@@ -82,8 +83,9 @@ The V1 PE is implemented and functionally verified:
   `result_request` read-without-clear, `accum_clear` pipeline flush, the §5.7
   control-priority combinations, and the finalized pipeline timing.
 
-Synthesis (DSP48E2 inference) and array-level (`systolic_array.sv`) integration
-remain future work.
+Synthesis (DSP48E2 inference) is **resolved** — see "Synthesis and DSP48E2
+Inference" below. Array-level (`systolic_array.sv`) integration with the
+controller/BRAM/input-feed remains future work.
 
 ### Systolic Array Specification
 
@@ -122,8 +124,41 @@ The V1 systolic array is implemented and functionally verified:
 - **Compile/elaboration:** `xvlog -sv` and `xelab` on `pe.sv` + `systolic_array.sv`
   (+ testbench) are clean (0 errors).
 
-The input-feed/line-buffer module is the next major module; synthesis and
-array-level integration remain future work.
+The input-feed/line-buffer module is the next major module; full array-level
+integration (controller/BRAM/input-feed wiring) remains future work.
+
+### Synthesis and DSP48E2 Inference
+
+DSP48E2 inference for the V1 PE and 8×8 array is established and verified
+(Vivado ML 2023.1, target `xck26-sfvc784-2LV-c`):
+
+- **Baseline (default synthesis):** Vivado's default `use_dsp = "auto"` mapped
+  the signed 8×8 PE MAC entirely to fabric — **0 DSP48E2**, 97 LUT / 12 CARRY8
+  per PE (array: 0 DSP, 7,054 LUT / 5,632 FF / 768 CARRY8). The 8×8 operands
+  fall below Vivado's auto-DSP threshold (a DSP48E2 27×18 multiplier would be
+  ~94% idle).
+- **Root cause (controlled probes):** an 8×8 multiply and an 8×8 MAC each infer
+  0 DSP48E2 under default synthesis; an explicit `(* use_dsp = "yes" *)` (or
+  ≥16-bit operands) is required to obtain DSP48E2 inference. The PE's control
+  gating (`rst`/`accum_clear`/`zero_skip`) is **not** the blocker.
+- **Fix:** `rtl/common/pe.sv` adds a targeted `(* use_dsp = "yes" *)` attribute
+  on the `product` datapath. No other behavioural change.
+- **Single PE synthesis:** exactly **1 DSP48E2** — `AREG=0, BREG=1, MREG=1,
+  PREG=1` (weight→BREG, product→MREG, accumulator→PREG, combinational
+  activation→AREG=0). Fabric drops to 2 LUT / 0 CARRY8 / 32 FF (result_out
+  only).
+- **8×8 array synthesis:** exactly **64 DSP48E2** (1 per PE), 1,039 LUT /
+  2,048 FF / 0 CARRY8 / 0 BRAM / 0 URAM. All DSPs use BREG=1, MREG=1, PREG=1;
+  in the array Vivado may absorb the activation shift-chain registers into the
+  DSP AREG inputs (observed AREG = 0/1/2 across columns), so AREG is not
+  uniformly 0 at array level — functionally equivalent.
+- **Functional verification unchanged:** `tb_pe` 55/55 PASS and
+  `tb_systolic_array` 379/379 PASS (the attribute is a synthesis hint only;
+  simulated behaviour is identical).
+
+**RESOLVED:** DSP48E2 inference for the V1 PE/array is confirmed (1 DSP/PE,
+64/array). Numerical format, accumulator width, and cycle-level behaviour are
+unchanged.
 
 ## Decisions
 
@@ -391,7 +426,8 @@ arise.
 12. V1 systolic-array testbench (`sim/tb_systolic_array.sv`) — **complete**
     (379/379 PASS in Vivado ML 2023.1)
 13. Input-feed / line-buffer module (separate spec + RTL) — **pending**
-14. Synthesis/DSP inference and array integration — **pending**
+14. Synthesis/DSP48E2 inference — **complete** (1 DSP/PE, 64/array); full
+    array-level integration (controller/BRAM/input-feed) — **pending**
 15. Team A / Team B V2 extensions — **pending**
 
 ## Next Planned Work
@@ -410,7 +446,8 @@ arise.
    `rtl/common/systolic_array.sv` + `sim/tb_systolic_array.sv`; Vivado 2023.1
    simulation passes 379/379.
 9. Input-feed / line-buffer module specification and RTL.
-10. Vivado synthesis and DSP48E2 inference check on the target device.
+10. ~~**Vivado synthesis and DSP48E2 inference check on the target device.**~~
+    **COMPLETE** — 1 DSP48E2/PE, 64/array (`use_dsp` attribute required for 8×8).
 
 ## Research Discipline
 

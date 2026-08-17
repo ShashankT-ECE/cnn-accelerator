@@ -176,7 +176,13 @@ is a common high-frequency choice but is **not the only valid configuration**.
 **RESEARCH FACT** — Vivado ML 2023.1 infers DSP48E2 usage from behavioural
 SystemVerilog `*` (multiply) and `+` (add/accumulate) operators when operand
 widths and coding style permit. The synthesis attribute
-`(* use_dsp = "yes" *)` can guide inference.
+`(* use_dsp = "yes" *)` guides inference.
+
+**RESEARCH FACT (verified 2026-08-17, Vivado ML 2023.1)** — For 8×8 signed
+operands, default synthesis (`use_dsp = "auto"`) does **not** infer a DSP48E2:
+the multiplier is small enough that Vivado implements it in fabric LUTs/CARRY8.
+The explicit `(* use_dsp = "yes" *)` directive is therefore **required** to
+obtain the intended DSP48E2 mapping for this project's PE (§8.1, `PROJECT_STATE.md`).
 
 ### 4.6 Synchronous Reset on DSP48E2
 
@@ -653,7 +659,9 @@ end
 ```
 The `weight <= weight_in` infers BREG=1. AREG is bypassed (combinational
 activation input). Expected resource: 1 DSP48E2 per PE (64 total for the
-8×8 array). At -2 speed grade: ~460 MHz achievable (2-stage) vs ~660 MHz
+8×8 array); this requires the `(* use_dsp = "yes" *)` attribute on the product
+datapath, because Vivado 2023.1 does not auto-infer a DSP for 8×8 operands
+(§4.5, §8.1). At -2 speed grade: ~460 MHz achievable (2-stage) vs ~660 MHz
 for full 3-stage pipeline (AREG+BREG+MREG+PREG); V1 accepts 2-stage for
 simplicity; deepen if synthesis requires it.
 
@@ -692,9 +700,13 @@ Write behavioural SystemVerilog using `*` and `+` operators. Vivado ML
 (single-line `acc <= acc + a*b` infers MREG=0). See §7.8 for the recommended
 multi-stage coding pattern.
 
-The synthesis attribute `(* use_dsp = "yes" *)` may be applied but is
-typically unnecessary for well-structured MAC code with operand widths
-≤27×18.
+The synthesis attribute `(* use_dsp = "yes" *)` is **required** for this
+project's signed 8×8 PE: under default synthesis (`use_dsp = "auto"`) Vivado
+ML 2023.1 maps an 8×8 MAC to fabric LUTs/CARRY8 rather than a DSP48E2 (the
+27×18 multiplier would be ~94% idle). `rtl/common/pe.sv` therefore applies the
+attribute to the `product` datapath. (For wider operands, e.g. 16×16, Vivado
+auto-infers a DSP without the attribute — the 8×8 case sits below the auto-DSP
+threshold.)
 
 ### 8.2 Pipeline Registers
 
