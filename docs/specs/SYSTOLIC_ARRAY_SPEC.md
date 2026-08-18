@@ -8,6 +8,13 @@
 > beyond the PE contract, and it does **not** specify the top-level FSM, the
 > BRAM weight controller, the input buffer, or any AXI interface.
 
+> **AMENDED (2026-08-17):** the original single-pass 25-tap 2-D convolution
+> mapping was found **mathematically inconsistent** and is superseded by a
+> **row-decomposed 5-pass** schedule. The array performs a 1-D 5-tap horizontal
+> correlation per pass; five sequential passes (one per kernel row `k_y`) produce
+> one true 2-D 5×5 convolution. See §10, §16, and §20.4 for the correction
+> record. `pe.sv` and `systolic_array.sv` are **unchanged**.
+
 ---
 
 ## 1. Purpose and Scope
@@ -209,7 +216,8 @@ PE does not delay the activation itself.
 **IMPLIED** — The activation value for tap `t` is presented at the array input
 `act_in`; the per-column delay comes from the shift chain, not from the input
 feed. The input-feed/line-buffer unit (out of scope, §1) is responsible for
-producing the correct 2-D activation sequence for the current tap (see §10.3).
+producing the correct per-pass activation sequence for the current tap (see
+§10.3).
 
 ---
 
@@ -278,36 +286,48 @@ offset absorbed by the schedule; it does not reduce throughput.
 
 ## 10. Convolution / Tap Scheduling
 
-### 10.1 Tap Serialization
+### 10.1 Kernel Serialization (Row-Decomposed 5-Pass)
 
-**DECISION** — The K×K×IC kernel is serialized into `T = K·K·IC` taps in a fixed,
-documented order. For Conv1 (K=5, IC=1): `T = 25` taps.
+**DECISION (amends the withdrawn single-pass 25-tap serialization, §20.4)** —
+The V1 Conv1 5×5 kernel is **not** flattened into a single 25-tap pass. It is
+decomposed into **five sequential 1-D horizontal passes**, one per kernel row
+`k_y = 0..4`:
 
-**DECISION** — Row-major serialization of the 2-D kernel: `t = K·k_y + k_x`
-(`k_y = t / K`, `k_x = t mod K`). For Conv1 (K=5): `t=0 → (0,0)`, `t=4 → (4,0)`,
-`t=5 → (0,1)`, …, `t=24 → (4,4)`. This fixed order is shared by the BRAM weight
-controller and the input-feed unit so weight generation and activation feeding
-stay aligned.
+- Pass `k_y` performs a **1-D 5-tap correlation** along input row `y + k_y`.
+- Within a pass, taps are indexed by `k_x = 0..4` (five taps): tap `k_x` pairs
+  weight `kernel[r][k_y][k_x]` with input pixel `input[y + k_y][x + k_x]`.
+- The five passes accumulate into the **same** PE accumulator (no clear between
+  passes), yielding the 2-D dot product
+  `output[y][x] = Σ_{k_y} Σ_{k_x} kernel[k_y][k_x] · input[y+k_y][x+k_x]`.
+
+The array is unaware of the 2-D structure: it performs one 1-D 5-tap correlation
+per pass. The controller/input-feed orchestrates the five passes and supplies
+the correct input row and five weights for each pass. This reuses the already
+verified 1-D array behavior directly.
 
 ### 10.2 Per-PE Computation
 
-**DECISION** — `PE(r,c)` accumulates, over the `T` tap cycles, the dot product
+**DECISION** — `PE(r,c)` accumulates, over the **five passes**, the dot product
 for output channel `r`, output pixel `(base - c)`:
 
 ```
-accum(r,c) = Σ_{t=0}^{T-1} w_r[t] · a_pixel(r,c)[t]
+accum(r,c) = Σ_{k_y=0}^{4} Σ_{k_x=0}^{4} w_r[k_y][k_x] · input[y+k_y][base-c+k_x]
 ```
 
-where `w_r[t]` is the tap-`t` weight of channel `r`, and `a_pixel(r,c)[t]` is
-the input activation the shift chain delivers to column `c` at tap `t`.
+Within each pass `k_y` the PE computes the 1-D partial sum
+`Σ_{k_x} w_r[k_y][k_x] · input[y+k_y][base-c+k_x]`; the accumulator carries the
+running sum across the five passes. `w_r[k_y][k_x]` is output channel `r`'s
+kernel weight at `(k_y, k_x)`.
 
 ### 10.3 Input Feed Responsibility
 
-**DECISION (boundary)** — Producing the correct `a_pixel(r,c)[t]` sequence from
-the input feature map (line buffering, `im2col` vs. sliding window, the
-`(W − K)` row jump) is the **input-feed unit's** job — a separate module with its
-own specification, not part of `systolic_array.sv`. This spec defines only the
-array's contract: `act_in` carries the current tap's activation each cycle.
+**DECISION (boundary)** — Producing the correct per-pass activation sequence
+from the input feature map (line buffering, the `(W − K)` row jump between
+passes, the 7-cycle lead-in, and supplying input row `y + k_y` during pass
+`k_y`) is the **input-feed unit's** job — a separate module with its own
+specification, not part of `systolic_array.sv`. This spec defines only the
+array's contract: `act_in` carries the current pass's activation each cycle,
+and `w_in` the current pass's five weights.
 
 ### 10.4 Column → Pixel Index (reverse order)
 
@@ -317,6 +337,12 @@ relative to column 0. The result is a **reverse index**: column `c` produces
 pixel `base − c`. This is a constant offset absorbed by the schedule (lead-in
 activations); it must be reflected in the result-ordering convention (§11.3)
 and in the golden model.
+
+**IMPLIED (amended)** — The reverse index is a **per-pass, 1-D** property of the
+shift chain. It is correct within each 1-D pass (§10.1) and was verified by the
+1-D array testbench. It is **not** a 2-D statement: the withdrawn single-pass
+2-D mapping applied it across kernel rows and produced incorrect results
+(§20.4).
 
 ---
 
@@ -340,7 +366,11 @@ per-PE `result_request`/`result_out` protocol: **read-without-clear**, with
 **DECISION** — **Column-sequential drain** (per `PE_SPEC.md` §5.2 recommendation):
 assert `result_req[c]` for one column at a time, capture that column's 8
 `result_out` values (8 × 32-bit = 256-bit bus), and step through the 8 columns.
-**8 cycles to drain the full array** (48 active results for Conv1).
+**16 cycles to drain the full array** — 2 cycles per column × 8 columns (48
+active results for Conv1): `result_out` is registered (1-cycle capture) and the
+array `result_out` bus is a combinational one-hot mux on the live `result_req`,
+so each column must be asserted for 2 cycles (latch the accumulator, then read
+the bus on the next cycle while `result_req[c]` is still asserted).
 
 **CANDIDATE (deferred)** — Parallel capture of all 64 results in one cycle
 (2048-bit bus) would cut the drain to 1 cycle at the cost of wide routing. Not
@@ -366,7 +396,7 @@ in §18):
 | `weight_load` | load the current `w_in` into all 64 PEs | asserted every tap cycle |
 | `accum_clear` | clear all 64 accumulators + products | between output groups, §13 |
 | `zero_skip` | gate MAC accumulation | **tied `0` in V1** (no sparsity) |
-| `result_req[0..7]` | per-column result capture (one-hot) | asserted one column per drain cycle |
+| `result_req[0..7]` | per-column result capture (one-hot) | asserted one column for 2 cycles (latch + read) |
 | `result_out[0..7]` | 8 × 32-bit results of the selected column | §11 |
 
 **DECISION** — `zero_skip` is a single array-wide input tied `0` in V1. Per-PE
@@ -383,20 +413,19 @@ zero-detection is Team A V2 and is not present here.
 **DECISION** — `accum_clear` is a **single array-wide signal** that clears every
 PE's accumulator **and** product register in one cycle (pipeline flush,
 `PE_SPEC.md` §7.8/§10.14). It is asserted **once at the start of each output
-group** — after the previous group's results have been fully drained and before
-the next group's tap cycles begin.
+group — before the first pass (`k_y = 0`) — and is NOT asserted between the
+five passes** of a group. The five passes must accumulate into the same PE
+accumulator, so no clear occurs between them.
 
 **IMPLIED** — Because `accum_clear` flushes the product register, no multi-cycle
 clear is needed, and the next group starts from a clean pipeline.
 
 **DECISION (sequencing)** — For each output group, the canonical order is:
 
-1. `accum_clear` (1 cycle),
-2. weight preload of tap 0 (1 cycle),
-3. `T` tap cycles (weight and activation streams, skew per §9),
-4. one pipeline-drain cycle for the last product,
-5. column-sequential `result_req` drain (8 cycles),
-6. return to step 1 for the next group.
+1. `accum_clear` (1 cycle, before pass 0),
+2. five 1-D passes (`k_y = 0..4`), each 7 lead-in + 5 taps + 1 drain (§16),
+3. column-sequential `result_req` drain (16 cycles, 2 per column), after pass 4,
+4. return to step 1 for the next group.
 
 See §16 for the cycle-by-cycle table.
 
@@ -445,8 +474,8 @@ input.
 
 - **Rows 0–5** = output channels 0–5; **rows 6–7 idle**.
 - **Columns 0–7** = 8 adjacent output pixels of one output row `y`.
-- One **output group** = 6 channels × 8 pixels = **48 results**, computed in 25
-  tap cycles (plus overhead, §16).
+- One **output group** = 6 channels × 8 pixels = **48 results**, computed in
+  **5 passes × 5 taps** (plus lead-in/pass overhead, §16).
 
 **DECISION** — Conv1 uses **valid convolution (no padding)**: 28×28 input →
 24×24 output. This matches the standard LeNet-5/MNIST reference
@@ -463,50 +492,75 @@ padding, so this is a V1 design choice.
 | Total outputs | 6 × 576 = 3,456 |
 | Total MACs | 3,456 × 25 = 86,400 |
 | Output groups | 3,456 ÷ 48 = 72 |
-| Compute cycles (floor) | 86,400 ÷ 48 = 1,800 |
+| MACs per output pixel | 25 (= 5 passes × 5 taps) |
+| Compute cycles (MAC floor, not the schedule) | 86,400 ÷ 48 = 1,800 |
 
 ---
 
-## 16. Cycle-Level Schedule
+## 16. Cycle-Level Schedule (5-Pass)
 
-**DECISION** — The canonical schedule for **one output group** (48 results),
-using the "weight leads activation by one cycle" convention (§9). `a_r[t]`
-denotes tap `t`'s activation; `w_r[t]` denotes channel `r`'s tap-`t` weight.
+**DECISION (amends the withdrawn single-pass 25-tap schedule, §20.4)** — The
+canonical schedule for **one output group** (48 results) is **five sequential
+1-D passes**, one per kernel row `k_y = 0..4`, using the "weight leads
+activation by one cycle" convention (§9).
 
-| Cycle | `weight_load` | `w_in[r]` | `act_in[r]` | Notes |
-|------:|:---:|:---:|:---:|:---|
-| 0 | 0 | — | — | `accum_clear=1`: zero all accumulators + products |
-| 1 | 1 | `w_r[0]` | 0 | weight preload (tap 0) |
-| 2 | 1 | `w_r[1]` | `a_r[0]` | product ← `a_r[0]·w_r[0]` |
-| 3 | 1 | `w_r[2]` | `a_r[1]` | product ← `a_r[1]·w_r[1]`; acc += `a_r[0]·w_r[0]` |
-| … | 1 | `w_r[t+1]` | `a_r[t]` | product ← `a_r[t]·w_r[t]`; acc += `a_r[t−1]·w_r[t−1]` |
-| 26 | 0 | — | `a_r[24]` | product ← `a_r[24]·w_r[24]` (last tap) |
-| 27 | 0 | — | 0 | acc += `a_r[24]·w_r[24]` → **accumulator complete** |
-| 27–34 | 0 | — | — | `result_req[0..7]` one column per cycle (drain) |
+### 16.1 Per-Pass Activation and Weight Streams
 
-**Correctness note** — Every product uses the correct tap weight: because the
-weight register lags `w_in` by one cycle, presenting `w_r[t+1]` while
-`act_in` carries `a_r[t]` makes the product register see `w_r[t]` (loaded one
-cycle earlier). All 25 terms accumulate into the pinned local accumulator with
-no partial-sum movement.
+For pass `k_y` (input row `y + k_y`, output row `y`), the streams presented at
+the array are:
 
-**Throughput note** — Every tap cycle (cycles 2–26) performs one MAC per active
-PE: **1 MAC/cycle/PE after the 2-cycle fill**, 48 active PEs for Conv1.
+- **Activation** (identical on all 8 `act_in[r]`):
+  `a[s] = input[y + k_y][base + s]` for `s = -7 .. 4` (7 lead-in + 5 taps),
+  and `a[s] = 0` outside this range.
+- **Weight** (per output-channel row `r`):
+  `w_r[s] = kernel[r][k_y][s]` for `s = 0 .. 4` (5 taps), and `w_r[s] = 0`
+  outside this range.
 
-**Steady-state accounting (non-overlapped):**
+The seven lead-in activations (`s = -7..-1`) are the input pixels immediately
+left of the window; they pre-load the shift chain so each column `c` sees its
+window's left-edge pixels. They pair with weight `0` and do not change the
+accumulator.
+
+### 16.2 Pass Cycle Table (canonical, non-overlapped)
+
+One pass = 7 lead-in + 5 taps + 1 drain = 13 cycles. `weight_load` is asserted
+every cycle; `w_in[r]` carries `w_r[s+1]` during activation cycle `s` so the
+weight register holds `w_r[s]` (the weight-lead skew, §9).
+
+| Cycle | `act_in[r]` | `w_in[r]` (weight lead) | Note |
+|------:|:---:|:---:|:---|
+| L1 | `a[-7]` | 0 | lead-in (weight reg = 0) |
+| L2 | `a[-6]` | 0 | lead-in |
+| … | … | … | lead-in (`a[-5] .. a[-2]`) |
+| L7 | `a[-1]` | `w_r[0]` | last lead-in; preloads tap-0 weight |
+| T0 | `a[0]` | `w_r[1]` | tap 0: product ← `a[0]·w_r[0]` |
+| T1 | `a[1]` | `w_r[2]` | tap 1: acc += `a[0]·w_r[0]` |
+| T2 | `a[2]` | `w_r[3]` | tap 2 |
+| T3 | `a[3]` | `w_r[4]` | tap 3 |
+| T4 | `a[4]` | 0 | tap 4: product ← `a[4]·w_r[4]` |
+| D | 0 | 0 | drain: acc += `a[4]·w_r[4]`; weight reg ← 0 |
+
+Passes `k_y = 1..4` repeat this 13-cycle pass for the next input row and next
+five weights. `accum_clear` is asserted **only before pass 0** of a new group,
+never between passes.
+
+### 16.3 Group Schedule
 
 | Component | Cycles |
 |-----------|-------:|
-| `accum_clear` | 1 |
-| weight preload | 1 |
-| tap cycles (25 MACs) | 25 |
-| pipeline drain (last product) | 1 |
-| result drain (8 columns) | 8 |
-| **Total per group** | **36** |
+| `accum_clear` (before pass 0 only) | 1 |
+| 5 passes × 13 cycles | 65 |
+| column-sequential `result_req` drain (8 columns × 2 cycles) | 16 |
+| **Total per group (canonical, non-overlapped)** | **82** |
 
-**CANDIDATE (deferred)** — The next group's weight preload can overlap the
-current group's result drain (they touch different registers). Not required for
-V1 correctness; noted to avoid premature optimization.
+**Correctness note** — Within a pass, the product register sees `w_r[s]` while
+`act_in` carries `a[s]` (weight-lead skew, §9); all five passes sum into the
+pinned local accumulator with no partial-sum movement between PEs.
+
+**CANDIDATE (deferred)** — The lead-in of pass `k_y+1` may overlap the drain of
+pass `k_y`, and the next group's clear may overlap the current drain; these are
+controller/input-feed throughput optimizations. Not required for V1 correctness;
+do not optimize prematurely.
 
 ---
 
@@ -517,22 +571,25 @@ V1 correctness; noted to avoid premature optimization.
 | Term | Definition | V1 (Conv1) |
 |------|-----------|-----------|
 | **Peak MAC rate** | 64 PEs × 1 MAC/cycle | 64 MACs/cycle |
-| **Active-PE MAC rate** | (active rows) × 1 MAC/cycle during tap cycles | 48 MACs/cycle (6 rows) |
-| **Array utilization** | active rows ÷ 8 | 6/8 = 75% |
-| **Group latency** | cycles to produce one output group | 36 cycles / 48 results |
-| **Group compute efficiency** | tap cycles ÷ group latency | 25/36 ≈ 69% |
+| **Active PEs** | rows × columns actually used | 6 rows × 8 cols = 48 |
 | **Pipeline latency** | `act_in` → first accumulator contribution | 2 cycles |
-| **Conv1 total** | groups × group latency | 72 × 36 = 2,592 cycles |
+| **Group compute structure** | 5 passes × 5 taps per output pixel | 25 MACs/pixel |
 
 **RESEARCH FACT / IMPLIED** — "64 MACs/cycle" (roadmap §3.2) is the array's
-**peak capability**, not a per-layer sustained throughput requirement. Conv1 has
-only 6 output channels, so a channel-per-row mapping sustains 48 MACs/cycle.
+**peak capability**, not a per-layer sustained throughput requirement.
 
-**DECISION** — "64 MACs/cycle" is the array's **peak** capability, not a
-sustained per-layer requirement. For Conv1 the channel-per-row mapping sustains
-48 MACs/cycle (6 rows) at 75% array utilization; rows 6–7 are idle and their
-results are ignored (§14). Filling the idle rows would require splitting the
-pixel or tap dimension across rows — deferred (not needed for V1 correctness).
+**DECISION (amends the withdrawn "48 MACs/cycle sustained" figure, §20.4)** —
+The sustained throughput for V1 Conv1 is **no longer 48 MACs/cycle**. The
+5-pass schedule interleaves 7 lead-in cycles (weight = 0) with every 5 tap
+cycles, so a fraction of each pass's cycles perform no useful MAC. The sustained
+MACs/cycle and cycles-per-layer must be **re-derived from the final
+controller/input-feed schedule** (which may overlap lead-in with the prior
+pass's drain); they are not asserted here.
+
+**DECISION** — "64 MACs/cycle" is the array's peak capability. Conv1 uses 6 rows
+(48 active PEs); rows 6–7 are idle and their results ignored (§14). Filling the
+idle rows would require splitting the pixel or tap dimension across rows —
+deferred (not needed for V1 correctness).
 
 ---
 
@@ -588,23 +645,30 @@ the golden convolution.
    `c` cycles later (1-cycle register per hop).
 4. **One-cycle skew** — weight leads activation by one cycle; verify the product
    uses the correct tap weight, not the previous one.
-5. **Full Conv1 tile vs. golden** — a complete output group matches
-   `golden_model.py` bit-exact (signed 8-bit, 32-bit accumulator,
+5. **Full Conv1 2-D convolution vs. golden (5-pass)** — a complete output group
+   matches `golden_model.py` bit-exact using the **five-pass** schedule (5
+   passes × 5 taps per output pixel; signed 8-bit, 32-bit accumulator,
    read-without-clear, reverse column index).
-6. **Drain ordering** — `result_req` captures the correct column, and the
-   (column → pixel) map matches the golden model.
-7. **Boundary behavior** — column 7 `act_out` unconnected without `x`
+6. **Five-pass accumulation** — the PE accumulator is preserved across the five
+   passes (`accum_clear` only before pass 0); each pass adds one kernel row
+   `k_y`.
+7. **Kernel-row boundary behavior** — the pass boundary must not corrupt the
+   running accumulator. The withdrawn single-pass 2-D mapping failed exactly
+   here (§20.4); this is the highest-priority new directed check.
+8. **Drain ordering** — `result_req` captures the correct column after pass 4,
+   and the (column → pixel) map matches the golden model.
+9. **Boundary behavior** — column 7 `act_out` unconnected without `x`
    propagation; idle rows (6–7) ignored; no floating inputs.
-8. **Pipeline fill** — first accumulator contribution 2 cycles after `act_in`;
-   steady-state 1 MAC/PE/cycle during tap cycles.
-9. **`zero_skip` tied low** — dense baseline matches the no-skip result.
-10. **Signed/corner arithmetic at scale** — the `tb_pe` corner cases
+10. **Pipeline fill** — first accumulator contribution 2 cycles after `act_in`;
+    steady-state 1 MAC/PE/cycle during the tap cycles of each pass.
+11. **`zero_skip` tied low** — dense baseline matches the no-skip result.
+12. **Signed/corner arithmetic at scale** — the `tb_pe` corner cases
     (min-negative, mixed sign) hold across the array.
 
 **DECISION** — The golden model must implement the exact array arithmetic:
-25-tap dot product per PE, signed 8-bit operands, 32-bit accumulation, the
-reverse column index, and read-without-clear. Any mismatch is a bug in either
-the RTL or the model.
+a 5×5 2-D dot product per PE computed as **five 1-D 5-tap passes**, signed
+8-bit operands, 32-bit accumulation, the reverse column index, and
+read-without-clear. Any mismatch is a bug in either the RTL or the model.
 
 ---
 
@@ -627,9 +691,9 @@ no longer block the array:
 |---|----------|-----------|-----------|
 | 1 | Conv1 output dimension / padding | 24×24 valid, no padding (24 = 3×8 → no partial tile) | §14, §15 |
 | 2 | Weight/activation skew convention | weight stream leads activation by one cycle | §9, §16 |
-| 3 | Result drain | column-sequential, 8 cycles | §11.3 |
-| 4 | Tap serialization order | row-major, `t = K·k_y + k_x` | §10.1 |
-| 5 | "64 MACs/cycle" | peak capability; Conv1 sustains 48 (75%), rows 6–7 idle | §17 |
+| 3 | Result drain | column-sequential, 16 cycles (2 per column) | §11.3 |
+| 4 | Kernel serialization | row-major indexing `k_y, k_x`, **decomposed into 5 passes** (amends the withdrawn single-pass 25-tap stream) | §10.1, §20.4 |
+| 5 | "64 MACs/cycle" | peak capability; **sustained throughput to re-derive** (withdrew "48 sustained") | §17, §20.4 |
 
 **Remaining items (not blocking `systolic_array.sv`):**
 
@@ -648,6 +712,35 @@ no longer block the array:
 | Sparsity (`zero_skip` functional connection) | V2 Team A — tied `0` in V1 |
 | Clock frequency target | Deferred to synthesis (`PE_SPEC.md` §11.6) |
 | Conv2 / FC / general layer mapping | Out of V1 scope (§5) |
+
+### 20.4 Correction Record — Single-Pass 2-D Mapping Withdrawn
+
+**DECISION (2026-08-17)** — The original single-pass 25-tap 2-D convolution
+mapping (§10.1, §16 as previously written) is **withdrawn**: it was found
+**mathematically inconsistent** during the input-feed/line-buffer specification
+work. With in-phase weight broadcast (§8), a single shared activation stream
+(§7), a 7-deep shift chain (§6), and row-major kernel flattening, the required
+activation `a[m−c] = input[y+⌊m/5⌋][base−c+(m mod 5)]` has no solution — a
+single `a[0]` would have to equal both `input[y][base]` and `input[y+1][base−5]`.
+Numerical verification confirmed column 0 correct and columns 1–7 incorrect.
+
+**Root cause** — The shift chain provides one spatial axis (horizontal offset);
+the 5×5 kernel has two. A linear delay cannot represent the `(W−K)` row jump at
+kernel-row boundaries, so columns `c ≥ 1` receive the previous kernel row's
+trailing pixel instead of the next row's leading pixel.
+
+**Why it was not caught** — `sim/tb_systolic_array.sv`'s convolution test (T11)
+used a 1-D 5-tap stimulus, which exercises the array mechanics but not the 2-D
+kernel-row boundary behavior.
+
+**Resolution adopted** — Row-decomposed 5-pass schedule (§10.1, §16): five
+sequential 1-D passes, one per kernel row, reusing the verified 1-D array
+behavior. `pe.sv` and `systolic_array.sv` are **unchanged**.
+
+**Withdrawn downstream claims** — the "48 MACs/cycle sustained" throughput
+(§17), the "36-cycle group latency", and the "2,592-cycle Conv1" figures were
+derived from the withdrawn schedule and are superseded; sustained throughput is
+marked for re-derivation from the controller schedule (§17).
 
 ---
 

@@ -16,8 +16,10 @@ development team.
 (`sim/tb_systolic_array.sv`, 379/379 checks PASS in Vivado ML 2023.1). Array
 compile/elaboration is verified (`xvlog`/`xelab` clean), and the V1 PE remains
 verified at 55/55 PASS. The systolic-array RTL + verification milestone is
-complete, and DSP48E2 inference is established (1 DSP/PE, 64/array). The
-input-feed/line-buffer module is the next major module; full array-level
+complete, and DSP48E2 inference is established (1 DSP/PE, 64/array). The V1
+Conv1 convolution mapping is resolved as a **row-decomposed 5-pass** schedule
+(Decision 9), superseding a withdrawn single-pass 2-D mapping. The
+input-feed/line-buffer specification is now unblocked; full array-level
 integration (controller/BRAM/input-feed wiring) remains future work.
 
 ## Verified Development Environment
@@ -298,7 +300,7 @@ native 48-bit internal accumulator provides additional headroom internally.
 | Accumulator clear | `accum_clear` (1 bit, separate from result_request) |
 | Read semantics | Read-without-clear |
 | Flow control | None in PE — FSM controls timing globally |
-| Array-level drain | Column-sequential (8 PEs/cycle, 8 cycles), outside PE scope |
+| Array-level drain | Column-sequential (8 PEs/cycle, 16 cycles: 2/column), outside PE scope |
 
 **Rationale:** Simplest mechanism satisfying R5. Read-without-clear is
 universal across all surveyed systolic accelerators. Separate `accum_clear`
@@ -385,13 +387,62 @@ now unblocked.
 |---|----------|-----------|-----------|
 | 1 | Conv1 output dimension / padding | 24×24 valid (no padding) | Standard LeNet-5/MNIST; 24 = 3×8 → no partial tile |
 | 2 | Weight/activation skew | weight stream leads activation by one cycle | Absorbs the PE BREG stage; §16 schedule |
-| 3 | Result drain | column-sequential, 8 cycles | Matches `result_request` protocol; 256-bit bus |
+| 3 | Result drain | column-sequential, 16 cycles (2/column) | Matches `result_request` protocol; 256-bit bus |
 | 4 | Tap serialization | row-major `t = K·k_y + k_x` | Deterministic; shared by weight ROM and input feed |
 | 5 | "64 MACs/cycle" | peak capability, not sustained | Conv1 sustains 48 (6 rows); rows 6–7 idle (75%) |
+
+> **Amended by Decision 9 (2026-08-17):** items 4 and 5 above (single-pass
+> row-major tap serialization; "48 MACs/cycle sustained") were found
+> mathematically inconsistent / unjustified and are superseded. See Decision 9
+> and `SYSTOLIC_ARRAY_SPEC.md` §20.4.
 
 **Note:** the input-feed / line-buffer unit is a **separate upcoming module**
 with its own specification. Its interface to the array (`act_in` sequence, tap
 order, skew) is fully defined by the array spec; only its internals remain.
+
+### Decision 9 — V1 Convolution Mapping (Row-Decomposed 5-Pass) — RESOLVED (2026-08-17)
+
+The V1 Conv1 5×5 convolution is computed as **five sequential 1-D horizontal
+passes**, one per kernel row `k_y = 0..4`, replacing the earlier single-pass
+25-tap 2-D mapping.
+
+| Parameter | Value |
+|-----------|-------|
+| Convolution structure | 5 sequential 1-D passes (one per kernel row `k_y`) |
+| Pass `k_y` | 1-D 5-tap horizontal correlation along input row `y + k_y` |
+| Taps per pass | 5 (`k_x = 0..4`) |
+| Accumulation | PE accumulator preserved across the 5 passes |
+| `accum_clear` | only before pass 0 of a new output group |
+| Result read | `result_request` after pass 4 (the 5th pass) |
+| PE / array RTL | **unchanged** |
+
+**Correction of a previous inconsistency.** The prior single-pass 25-tap 2-D
+mapping (recorded in `SYSTOLIC_ARRAY_SPEC.md` §10.1/§16 and Decision 8) was
+found **mathematically inconsistent** during the input-feed/line-buffer
+specification work: with in-phase weight broadcast, a single shared activation
+stream, and a 7-deep shift chain, the required activation value at one cycle
+would have to equal two different input pixels. Numerical verification confirmed
+column 0 correct and columns 1–7 incorrect. This is recorded as a **withdrawn
+mapping** (with audit trail) in `SYSTOLIC_ARRAY_SPEC.md` §20.4 — not silently
+relabelled.
+
+**Why the error was not caught.** `sim/tb_systolic_array.sv`'s convolution test
+(T11) used a 1-D 5-tap stimulus, which exercised the array mechanics but not the
+2-D kernel-row boundary behaviour where the inconsistency occurs.
+
+**Scope.** `rtl/common/pe.sv` and `rtl/common/systolic_array.sv` are unchanged;
+the array performs a 1-D 5-tap correlation per pass and is unaware of the 2-D
+structure. The controller/input-feed orchestrates the five passes.
+
+**Storage and throughput are NOT finalized.** The input-feed's physical storage
+(BRAM/URAM/distributed RAM) and the sustained throughput are not claimed here;
+they must be derived from the input-feed/line-buffer specification (now
+unblocked). The only derived storage fact is the 5×5 window data-span minimum
+`(5−1)·28 + 5 = 117` pixels, treated as a data-availability lower bound, not a
+physical line-buffer size.
+
+**Rationale:** reuses the already-verified 1-D array behaviour directly; changes
+only the controller/weight/activation schedule; no PE or array RTL change.
 
 ### Unresolved PE Decisions
 
@@ -440,9 +491,10 @@ These are **not** finalized:
 | PE forwarding direction | Undecided | **Established:** activations shift across rows per roadmap §3.2 |
 | Conv1 output dimension | Undecided | **Established:** 24×24 valid, no padding (Decision 8, 2026-08-17) |
 | Weight/activation skew | Undecided | **Established:** weight stream leads activation by one cycle (Decision 8, 2026-08-17) |
-| Result drain | Undecided | **Established:** column-sequential, 8 cycles (Decision 8, 2026-08-17) |
-| Tap serialization order | Undecided | **Established:** row-major `t = K·k_y + k_x` (Decision 8, 2026-08-17) |
-| "64 MACs/cycle" meaning | Undecided | **Established:** peak capability; Conv1 sustains 48 MACs/cycle (Decision 8, 2026-08-17) |
+| Result drain | Undecided | **Established:** column-sequential, 16 cycles (2/column) (Decision 8, 2026-08-17) |
+| Kernel serialization | Undecided | **Established:** row-major `k_y, k_x` indexing, **decomposed into 5 passes** (Decision 9, 2026-08-17; amends the withdrawn single-pass 25-tap stream) |
+| "64 MACs/cycle" meaning | Undecided | **Established:** peak capability; sustained throughput re-derived under the 5-pass mapping (Decision 9, 2026-08-17) |
+| Conv1 convolution mapping | Incorrect (single-pass 2-D) | **Established:** row-decomposed 5-pass, one 1-D pass per kernel row (Decision 9, 2026-08-17) |
 
 ## Open Questions
 
@@ -466,10 +518,13 @@ arise.
 11. Systolic array RTL (`rtl/common/systolic_array.sv`) — **complete**
 12. V1 systolic-array testbench (`sim/tb_systolic_array.sv`) — **complete**
     (379/379 PASS in Vivado ML 2023.1)
-13. Input-feed / line-buffer module (separate spec + RTL) — **pending**
+13. Input-feed / line-buffer module (separate spec + RTL) — **pending** (spec
+    unblocked by Decision 9)
 14. Synthesis/DSP48E2 inference — **complete** (1 DSP/PE, 64/array); full
     array-level integration (controller/BRAM/input-feed) — **pending**
-15. Team A / Team B V2 extensions — **pending**
+15. V1 convolution mapping decision (row-decomposed 5-pass) — **complete**
+    (2026-08-17); supersedes the withdrawn single-pass 2-D schedule
+16. Team A / Team B V2 extensions — **pending**
 
 ## Next Planned Work
 
@@ -486,9 +541,13 @@ arise.
 8. ~~**Systolic array implementation + array-level verification.**~~ **COMPLETE** —
    `rtl/common/systolic_array.sv` + `sim/tb_systolic_array.sv`; Vivado 2023.1
    simulation passes 379/379.
-9. Input-feed / line-buffer module specification and RTL.
+9. Input-feed / line-buffer module specification and RTL (spec **unblocked** by
+   Decision 9).
 10. ~~**Vivado synthesis and DSP48E2 inference check on the target device.**~~
     **COMPLETE** — 1 DSP48E2/PE, 64/array (`use_dsp` attribute required for 8×8).
+11. ~~**V1 convolution mapping (row-decomposed 5-pass).**~~ **COMPLETE** —
+    Decision 9 recorded (2026-08-17); supersedes the withdrawn single-pass 2-D
+    schedule.
 
 ## Research Discipline
 
