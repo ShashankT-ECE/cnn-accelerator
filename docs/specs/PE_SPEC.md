@@ -1076,6 +1076,97 @@ All §12.1 decisions are RESOLVED. Before `pe.sv` is written:
 
 ---
 
+## 13. PE-v2 Specification Delta (V2 Reconfigurable Dataflow)
+
+> **Status:** RESOLVED — interface and WS accumulator semantics recorded as
+> **Decision 10** (`docs/PROJECT_STATE.md`, 2026-08-18). This is the PE change
+> required for Team B's V2 reconfigurable-dataflow mode. It does **not** modify
+> the V1 PE: `rtl/common/pe.sv` and `sim/tb_pe.sv` remain frozen and untouched.
+
+### 13.1 Scope
+
+PE-v2 is a **superset** of the V1 PE. The V1 contract (§5–§8, Decisions 1–6) is
+unchanged. The V2 dataflow is **true spatial Weight-Stationary** (Decision 10):
+weights held in PEs, activations shift, partial sums cascade vertically. PE-v2
+adds exactly **three ports and one mux**; the weight, product, result, and
+activation-forwarding blocks are V1-identical.
+
+This supersedes the roadmap's §3.2/§5.6 wording that named
+`wgt_out`/`shift_enable`/`load_enable`/`accumulate_enable` as the V2 PE hooks:
+Decision 10 defines the actual V2 PE change as
+`psum_in`/`psum_out`/`dataflow_mode`. §11.10/§11.11 remain historical/roadmap
+context only.
+
+### 13.2 Added Ports
+
+| Signal | Direction | Width | Status |
+|--------|-----------|-------|--------|
+| `psum_in` | input | 32 | **DECISION** (Decision 10) — WS cascade addend; ignored in OS mode |
+| `psum_out` | output | 32 | **DECISION** (Decision 10) — registered accumulator value (`= accumulator`) |
+| `dataflow_mode` | input | 1 | **DECISION** (Decision 10) — `0` = OS (V1), `1` = WS |
+
+Note: the internal `dataflow_mode` encoding (`0`=OS, `1`=WS) is a PE-level
+convention chosen so that the reset default (`0`) yields V1 OS behaviour. Its
+mapping to the ARM-visible `DATAFLOW_MODE` register (roadmap §3.2 encodes
+`0`=WS, `1`=OS) is deferred to the register-map definition and is not resolved
+here.
+
+### 13.3 Accumulator Semantics (WS vs OS)
+
+**DECISION** — `dataflow_mode` selects only the accumulator addend source:
+
+```systemverilog
+assign psum_out = accumulator;
+
+always_ff @(posedge clk) begin
+    if (rst)                 accumulator <= '0;
+    else if (accum_clear)    accumulator <= '0;
+    else if (dataflow_mode)  accumulator <= psum_in + product;   // WS: cascade
+    else                     accumulator <= accumulator + product; // OS: hold (V1)
+end
+```
+
+- **OS (`dataflow_mode = 0`):** `accumulator <= accumulator + product` —
+  bit-identical to the V1 accumulator block. `psum_in` is ignored.
+- **WS (`dataflow_mode = 1`):** `accumulator <= psum_in + product` — the
+  accumulator register is reused as a partial-sum pass-through; `psum_out`
+  feeds the PE below.
+- `rst` and `accum_clear` clear `accumulator` (and `product`) in both modes,
+  independent of `dataflow_mode`.
+- `zero_skip` still zeroes `product` (§5.3/§9), so in WS a skipped MAC passes
+  `psum_in + 0` through unchanged — no new gating.
+
+### 13.4 Control Priority
+
+**DECISION** — The V1 control priority (§5.7) is **unchanged**:
+`rst` > `weight_load` > `accum_clear` > `result_request` > `zero_skip` > MAC.
+`dataflow_mode` is a static configuration input, stable throughout a layer's
+COMPUTE phase; it is not a per-cycle control and only selects the accumulator
+addend source. `rst`/`accum_clear` override it in both modes.
+
+### 13.5 OS Equivalence Requirement
+
+**REQUIREMENT** — PE-v2 in OS mode must be behaviourally equivalent to the V1
+PE. Acceptance criterion: the frozen `sim/tb_pe.sv` (55/55) and
+`sim/tb_systolic_array.sv` (379/379) pass unchanged against PE-v2 (and
+array-v2) with `dataflow_mode = 0` and `psum_in = 0`. `psum_out` is a passive
+tap of `accumulator` and does not affect OS behaviour.
+
+### 13.6 Open V2 Array-Level Items (not resolved in this delta)
+
+The PE-v2 contract above is complete for the PE change. The following V2
+array-level items remain open and are **not** resolved here:
+
+| # | Item | Status |
+|---|------|--------|
+| 1 | WS weight-loading mechanism | **OPEN DECISION** |
+| 2 | WS activation delivery (per-row streams vs diagonal skew) | **OPEN DECISION** |
+| 3 | WS result collection (reuse `result_req` reading row 7 vs dedicated bottom-row bus) | **OPEN DECISION** |
+| 4 | Reconfiguration flush sequence (full `rst` vs lighter flush) | **OPEN DECISION** |
+| 5 | DSP48E2 inference of the mode mux / PCIN–PCOUT cascade | **OPEN DECISION** (verification gate) |
+
+---
+
 ## Appendix A: References
 
 | Reference | Description |

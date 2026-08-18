@@ -444,6 +444,45 @@ physical line-buffer size.
 **Rationale:** reuses the already-verified 1-D array behaviour directly; changes
 only the controller/weight/activation schedule; no PE or array RTL change.
 
+### Decision 10 — V2 Reconfigurable Dataflow (True Spatial Weight-Stationary) — RESOLVED (2026-08-18)
+
+**V2's reconfigurable-dataflow mode is true spatial Weight-Stationary (WS).**
+PE-v2 adds the partial-sum cascade ports required to implement it, and the V1
+RTL is frozen and untouched.
+
+| Parameter | Value |
+|-----------|-------|
+| V2 WS dataflow | weights held in PEs + activation shift + vertical `psum_in`/`psum_out` cascade |
+| Cross-tile reduction | bottom-to-top tile feedback (per-column feedback registers + row-0 mux) |
+| PE-v2 added ports | `psum_in[31:0]` (input), `psum_out[31:0]` (output), `dataflow_mode` (input) |
+| WS accumulator | `accumulator <= psum_in + product` (pass-through) |
+| OS accumulator | `accumulator <= accumulator + product` (V1-identical) |
+| Control priority | unchanged (`PE_SPEC.md` §5.7) |
+| OS mode | behaviourally equivalent to V1 (`dataflow_mode = 0`) |
+
+**V1 RTL frozen.** `rtl/common/pe.sv`, `rtl/common/systolic_array.sv`,
+`rtl/common/input_feed.sv`, and the V1 testbenches (`sim/tb_pe.sv`,
+`sim/tb_systolic_array.sv`, `sim/tb_input_feed.sv`) are **frozen and are not to
+be modified** for V2. V2 introduces a new PE variant (PE-v2) and array-v2 rather
+than editing the V1 modules.
+
+**Why this supersedes the roadmap wording.** The roadmap §3.2 describes V2
+"Mode 0 Weight Stationary" as "weights held, activations shift" with no partial
+sums. Taken literally that computes `w × Σ activations`, which is not a
+convolution (the same error withdrawn in Decision 9 / `SYSTOLIC_ARRAY_SPEC.md`
+§20.4). True spatial WS requires the partial-sum cascade that Decision 7
+deferred. PE-v2 adds the minimum ports so the array can reduce a 1-D dot product
+across the vertical cascade and, via bottom-to-top tile feedback, deeper
+reductions (e.g. Conv1's 25 taps across 4 tiles of ≤8). This is an explicit
+decision, not a silent extension of the V1 PE.
+
+**Contract.** The PE-v2 port list and accumulator semantics are specified in
+`docs/specs/PE_SPEC.md` §13.
+
+**Open V2 array-level items (not resolved by this decision):** WS weight-loading
+mechanism, WS activation delivery, WS result collection, the reconfiguration
+flush sequence, and DSP48E2 inference of the mode mux / PCIN–PCOUT cascade.
+
 ### Unresolved PE Decisions
 
 The following decisions block `rtl/common/pe.sv` implementation (see
@@ -469,9 +508,12 @@ These are **not** finalized:
   (weight-broadcast + activation-shift + local accumulation), no sparsity
   (Decision 7).
 - **True spatial Weight-Stationary** (partial-sum cascade, `psum_in`/`psum_out`)
-  is deferred to V2 / PE v1.1.
+  is the V2 reconfigurable-dataflow mode — **DECIDED (Decision 10, 2026-08-18)**,
+  superseding the earlier "deferred to V2 / PE v1.1" status. PE-v2 adds
+  `psum_in`/`psum_out`/`dataflow_mode`.
 - **Team B reconfigurable dataflow** (per-layer WS/OS mode switching) is a V2
-  extension; its Weight-Stationary mode requires the deferred psum cascade.
+  extension; its Weight-Stationary mode uses the psum cascade defined by
+  Decision 10.
 - **Team A sparsity** is a V2 extension. The V1 PE has the `zero_skip`
   port, but its functional connection to the Sparsity Manager is a V2
   Team A concern.
