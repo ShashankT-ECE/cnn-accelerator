@@ -1163,7 +1163,7 @@ array-level items remain open and are **not** resolved here:
 | 2 | WS activation delivery (per-row streams vs diagonal skew) | **OPEN DECISION** |
 | 3 | WS result collection (reuse `result_req` reading row 7 vs dedicated bottom-row bus) | **OPEN DECISION** |
 | 4 | Reconfiguration flush sequence (full `rst` vs lighter flush) | **OPEN DECISION** |
-| 5 | DSP48E2 inference of the mode mux / PCIN–PCOUT cascade | **OPEN DECISION** (verification gate) |
+| 5 | DSP48E2 inference of the mode mux / PCIN–PCOUT cascade | **RESOLVED (2026-08-19)** — Vivado ML 2023.1 implements the muxed WS addend (`psum_in`) through the DSP48E2 **C input** (OPMODE "C or P"), not PCIN/PCOUT. Functionally equivalent (array 335/335 PASS, 64 DSP48E2 / 0 CARRY8); PCIN/PCOUT is an implementation detail, not a V2 functional requirement |
 
 ---
 

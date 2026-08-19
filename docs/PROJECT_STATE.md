@@ -22,6 +22,13 @@ Conv1 convolution mapping is resolved as a **row-decomposed 5-pass** schedule
 input-feed/line-buffer specification is now unblocked; full array-level
 integration (controller/BRAM/input-feed wiring) remains future work.
 
+The V2 reconfigurable-dataflow systolic array (true spatial Weight-Stationary)
+is also implemented and verified: `rtl/common/systolic_array_v2.sv` passes
+335/335 checks in `sim/tb_systolic_array_v2.sv`, synthesizes to 64 DSP48E2 /
+0 CARRY8, and closes timing at 200 MHz with post-route WNS +2.861 ns. Vivado
+implements the muxed WS addend through the DSP C input (not PCIN/PCOUT) — see
+Decision 12.
+
 ## Verified Development Environment
 
 - Host OS: Ubuntu 22.04.5 LTS 64-bit
@@ -128,6 +135,52 @@ The V1 systolic array is implemented and functionally verified:
 
 The input-feed/line-buffer module is the next major module; full array-level
 integration (controller/BRAM/input-feed wiring) remains future work.
+
+### Systolic Array V2 Implementation and Verification
+
+The V2 reconfigurable-dataflow systolic array (true spatial Weight-Stationary,
+Decisions 10–11) is implemented and functionally verified:
+
+- **RTL:** `rtl/common/systolic_array_v2.sv` — an 8×8 grid of 64 PE-v2 instances
+  (`rtl/common/pe_v2.sv`) with the V1-identical activation shift chain, an
+  explicit vertical `psum_in`/`psum_out` cascade, always-on bottom-to-top tile
+  feedback (`psum_in[0][c] = psum_out[7][c]`), per-row weight broadcast, and a
+  per-row (transposed) result drain that reads row 7. `dataflow_mode`/`zero_skip`
+  are array-wide fan-out inputs; no FSM/controller/BRAM is instantiated.
+- **Testbench:** `sim/tb_systolic_array_v2.sv` — self-checking, non-UVM, with an
+  independent 5×5 valid-convolution golden model (never derived from the V2
+  schedule / PE geometry / tile counters).
+- **Simulation:** Vivado ML 2023.1 (`xvlog`/`xelab`/`xsim`) — **335/335 checks
+  PASS, 0 FAIL**. Covers reset, weight load/hold, per-row diagonal skew, the
+  vertical psum cascade (row-to-row / 2-PE / 8-row), all four tile partials at
+  cycles 17/25/33/41, bottom-to-top tile feedback, tile-3 single tap, result
+  capture timing, signed 8×8 corners, 32-bit accumulation, randomized cases, all
+  8 output columns, boundary cases, multiple output rows, and multiple
+  kernels/channels.
+- **Compile/elaboration:** `xvlog -sv`/`xelab` clean (0 errors).
+
+This establishes the true spatial Weight-Stationary dataflow (Decision 10) and
+the Conv1 WS mapping (Decision 11) at array level. The controller/input-feed
+internals that realize the §9 schedule remain future work.
+
+### Systolic Array V2 Synthesis and DSP Mapping
+
+- **DSP48E2 = 64** (1/PE), **CARRY8 = 0**, **BREG=1 / MREG=1 / PREG=1** for all
+  64; AREG = 0/1/2 (activation shift-chain absorption, same mechanism as V1).
+- **DSP addend mapping (RESOLVED):** the muxed WS addend (`psum_in + product`) is
+  implemented through the DSP48E2 **C input** (OPMODE "C or P"), **not** the
+  PCIN/PCOUT cascade, because the `dataflow_mode` mux prevents PCIN/PCOUT
+  inference (confirmed in `build/dsp_probe/`: the mux-free `pe_ws` infers
+  `PCIN+(A*B)`, the muxed `pe_dual` infers `(C or P)+(A*B)`). PCIN/PCOUT is an
+  implementation detail, not a V2 functional requirement: the vertical psum
+  reduction and bottom-to-top feedback are functionally verified and timing-clean
+  regardless of which DSP input carries the addend. No PE redesign is required
+  (Decision 12).
+- **Post-route timing (200 MHz baseline):** WNS **+2.861 ns**, TNS 0 ns,
+  WHS +0.073 ns, THS 0 ns, 0 failing endpoints, no congestion above level 5,
+  0 unrouted nets. Critical path = the row-7 → row-0 tile-feedback hop via the
+  C input (2.095 ns data delay, 2 logic levels). Resources: 64 DSP48E2 / 1,032
+  LUT / 2,368 FF / 0 CARRY8 / 0 BRAM / 0 URAM.
 
 ### Synthesis and DSP48E2 Inference
 
@@ -482,6 +535,61 @@ decision, not a silent extension of the V1 PE.
 **Open V2 array-level items (not resolved by this decision):** WS weight-loading
 mechanism, WS activation delivery, WS result collection, the reconfiguration
 flush sequence, and DSP48E2 inference of the mode mux / PCIN–PCOUT cascade.
+
+### Decision 11 — V2 WS Conv1 Mapping — RESOLVED (2026-08-19)
+
+**The V2 Weight-Stationary Conv1 mapping is resolved** (see
+`docs/specs/SYSTOLIC_ARRAY_V2_SPEC.md`). The earlier idea of mapping the **6
+output channels onto PE rows 0–5** is **WITHDRAWN**: the PE-v2 vertical
+`psum_in → psum_out` cascade **sums rows**, so rows-as-channels would produce
+`Σ output[ch]` — the sum of six distinct channels, not six independent results.
+In WS mode rows must therefore represent the **reduction/tap** dimension.
+
+| Parameter | Value |
+|-----------|-------|
+| PE rows 0–7 | kernel tap / reduction dimension (8 taps per tile) |
+| PE columns 0–7 | 8 output pixels, V1 reverse-index mapping (`base − c`) |
+| Output channels | serialized — one channel per sweep (6 sweeps for Conv1) |
+| 25 taps | 4 WS tiles: 8 + 8 + 8 + 1 |
+| Within a tile | `psum_in → psum_out` performs the vertical reduction |
+| Bottom row | produces the running tile partial sum |
+| Cross-tile feedback | bottom-to-top: `PE(0,c).psum_in = PE(7,c).psum_out` |
+| Final result | bottom row (row 7), one completed output per column |
+
+**Compatibility verified:** the bottom-to-top feedback is a valid systolic ring
+(8 accumulator registers around the loop, no combinational loop) and is
+realizable with the already-verified `rtl/common/pe_v2.sv` with **no PE change**;
+`weight_load` reloads tap weights between tiles in both modes, and `accum_clear`
+is asserted once per sweep (never between tiles), mirroring V1's pass sequencing.
+The *cycle-level schedule* (V2 spec §9) and the `systolic_array_v2.sv`
+interconnect are now implemented and verified (335/335; see Decision 12).
+
+**Why this is a transposition, not a new datapath:** V1 holds channels on rows
+and serializes taps in time; V2 WS holds taps on rows and serializes channels in
+time. Columns (pixels) and the reverse index are unchanged; the V1 output-group
+shape (6 × 8 = 48 results) is preserved.
+
+### Decision 12 — V2 WS DSP Cascade Mapping (C input, not PCIN/PCOUT) — RESOLVED (2026-08-19)
+
+**The V2 WS partial-sum cascade is implemented through the DSP48E2 C input, not
+the PCIN/PCOUT cascade.** This resolves the "DSP48E2 inference of the mode mux /
+PCIN–PCOUT cascade" verification gate (`PE_SPEC.md` §13.6 #5,
+`SYSTOLIC_ARRAY_V2_SPEC.md` §10 #4).
+
+| Parameter | Value |
+|-----------|-------|
+| V2 WS dataflow | true spatial Weight-Stationary (Decisions 10–11) |
+| Vertical psum reduction + tile feedback | functionally verified (335/335 array PASS) |
+| WS addend DSP mapping | C input (OPMODE "C or P"), NOT PCIN/PCOUT |
+| Root cause | the `dataflow_mode` mux prevents PCIN/PCOUT inference (mux-free `pe_ws` infers `PCIN+(A*B)`; muxed `pe_dual` infers `(C or P)+(A*B)`) |
+| PCIN/PCOUT status | implementation detail, not a V2 functional requirement |
+| PE redesign | not required |
+
+**Why no change is made.** The `dataflow_mode` mux is the defining "reconfigurable
+dataflow" feature of PE-v2; removing it to force PCIN/PCOUT would break OS↔WS
+reconfigurability. The C-input mapping is functionally identical, synthesizes to
+64 DSP48E2 / 0 CARRY8, and closes at 200 MHz (WNS +2.861 ns). No PE-v2 or
+array-v2 redesign is warranted.
 
 ### Unresolved PE Decisions
 

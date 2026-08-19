@@ -15,8 +15,14 @@
 // §5.7/§13.4) is V1-identical. The V1 PE (rtl/common/pe.sv) is FROZEN and
 // untouched; this module is the V2 PE variant.
 //
-// DSP48E2 inference (1 DSP/PE, BREG=1, MREG=1, PREG=1, WS uses PCIN/PCOUT)
-// verified under build/dsp_probe/ (Vivado ML 2023.1, xck26-sfvc784-2LV-c).
+// DSP48E2 inference (1 DSP/PE, BREG=1, MREG=1, PREG=1) verified under
+// build/dsp_probe/ and build/v2_synth/ (Vivado ML 2023.1, xck26-sfvc784-2LV-c).
+// In WS mode the psum_in addend is implemented through the DSP48E2 C input
+// (OPMODE "C or P"), NOT the PCIN/PCOUT cascade: the dataflow_mode mux prevents
+// PCIN/PCOUT inference. This is an implementation detail only — the WS
+// accumulator behaviour (accumulator <= psum_in + product) is functionally
+// equivalent either way and is verified at array level (335/335,
+// sim/tb_systolic_array_v2.sv). PCIN/PCOUT is not a V2 functional requirement.
 //
 // Authoritative contract: docs/specs/PE_SPEC.md (V1 §5-§8, V2 §13) and
 // docs/PROJECT_STATE.md (Decision 10).
