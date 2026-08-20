@@ -8,7 +8,9 @@
 > (`rtl/common/systolic_array_v2.sv`) is implemented and functionally verified:
 > 335/335 checks PASS in `sim/tb_systolic_array_v2.sv`; 64 DSP48E2 / 0 CARRY8;
 > 200 MHz post-route WNS +2.861 ns. §10 item 4 records the resolved DSP-mapping
-> finding (the muxed WS addend maps to the C input, not PCIN/PCOUT).
+> finding (the muxed WS addend maps to the C input, not PCIN/PCOUT). The four
+> controller/input-feed decisions (§10 items 1/2/3/5) are resolved by Decision 13
+> (`docs/PROJECT_STATE.md`, 2026-08-20).
 
 ---
 
@@ -473,15 +475,18 @@ read). The only array-level consequence is that `result_request` must be driven
 
 | # | Item | Status |
 |---|------|--------|
-| 1 | WS result-collection mechanism (per-row `result_req` vs bottom-row bus) | **OPEN DECISION** — result location fixed to row 7, captured at cycle 41 (§8, §9.8) |
-| 2 | WS weight-loading mechanism (BRAM/controller sequencing to hit cycles 0/15/23/31) | **OPEN DECISION** — timing fixed by §9.3; BRAM/controller realization open |
-| 3 | Reconfiguration flush sequence (full `rst` vs lighter flush) | **OPEN DECISION** (`PE_SPEC.md` §13.6) |
+| 1 | WS result-collection mechanism (per-row `result_req` vs bottom-row bus) | **RESOLVED (2026-08-20)** — reuse the per-row `result_req`: assert `result_req[7]` (row 7) for **one cycle** at cycle 41; capture `result_out[0:7]` at cycle 42 (§8, §9.8). No dedicated bottom-row bus. Decision 13 |
+| 2 | WS weight-loading mechanism (BRAM/controller sequencing to hit cycles 0/15/23/31) | **RESOLVED (2026-08-20)** — reuse `w_in[0:7]` + the single array-wide `weight_load` at cycles 0/15/23/31 (timing fixed by §9.3); per-tap weights from a small deterministic weight store (LUTROM/register file, no BRAM). Physical memory primitive is an input-feed implementation detail. Decision 13 |
+| 3 | Reconfiguration flush sequence (full `rst` vs lighter flush) | **RESOLVED (2026-08-20)** — `accum_clear` at the group/sweep boundary (cycle 0); full `rst` is power-on only; never `accum_clear` between tiles. Decision 13 |
 | 4 | DSP48E2 inference of the mode mux / PCIN–PCOUT cascade incl. feedback | **RESOLVED (2026-08-19)** — Vivado ML 2023.1 implements the muxed WS addend through the DSP **C input** (OPMODE "C or P"), not PCIN/PCOUT. PCIN/PCOUT is an implementation detail, not a V2 functional requirement; no PE redesign required |
-| 5 | Tap flattening order (row-major vs column-major) for the 25-tap stream | **OPEN DECISION** — §9.1 uses row-major `k = 5·k_y + k_x` as a working convention; weight ROM and input-feed must agree |
+| 5 | Tap flattening order (row-major vs column-major) for the 25-tap stream | **RESOLVED (2026-08-20)** — **row-major** `k = 5·k_y + k_x` (fixed, not just a working convention); minimizes the input-feed live-row window (≤3 kernel rows per tile vs 5 for column-major). Decision 13 |
 | 6 | Group-boundary pipelining (reduce the 42-cycle/group baseline) | **NOT ADOPTED** — optimization only; the correctness-first baseline is §9.9 |
 
 **Resolved by this revision:** the exact WS cycle schedule (previously §10 item 1)
-is now specified and verified in §9.
+is now specified and verified in §9, and the four remaining controller/input-feed
+open items (1/2/3/5) are resolved by **Decision 13** (`docs/PROJECT_STATE.md`,
+2026-08-20). The only remaining work is the controller/input-feed internals that
+realize the §9 schedule; `pe_v2.sv` and `systolic_array_v2.sv` are unchanged.
 
 ---
 
@@ -501,4 +506,5 @@ is now specified and verified in §9.
 > **Status:** `systolic_array_v2.sv` is implemented and functionally verified
 > (335/335 in `sim/tb_systolic_array_v2.sv`; 64 DSP48E2 / 0 CARRY8; 200 MHz
 > post-route WNS +2.861 ns). The controller/input-feed internals that realize the
-> §9 schedule remain future work. `pe_v2.sv` is **not** modified.
+> §9 schedule remain future work (unblocked by Decision 13, 2026-08-20).
+> `pe_v2.sv` is **not** modified.

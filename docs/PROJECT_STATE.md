@@ -591,6 +591,27 @@ reconfigurability. The C-input mapping is functionally identical, synthesizes to
 64 DSP48E2 / 0 CARRY8, and closes at 200 MHz (WNS +2.861 ns). No PE-v2 or
 array-v2 redesign is warranted.
 
+### Decision 13 — V2 Controller/Input-Feed Decisions — RESOLVED (2026-08-20)
+
+The four remaining V2 array-level open items (result collection, weight loading,
+reconfiguration flush, and tap flattening) are resolved against the frozen PE-v2
+/ array-v2 interfaces and the verified 42-cycle/group schedule
+(`docs/specs/SYSTOLIC_ARRAY_V2_SPEC.md` §9). Each uses the smallest V2-compatible
+choice and adds **no new array or PE port**; no RTL is modified.
+
+| # | Item | Resolution |
+|---|------|-----------|
+| 1 | Result collection | Reuse the existing per-row `result_req`: assert `result_req[7]` (row 7) for **one cycle** at cycle 41; capture `result_out[0:7]` at cycle 42. No dedicated bottom-row bus (it would modify the frozen array-v2). |
+| 2 | Weight loading | Reuse `w_in[0:7]` + the single array-wide `weight_load` at cycles 0/15/23/31; per-tap weights from a small deterministic weight store (LUTROM/register file, ~150 weights ≈ 1.2 kb — no BRAM/URAM). The physical memory primitive is an input-feed implementation detail. |
+| 3 | Reconfiguration flush | `accum_clear` at the group/sweep boundary (cycle 0) is the reconfiguration flush; full `rst` is the power-on reset only. `accum_clear` is **never** asserted between tiles (the ring must be preserved). |
+| 4 | Tap flattening | **Row-major** `k = 5·k_y + k_x` (fixed, not just a working convention). Minimizes the input-feed's live-row window (≤3 kernel rows per tile vs 5 for column-major) and is already the verified golden-model order. |
+
+These four close `SYSTOLIC_ARRAY_V2_SPEC.md` §10 items 1/2/3/5 and `PE_SPEC.md`
+§13.6 items 1/3/4 (§13.6 item 2 was already resolved by §9.5; §13.6 item 5 by
+Decision 12). The V2 controller/input-feed RTL that realizes the §9 schedule is
+now unblocked; only its internals (activation line-buffer sizing, weight-store
+primitive) remain future work.
+
 ### Unresolved PE Decisions
 
 The following decisions block `rtl/common/pe.sv` implementation (see
@@ -668,13 +689,18 @@ arise.
 11. Systolic array RTL (`rtl/common/systolic_array.sv`) — **complete**
 12. V1 systolic-array testbench (`sim/tb_systolic_array.sv`) — **complete**
     (379/379 PASS in Vivado ML 2023.1)
-13. Input-feed / line-buffer module (separate spec + RTL) — **pending** (spec
-    unblocked by Decision 9)
+13. Input-feed / line-buffer module (separate spec + RTL) — **complete**
+    (`rtl/common/input_feed.sv` + `sim/tb_input_feed.sv` +
+    `docs/specs/INPUT_FEED_SPEC.md`; unblocked by Decision 9)
 14. Synthesis/DSP48E2 inference — **complete** (1 DSP/PE, 64/array); full
     array-level integration (controller/BRAM/input-feed) — **pending**
 15. V1 convolution mapping decision (row-decomposed 5-pass) — **complete**
     (2026-08-17); supersedes the withdrawn single-pass 2-D schedule
-16. Team A / Team B V2 extensions — **pending**
+16. Team B V2 extensions (reconfigurable dataflow: PE-v2 + systolic-array-v2) —
+    **complete** (335/335 PASS, 64 DSP48E2, 200 MHz WNS +2.861 ns); Team A V2
+    sparsity extension — **pending**
+17. V2 controller/input-feed (realizes the §9 WS schedule) — **pending**
+    (unblocked by Decision 13)
 
 ## Next Planned Work
 
@@ -691,13 +717,17 @@ arise.
 8. ~~**Systolic array implementation + array-level verification.**~~ **COMPLETE** —
    `rtl/common/systolic_array.sv` + `sim/tb_systolic_array.sv`; Vivado 2023.1
    simulation passes 379/379.
-9. Input-feed / line-buffer module specification and RTL (spec **unblocked** by
-   Decision 9).
+9. ~~**Input-feed / line-buffer module specification and RTL.**~~ **COMPLETE** —
+   `rtl/common/input_feed.sv` + `sim/tb_input_feed.sv` +
+   `docs/specs/INPUT_FEED_SPEC.md` (spec unblocked by Decision 9).
 10. ~~**Vivado synthesis and DSP48E2 inference check on the target device.**~~
     **COMPLETE** — 1 DSP48E2/PE, 64/array (`use_dsp` attribute required for 8×8).
 11. ~~**V1 convolution mapping (row-decomposed 5-pass).**~~ **COMPLETE** —
     Decision 9 recorded (2026-08-17); supersedes the withdrawn single-pass 2-D
     schedule.
+12. **V2 controller/input-feed internals** that realize the §9 WS schedule
+    (`docs/specs/SYSTOLIC_ARRAY_V2_SPEC.md` §9) — unblocked by Decision 13
+    (2026-08-20).
 
 ## Research Discipline
 

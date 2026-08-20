@@ -1155,14 +1155,15 @@ tap of `accumulator` and does not affect OS behaviour.
 ### 13.6 Open V2 Array-Level Items (not resolved in this delta)
 
 The PE-v2 contract above is complete for the PE change. The following V2
-array-level items remain open and are **not** resolved here:
+array-level items were open when this delta was written and are now **resolved**
+(no PE change is required by any of them):
 
 | # | Item | Status |
 |---|------|--------|
-| 1 | WS weight-loading mechanism | **OPEN DECISION** |
-| 2 | WS activation delivery (per-row streams vs diagonal skew) | **OPEN DECISION** |
-| 3 | WS result collection (reuse `result_req` reading row 7 vs dedicated bottom-row bus) | **OPEN DECISION** |
-| 4 | Reconfiguration flush sequence (full `rst` vs lighter flush) | **OPEN DECISION** |
+| 1 | WS weight-loading mechanism | **RESOLVED (2026-08-20)** — reuse `w_in[0:7]` + the single array-wide `weight_load` at cycles 0/15/23/31; per-tap weights from a small deterministic weight store (no BRAM/URAM). Physical memory primitive is an input-feed implementation detail. Decision 13 |
+| 2 | WS activation delivery (per-row streams vs diagonal skew) | **RESOLVED (2026-08-19)** — eight distinct per-row diagonal-skewed activation streams (`SYSTOLIC_ARRAY_V2_SPEC.md` §9.5) |
+| 3 | WS result collection (reuse `result_req` reading row 7 vs dedicated bottom-row bus) | **RESOLVED (2026-08-20)** — reuse `result_req[7]` (row 7) for one cycle at cycle 41; capture `result_out[0:7]` at cycle 42. No dedicated bottom-row bus. Decision 13 |
+| 4 | Reconfiguration flush sequence (full `rst` vs lighter flush) | **RESOLVED (2026-08-20)** — `accum_clear` at the group/sweep boundary; full `rst` is power-on only; never `accum_clear` between tiles. Decision 13 |
 | 5 | DSP48E2 inference of the mode mux / PCIN–PCOUT cascade | **RESOLVED (2026-08-19)** — Vivado ML 2023.1 implements the muxed WS addend (`psum_in`) through the DSP48E2 **C input** (OPMODE "C or P"), not PCIN/PCOUT. Functionally equivalent (array 335/335 PASS, 64 DSP48E2 / 0 CARRY8); PCIN/PCOUT is an implementation detail, not a V2 functional requirement |
 
 ---
