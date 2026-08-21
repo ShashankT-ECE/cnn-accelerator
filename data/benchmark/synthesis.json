@@ -1,0 +1,60 @@
+{
+  "label": "[POST-ROUTE SYNTHESIS ESTIMATE]",
+  "tool": "Vivado ML 2023.1",
+  "device": "xck26-sfvc784-2LV-c",
+  "top": "cnn_accelerator_v2",
+  "clock_mhz": 200.0,
+  "constraint": "create_clock -period 5.000 (OOC, register-to-register)",
+  "hardened": {
+    "wns_ns": 0.189,
+    "tns_ns": 0.0,
+    "whs_ns": 0.073,
+    "ths_ns": 0.0,
+    "pulse_width_slack_ns": 1.738,
+    "failing_endpoints": 0,
+    "lut": 9372,
+    "ff": 5795,
+    "dsp48e2": 64,
+    "carry8": 20,
+    "bram": 0,
+    "uram": 0,
+    "critical_path": "s counter -> address look-ahead -> image distributed-RAM -> stream register (11 logic levels)",
+    "max_frequency_mhz_approx": 208
+  },
+  "baseline_before_hardening": {
+    "wns_ns": 0.030,
+    "tns_ns": 0.0,
+    "whs_ns": 0.073,
+    "ths_ns": 0.0,
+    "lut": 11245,
+    "ff": 5726,
+    "dsp48e2": 67,
+    "carry8": 20,
+    "bram": 0,
+    "uram": 0,
+    "critical_path": "s counter -> per-PE control decode (routing-dominated, 74.8% route)"
+  },
+  "frozen_array_v2_only": {
+    "wns_ns": 2.861,
+    "lut": 1032,
+    "ff": 2368,
+    "dsp48e2": 64,
+    "carry8": 0,
+    "bram": 0,
+    "uram": 0,
+    "note": "OOC systolic_array_v2 alone (Decision 12); the controller consumes the margin"
+  },
+  "changes": {
+    "register_control": "accum_clear / weight_load registered at array boundary (look-ahead)",
+    "pipeline_counters": "per-cycle MAC increments registered; 32-bit accumulators add a cycle later",
+    "result_base_shifts": "ch*784 / y*28 expanded as shifts (removed 3 controller DSPs)",
+    "max_fanout": "max_fanout=16 on s counter and mode_active_r",
+    "cost": "+69 FF (pipeline registers); -3 DSP, -1873 LUT (removed controller DSP arithmetic + net effect)"
+  },
+  "notes": [
+    "WNS improved +0.030 -> +0.189 ns (6.3x margin); approx max freq 201 -> 208 MHz.",
+    "Residual critical path is the registered stream read (address look-ahead -> image dist-RAM); full 2-deep address pipelining is the remaining lever, documented in PHASE2_HARDENING.md.",
+    "DSP48E2 = 64 = 64 PE MACs (1/PE); the 3 controller address-arithmetic DSPs are eliminated.",
+    "BREG=0 for all PE MACs (mode-muxed weight path prevents DSP BREG inference; weight registered in fabric). Functional, bit-exact; documented (Decision 12 class)."
+  ]
+}

@@ -1,0 +1,103 @@
+{
+  "primary_image": {
+    "total_mac_opportunities": 156800,
+    "zero_activation_macs": 133960,
+    "executed_macs": 22840,
+    "activation_zero_fraction_pct": 85.43,
+    "skippable_positions": 60,
+    "skippable_group_fraction_pct": 53.57,
+    "skippable_macs_coarse": 73600,
+    "skippable_mac_fraction_pct": 46.94,
+    "ws_dense_cycles": 38528,
+    "ws_sparse_cycles": 18368,
+    "measured_cycle_reduction_pct": 52.33,
+    "measured_speedup": 2.098,
+    "fine_grained_max_speedup": 6.865,
+    "index": 0,
+    "label": 7
+  },
+  "subset": {
+    "n_images": 200,
+    "deterministic": "test split indices 0..N-1, no RNG"
+  },
+  "aggregate": {
+    "total_mac_opportunities": {
+      "mean": 156800.0,
+      "min": 156800.0,
+      "max": 156800.0,
+      "std": 0.0
+    },
+    "zero_activation_macs": {
+      "mean": 128961.0,
+      "min": 103200.0,
+      "max": 147600.0,
+      "std": 7841.323
+    },
+    "executed_macs": {
+      "mean": 27839.0,
+      "min": 9200.0,
+      "max": 53600.0,
+      "std": 7841.323
+    },
+    "activation_zero_fraction_pct": {
+      "mean": 82.246,
+      "min": 65.82,
+      "max": 94.13,
+      "std": 5.001
+    },
+    "skippable_positions": {
+      "mean": 48.35,
+      "min": 25.0,
+      "max": 67.0,
+      "std": 10.382
+    },
+    "skippable_group_fraction_pct": {
+      "mean": 43.17,
+      "min": 22.32,
+      "max": 59.82,
+      "std": 9.269
+    },
+    "skippable_macs_coarse": {
+      "mean": 58104.0,
+      "min": 30400.0,
+      "max": 84800.0,
+      "std": 13535.922
+    },
+    "skippable_mac_fraction_pct": {
+      "mean": 37.056,
+      "min": 19.39,
+      "max": 54.08,
+      "std": 8.633
+    },
+    "ws_dense_cycles": {
+      "mean": 38528.0,
+      "min": 38528.0,
+      "max": 38528.0,
+      "std": 0.0
+    },
+    "ws_sparse_cycles": {
+      "mean": 22282.4,
+      "min": 16016.0,
+      "max": 30128.0,
+      "std": 3488.378
+    },
+    "measured_cycle_reduction_pct": {
+      "mean": 42.166,
+      "min": 21.8,
+      "max": 58.43,
+      "std": 9.054
+    },
+    "measured_speedup": {
+      "mean": 1.774,
+      "min": 1.279,
+      "max": 2.406,
+      "std": 0.289
+    },
+    "fine_grained_max_speedup": {
+      "mean": 6.219,
+      "min": 2.925,
+      "max": 17.043,
+      "std": 2.273
+    }
+  }
+}

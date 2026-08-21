@@ -1,0 +1,20 @@
+{
+  "labels": "[SIMULATION] cycle counts; WS dense is [ANALYTICAL] no-skip bound",
+  "os_dense": {
+    "cycles": 9184,
+    "mac_compute_cycles": 2800,
+    "result_drain_cycles": 1792,
+    "leadin_and_clear_cycles": 4592,
+    "channel_sweep_overhead": 0,
+    "reconfig_overhead": 0
+  },
+  "ws_dense": {
+    "cycles": 38528,
+    "channel_sweep_factor": 8,
+    "per_group_cycles": 43,
+    "groups": 896,
+    "note": "8x channel serialization vs OS; shorter group (43 vs 82) recovers ~1.9x"
+  },
+  "ratio_os_vs_ws": 4.195,
+  "mechanism": "OS holds all 8 channels on 8 PE rows (parallel); WS serializes channels (8 sweeps). WS's shorter group (43 vs 82) recovers ~1.9x, net ~4.2x slower."
+}

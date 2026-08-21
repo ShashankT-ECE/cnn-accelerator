@@ -22,6 +22,61 @@ Conv1 convolution mapping is resolved as a **row-decomposed 5-pass** schedule
 input-feed/line-buffer specification is now unblocked; full array-level
 integration (controller/BRAM/input-feed wiring) remains future work.
 
+The V2 reconfigurable-dataflow systolic array (true spatial Weight-Stationary)
+is also implemented and verified: `rtl/common/systolic_array_v2.sv` passes
+335/335 checks in `sim/tb_systolic_array_v2.sv`, synthesizes to 64 DSP48E2 /
+0 CARRY8, and closes timing at 200 MHz with post-route WNS +2.861 ns. Vivado
+implements the muxed WS addend through the DSP C input (not PCIN/PCOUT) — see
+Decision 12.
+
+### Phase 2 Research Accelerator — COMPLETE (2026-08-21)
+
+The Phase 2 research accelerator (`rtl/common/cnn_accelerator_v2.sv`) is
+implemented and verified against the real MNIST-12 Conv1 (SAME-padded, OC=8)
+golden model. It wraps the FROZEN V2 datapath (`systolic_array_v2.sv` /
+`pe_v2.sv`, unchanged) with new integration logic providing:
+
+- **Runtime OS/WS reconfiguration** on one datapath (Decision 14): 0=OS, 1=WS;
+  mode_commit only in IDLE; 8-cycle flush; verified OS→WS and WS→OS bit-exact
+  with no reset. OS = 9,184 cycles; WS dense = 38,528 cycles.
+- **SAME padding** (zero injection for OOB rows/cols — fixes the Phase-1 clamp
+  bug) and **OC=8** (all 8 PE rows in OS; 8 channel sweeps in WS).
+- **Genuine coarse zero-skip** (Decision 16): a 5×12 all-zero activation window
+  skips the whole WS group. Measured on real MNIST: 85.43% of MACs have zero
+  activation; WS drops 38,528 → 18,368 cycles (2.10×). The frozen array's
+  array-wide `zero_skip` is tied 0 (per-MAC gating is unsafe — gates the
+  *shifted* product) and documented as a limitation.
+- Exact `skipped/executed/total` MAC counters (156,800 / 133,960 / 22,840).
+
+Integration testbench `sim/tb_cnn_accelerator_v2.sv` passes **75,305/75,305**
+checks (OS/WS bit-exact vs golden, reconfiguration, padding boundaries, OC=8,
+sparsity counters, mode interlock). Synthesis/implementation and timing are
+recorded in `docs/PHASE2_SYNTHESIS.md`.
+
+### Phase 2 Hardening — COMPLETE (2026-08-21)
+
+The paper-readiness hardening milestone is complete and recorded in
+`docs/PHASE2_HARDENING.md` (machine-readable artifacts in `data/benchmark/`).
+All changes are localized to the Phase-2 controller (`cnn_accelerator_v2.sv`);
+**no frozen module changed** and results remain bit-exact (75,305/75,305,
+OS 9,184 / WS 18,368 cycles, counters 133,960/22,840/156,800 unchanged).
+
+- **Timing:** WNS **+0.030 → +0.189 ns** @ 200 MHz (6.3× margin, ~208 MHz max)
+  by registering `accum_clear`/`weight_load` at the array boundary, pipelining
+  the MAC/cycle counters, expanding `result_base` as shifts (removes 3
+  controller DSPs), and `max_fanout` on `s`/`mode_active_r`. Resources: LUT
+  11,245→9,372, FF 5,726→5,795, DSP 67→64, CARRY8 20.
+- **Fair OS/WS comparison:** OS 9,184 vs WS no-skip 38,528 = 4.195×; mechanism
+  is WS channel serialization (8×) vs OS channel parallelism on rows.
+- **Sparsity accounting:** 85.43% zero activations → 46.94% skippable MACs →
+  52.33% cycle reduction → 2.10× (single image), 1.77× mean over 200 images.
+  `zero_skip` per-MAC gating remains tied 0 (unsafe on the frozen array); the
+  genuine mechanism is the coarse WS zero-group skip.
+- **Accuracy:** FP32 == INT8 == 98.90% (0 flips, SQNR 46.44 dB, 0 clipping) on
+  the full 10k test set; checkpoint SHA-256 pinned in `data/vectors/manifest.json`.
+- **Reconfiguration:** 8-cycle flush (40 ns @ 200 MHz); OS→WS→OS and WS→OS→WS
+  bit-exact, no reset.
+
 ## Verified Development Environment
 
 - Host OS: Ubuntu 22.04.5 LTS 64-bit
@@ -128,6 +183,52 @@ The V1 systolic array is implemented and functionally verified:
 
 The input-feed/line-buffer module is the next major module; full array-level
 integration (controller/BRAM/input-feed wiring) remains future work.
+
+### Systolic Array V2 Implementation and Verification
+
+The V2 reconfigurable-dataflow systolic array (true spatial Weight-Stationary,
+Decisions 10–11) is implemented and functionally verified:
+
+- **RTL:** `rtl/common/systolic_array_v2.sv` — an 8×8 grid of 64 PE-v2 instances
+  (`rtl/common/pe_v2.sv`) with the V1-identical activation shift chain, an
+  explicit vertical `psum_in`/`psum_out` cascade, always-on bottom-to-top tile
+  feedback (`psum_in[0][c] = psum_out[7][c]`), per-row weight broadcast, and a
+  per-row (transposed) result drain that reads row 7. `dataflow_mode`/`zero_skip`
+  are array-wide fan-out inputs; no FSM/controller/BRAM is instantiated.
+- **Testbench:** `sim/tb_systolic_array_v2.sv` — self-checking, non-UVM, with an
+  independent 5×5 valid-convolution golden model (never derived from the V2
+  schedule / PE geometry / tile counters).
+- **Simulation:** Vivado ML 2023.1 (`xvlog`/`xelab`/`xsim`) — **335/335 checks
+  PASS, 0 FAIL**. Covers reset, weight load/hold, per-row diagonal skew, the
+  vertical psum cascade (row-to-row / 2-PE / 8-row), all four tile partials at
+  cycles 17/25/33/41, bottom-to-top tile feedback, tile-3 single tap, result
+  capture timing, signed 8×8 corners, 32-bit accumulation, randomized cases, all
+  8 output columns, boundary cases, multiple output rows, and multiple
+  kernels/channels.
+- **Compile/elaboration:** `xvlog -sv`/`xelab` clean (0 errors).
+
+This establishes the true spatial Weight-Stationary dataflow (Decision 10) and
+the Conv1 WS mapping (Decision 11) at array level. The controller/input-feed
+internals that realize the §9 schedule remain future work.
+
+### Systolic Array V2 Synthesis and DSP Mapping
+
+- **DSP48E2 = 64** (1/PE), **CARRY8 = 0**, **BREG=1 / MREG=1 / PREG=1** for all
+  64; AREG = 0/1/2 (activation shift-chain absorption, same mechanism as V1).
+- **DSP addend mapping (RESOLVED):** the muxed WS addend (`psum_in + product`) is
+  implemented through the DSP48E2 **C input** (OPMODE "C or P"), **not** the
+  PCIN/PCOUT cascade, because the `dataflow_mode` mux prevents PCIN/PCOUT
+  inference (confirmed in `build/dsp_probe/`: the mux-free `pe_ws` infers
+  `PCIN+(A*B)`, the muxed `pe_dual` infers `(C or P)+(A*B)`). PCIN/PCOUT is an
+  implementation detail, not a V2 functional requirement: the vertical psum
+  reduction and bottom-to-top feedback are functionally verified and timing-clean
+  regardless of which DSP input carries the addend. No PE redesign is required
+  (Decision 12).
+- **Post-route timing (200 MHz baseline):** WNS **+2.861 ns**, TNS 0 ns,
+  WHS +0.073 ns, THS 0 ns, 0 failing endpoints, no congestion above level 5,
+  0 unrouted nets. Critical path = the row-7 → row-0 tile-feedback hop via the
+  C input (2.095 ns data delay, 2 logic levels). Resources: 64 DSP48E2 / 1,032
+  LUT / 2,368 FF / 0 CARRY8 / 0 BRAM / 0 URAM.
 
 ### Synthesis and DSP48E2 Inference
 
@@ -444,6 +545,160 @@ physical line-buffer size.
 **Rationale:** reuses the already-verified 1-D array behaviour directly; changes
 only the controller/weight/activation schedule; no PE or array RTL change.
 
+### Decision 10 — V2 Reconfigurable Dataflow (True Spatial Weight-Stationary) — RESOLVED (2026-08-18)
+
+**V2's reconfigurable-dataflow mode is true spatial Weight-Stationary (WS).**
+PE-v2 adds the partial-sum cascade ports required to implement it, and the V1
+RTL is frozen and untouched.
+
+| Parameter | Value |
+|-----------|-------|
+| V2 WS dataflow | weights held in PEs + activation shift + vertical `psum_in`/`psum_out` cascade |
+| Cross-tile reduction | bottom-to-top tile feedback (per-column feedback registers + row-0 mux) |
+| PE-v2 added ports | `psum_in[31:0]` (input), `psum_out[31:0]` (output), `dataflow_mode` (input) |
+| WS accumulator | `accumulator <= psum_in + product` (pass-through) |
+| OS accumulator | `accumulator <= accumulator + product` (V1-identical) |
+| Control priority | unchanged (`PE_SPEC.md` §5.7) |
+| OS mode | behaviourally equivalent to V1 (`dataflow_mode = 0`) |
+
+**V1 RTL frozen.** `rtl/common/pe.sv`, `rtl/common/systolic_array.sv`,
+`rtl/common/input_feed.sv`, and the V1 testbenches (`sim/tb_pe.sv`,
+`sim/tb_systolic_array.sv`, `sim/tb_input_feed.sv`) are **frozen and are not to
+be modified** for V2. V2 introduces a new PE variant (PE-v2) and array-v2 rather
+than editing the V1 modules.
+
+**Why this supersedes the roadmap wording.** The roadmap §3.2 describes V2
+"Mode 0 Weight Stationary" as "weights held, activations shift" with no partial
+sums. Taken literally that computes `w × Σ activations`, which is not a
+convolution (the same error withdrawn in Decision 9 / `SYSTOLIC_ARRAY_SPEC.md`
+§20.4). True spatial WS requires the partial-sum cascade that Decision 7
+deferred. PE-v2 adds the minimum ports so the array can reduce a 1-D dot product
+across the vertical cascade and, via bottom-to-top tile feedback, deeper
+reductions (e.g. Conv1's 25 taps across 4 tiles of ≤8). This is an explicit
+decision, not a silent extension of the V1 PE.
+
+**Contract.** The PE-v2 port list and accumulator semantics are specified in
+`docs/specs/PE_SPEC.md` §13.
+
+**Open V2 array-level items (not resolved by this decision):** WS weight-loading
+mechanism, WS activation delivery, WS result collection, the reconfiguration
+flush sequence, and DSP48E2 inference of the mode mux / PCIN–PCOUT cascade.
+
+### Decision 11 — V2 WS Conv1 Mapping — RESOLVED (2026-08-19)
+
+**The V2 Weight-Stationary Conv1 mapping is resolved** (see
+`docs/specs/SYSTOLIC_ARRAY_V2_SPEC.md`). The earlier idea of mapping the **6
+output channels onto PE rows 0–5** is **WITHDRAWN**: the PE-v2 vertical
+`psum_in → psum_out` cascade **sums rows**, so rows-as-channels would produce
+`Σ output[ch]` — the sum of six distinct channels, not six independent results.
+In WS mode rows must therefore represent the **reduction/tap** dimension.
+
+| Parameter | Value |
+|-----------|-------|
+| PE rows 0–7 | kernel tap / reduction dimension (8 taps per tile) |
+| PE columns 0–7 | 8 output pixels, V1 reverse-index mapping (`base − c`) |
+| Output channels | serialized — one channel per sweep (6 sweeps for Conv1) |
+| 25 taps | 4 WS tiles: 8 + 8 + 8 + 1 |
+| Within a tile | `psum_in → psum_out` performs the vertical reduction |
+| Bottom row | produces the running tile partial sum |
+| Cross-tile feedback | bottom-to-top: `PE(0,c).psum_in = PE(7,c).psum_out` |
+| Final result | bottom row (row 7), one completed output per column |
+
+**Compatibility verified:** the bottom-to-top feedback is a valid systolic ring
+(8 accumulator registers around the loop, no combinational loop) and is
+realizable with the already-verified `rtl/common/pe_v2.sv` with **no PE change**;
+`weight_load` reloads tap weights between tiles in both modes, and `accum_clear`
+is asserted once per sweep (never between tiles), mirroring V1's pass sequencing.
+The *cycle-level schedule* (V2 spec §9) and the `systolic_array_v2.sv`
+interconnect are now implemented and verified (335/335; see Decision 12).
+
+**Why this is a transposition, not a new datapath:** V1 holds channels on rows
+and serializes taps in time; V2 WS holds taps on rows and serializes channels in
+time. Columns (pixels) and the reverse index are unchanged; the V1 output-group
+shape (6 × 8 = 48 results) is preserved.
+
+### Decision 12 — V2 WS DSP Cascade Mapping (C input, not PCIN/PCOUT) — RESOLVED (2026-08-19)
+
+**The V2 WS partial-sum cascade is implemented through the DSP48E2 C input, not
+the PCIN/PCOUT cascade.** This resolves the "DSP48E2 inference of the mode mux /
+PCIN–PCOUT cascade" verification gate (`PE_SPEC.md` §13.6 #5,
+`SYSTOLIC_ARRAY_V2_SPEC.md` §10 #4).
+
+| Parameter | Value |
+|-----------|-------|
+| V2 WS dataflow | true spatial Weight-Stationary (Decisions 10–11) |
+| Vertical psum reduction + tile feedback | functionally verified (335/335 array PASS) |
+| WS addend DSP mapping | C input (OPMODE "C or P"), NOT PCIN/PCOUT |
+| Root cause | the `dataflow_mode` mux prevents PCIN/PCOUT inference (mux-free `pe_ws` infers `PCIN+(A*B)`; muxed `pe_dual` infers `(C or P)+(A*B)`) |
+| PCIN/PCOUT status | implementation detail, not a V2 functional requirement |
+| PE redesign | not required |
+
+**Why no change is made.** The `dataflow_mode` mux is the defining "reconfigurable
+dataflow" feature of PE-v2; removing it to force PCIN/PCOUT would break OS↔WS
+reconfigurability. The C-input mapping is functionally identical, synthesizes to
+64 DSP48E2 / 0 CARRY8, and closes at 200 MHz (WNS +2.861 ns). No PE-v2 or
+array-v2 redesign is warranted.
+
+### Decision 13 — V2 Controller/Input-Feed Decisions — RESOLVED (2026-08-20)
+
+The four remaining V2 array-level open items (result collection, weight loading,
+reconfiguration flush, and tap flattening) are resolved against the frozen PE-v2
+/ array-v2 interfaces and the verified 42-cycle/group schedule
+(`docs/specs/SYSTOLIC_ARRAY_V2_SPEC.md` §9). Each uses the smallest V2-compatible
+choice and adds **no new array or PE port**; no RTL is modified.
+
+| # | Item | Resolution |
+|---|------|-----------|
+| 1 | Result collection | Reuse the existing per-row `result_req`: assert `result_req[7]` (row 7) for **one cycle** at cycle 41; capture `result_out[0:7]` at cycle 42. No dedicated bottom-row bus (it would modify the frozen array-v2). |
+| 2 | Weight loading | Reuse `w_in[0:7]` + the single array-wide `weight_load` at cycles 0/15/23/31; per-tap weights from a small deterministic weight store (LUTROM/register file, ~150 weights ≈ 1.2 kb — no BRAM/URAM). The physical memory primitive is an input-feed implementation detail. |
+| 3 | Reconfiguration flush | `accum_clear` at the group/sweep boundary (cycle 0) is the reconfiguration flush; full `rst` is the power-on reset only. `accum_clear` is **never** asserted between tiles (the ring must be preserved). |
+| 4 | Tap flattening | **Row-major** `k = 5·k_y + k_x` (fixed, not just a working convention). Minimizes the input-feed's live-row window (≤3 kernel rows per tile vs 5 for column-major) and is already the verified golden-model order. |
+
+These four close `SYSTOLIC_ARRAY_V2_SPEC.md` §10 items 1/2/3/5 and `PE_SPEC.md`
+§13.6 items 1/3/4 (§13.6 item 2 was already resolved by §9.5; §13.6 item 5 by
+Decision 12). The V2 controller/input-feed RTL that realizes the §9 schedule is
+now unblocked; only its internals (activation line-buffer sizing, weight-store
+primitive) remain future work.
+
+### Decision 14 — Phase 2 Controller Architecture — RESOLVED (2026-08-21)
+
+**The Phase 2 research accelerator is a single new integration module
+(`rtl/common/cnn_accelerator_v2.sv`) driving the frozen `systolic_array_v2` in
+both OS and WS modes, with SAME padding and OC=8.** No frozen module is
+modified.
+
+| Parameter | Value |
+|---|---|
+| Dataflow select | `dataflow_mode` (0=OS, 1=WS), latched to `mode_active` |
+| Mode switch | `mode_commit` honoured only in IDLE; 8-cycle flush (`accum_clear` + 7-cycle shift-chain drain); no `rst` |
+| OS mapping | rows = 8 output channels; 5-pass row-decomposed (Decision 9); 82 cyc/group × 112 groups = 9,184 cycles |
+| WS mapping | rows = 8 taps/tile, 4 tiles; channels serialized (8 sweeps); 43 cyc/group × 896 groups = 38,528 cycles |
+| Padding | zero injection via `row_ok`/`col_ok` predicate on the stream address (`-2` row/col offset) |
+| OC=8 / 28×28 | 4 groups/row; `base = 7,15,23,31`; last group partial (4 valid pixels) |
+| Result index | flat leftmost-pixel index `ch*784 + y*28 + (base-7)` (unambiguous for `base=31`) |
+
+### Decision 15 — Result Encoding — RESOLVED (2026-08-21)
+
+The result word carries `result_base = ch*784 + y*28 + (base-7)` (the group's
+**leftmost** pixel flat index). A naive rightmost encoding
+(`… + base`, `base=31`) overflows into the next row and is ambiguous; the
+leftmost encoding (`base-7 ∈ {0,8,16,24}`) never overflows.
+
+### Decision 16 — Sparsity Mechanism — RESOLVED (2026-08-21)
+
+The frozen array's `zero_skip` is **array-wide** and gates the **product**
+register, which samples the **shifted** activation (`act_delayed`), not the fed
+stream. Gating it on the fed stream (`act_out==0`) zeroes legitimate in-flight
+products (verified: sparse MNIST fails bit-exact). Therefore:
+
+| Parameter | Value |
+|---|---|
+| `zero_skip` | tied to 0 (per-MAC gating unsafe on frozen array — documented) |
+| Genuine mechanism | **coarse zero-group skip**: skip a WS group whose 5×12 activation window is all-zero (detected via a 784-bit non-zero mask maintained on image write) |
+| Measured MNIST | 85.43% zero-activation MACs; 60/112 positions all-zero; WS 38,528 → 18,368 cycles (2.10×) |
+| Counters | `total_macs`=156,800, `skipped_macs`=133,960, `executed_macs`=22,840, `cycle_count`, `zero_skip_cycles` |
+| Rejected | fine-grained compaction (breaks fixed systolic timing) |
+
 ### Unresolved PE Decisions
 
 The following decisions block `rtl/common/pe.sv` implementation (see
@@ -469,9 +724,12 @@ These are **not** finalized:
   (weight-broadcast + activation-shift + local accumulation), no sparsity
   (Decision 7).
 - **True spatial Weight-Stationary** (partial-sum cascade, `psum_in`/`psum_out`)
-  is deferred to V2 / PE v1.1.
+  is the V2 reconfigurable-dataflow mode — **DECIDED (Decision 10, 2026-08-18)**,
+  superseding the earlier "deferred to V2 / PE v1.1" status. PE-v2 adds
+  `psum_in`/`psum_out`/`dataflow_mode`.
 - **Team B reconfigurable dataflow** (per-layer WS/OS mode switching) is a V2
-  extension; its Weight-Stationary mode requires the deferred psum cascade.
+  extension; its Weight-Stationary mode uses the psum cascade defined by
+  Decision 10.
 - **Team A sparsity** is a V2 extension. The V1 PE has the `zero_skip`
   port, but its functional connection to the Sparsity Manager is a V2
   Team A concern.
@@ -518,13 +776,18 @@ arise.
 11. Systolic array RTL (`rtl/common/systolic_array.sv`) — **complete**
 12. V1 systolic-array testbench (`sim/tb_systolic_array.sv`) — **complete**
     (379/379 PASS in Vivado ML 2023.1)
-13. Input-feed / line-buffer module (separate spec + RTL) — **pending** (spec
-    unblocked by Decision 9)
+13. Input-feed / line-buffer module (separate spec + RTL) — **complete**
+    (`rtl/common/input_feed.sv` + `sim/tb_input_feed.sv` +
+    `docs/specs/INPUT_FEED_SPEC.md`; unblocked by Decision 9)
 14. Synthesis/DSP48E2 inference — **complete** (1 DSP/PE, 64/array); full
     array-level integration (controller/BRAM/input-feed) — **pending**
 15. V1 convolution mapping decision (row-decomposed 5-pass) — **complete**
     (2026-08-17); supersedes the withdrawn single-pass 2-D schedule
-16. Team A / Team B V2 extensions — **pending**
+16. Team B V2 extensions (reconfigurable dataflow: PE-v2 + systolic-array-v2) —
+    **complete** (335/335 PASS, 64 DSP48E2, 200 MHz WNS +2.861 ns); Team A V2
+    sparsity extension — **pending**
+17. V2 controller/input-feed (realizes the §9 WS schedule) — **pending**
+    (unblocked by Decision 13)
 
 ## Next Planned Work
 
@@ -541,13 +804,17 @@ arise.
 8. ~~**Systolic array implementation + array-level verification.**~~ **COMPLETE** —
    `rtl/common/systolic_array.sv` + `sim/tb_systolic_array.sv`; Vivado 2023.1
    simulation passes 379/379.
-9. Input-feed / line-buffer module specification and RTL (spec **unblocked** by
-   Decision 9).
+9. ~~**Input-feed / line-buffer module specification and RTL.**~~ **COMPLETE** —
+   `rtl/common/input_feed.sv` + `sim/tb_input_feed.sv` +
+   `docs/specs/INPUT_FEED_SPEC.md` (spec unblocked by Decision 9).
 10. ~~**Vivado synthesis and DSP48E2 inference check on the target device.**~~
     **COMPLETE** — 1 DSP48E2/PE, 64/array (`use_dsp` attribute required for 8×8).
 11. ~~**V1 convolution mapping (row-decomposed 5-pass).**~~ **COMPLETE** —
     Decision 9 recorded (2026-08-17); supersedes the withdrawn single-pass 2-D
     schedule.
+12. **V2 controller/input-feed internals** that realize the §9 WS schedule
+    (`docs/specs/SYSTOLIC_ARRAY_V2_SPEC.md` §9) — unblocked by Decision 13
+    (2026-08-20).
 
 ## Research Discipline
 

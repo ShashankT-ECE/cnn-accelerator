@@ -1,0 +1,18 @@
+{
+  "flush_cycles": 8,
+  "mode_switch_cycles": 8,
+  "first_valid_result_after_switch_cycles": {
+    "os_to_ws": 50,
+    "ws_to_os": 75,
+    "note": "first valid result of the new mode after start; the WS first group of a sparse image emits zeros at s=0 (skip) instead of s=42"
+  },
+  "total_transition_latency_cycles": 8,
+  "total_transition_latency_ns": 40.0,
+  "bit_exact": {
+    "os_to_ws": "verified (no reset)",
+    "ws_to_os": "verified (no reset)",
+    "os_to_ws_to_os": "verified (no reset)",
+    "ws_to_os_to_ws": "verified (no reset)"
+  },
+  "provenance": "[SIMULATION] tb_cnn_accelerator_v2.sv T3/T4; flush is flush_cnt 0..7 in cnn_accelerator_v2.sv"
+}

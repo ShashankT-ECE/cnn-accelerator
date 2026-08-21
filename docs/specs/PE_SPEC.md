@@ -1076,6 +1076,98 @@ All §12.1 decisions are RESOLVED. Before `pe.sv` is written:
 
 ---
 
+## 13. PE-v2 Specification Delta (V2 Reconfigurable Dataflow)
+
+> **Status:** RESOLVED — interface and WS accumulator semantics recorded as
+> **Decision 10** (`docs/PROJECT_STATE.md`, 2026-08-18). This is the PE change
+> required for Team B's V2 reconfigurable-dataflow mode. It does **not** modify
+> the V1 PE: `rtl/common/pe.sv` and `sim/tb_pe.sv` remain frozen and untouched.
+
+### 13.1 Scope
+
+PE-v2 is a **superset** of the V1 PE. The V1 contract (§5–§8, Decisions 1–6) is
+unchanged. The V2 dataflow is **true spatial Weight-Stationary** (Decision 10):
+weights held in PEs, activations shift, partial sums cascade vertically. PE-v2
+adds exactly **three ports and one mux**; the weight, product, result, and
+activation-forwarding blocks are V1-identical.
+
+This supersedes the roadmap's §3.2/§5.6 wording that named
+`wgt_out`/`shift_enable`/`load_enable`/`accumulate_enable` as the V2 PE hooks:
+Decision 10 defines the actual V2 PE change as
+`psum_in`/`psum_out`/`dataflow_mode`. §11.10/§11.11 remain historical/roadmap
+context only.
+
+### 13.2 Added Ports
+
+| Signal | Direction | Width | Status |
+|--------|-----------|-------|--------|
+| `psum_in` | input | 32 | **DECISION** (Decision 10) — WS cascade addend; ignored in OS mode |
+| `psum_out` | output | 32 | **DECISION** (Decision 10) — registered accumulator value (`= accumulator`) |
+| `dataflow_mode` | input | 1 | **DECISION** (Decision 10) — `0` = OS (V1), `1` = WS |
+
+Note: the internal `dataflow_mode` encoding (`0`=OS, `1`=WS) is a PE-level
+convention chosen so that the reset default (`0`) yields V1 OS behaviour. Its
+mapping to the ARM-visible `DATAFLOW_MODE` register (roadmap §3.2 encodes
+`0`=WS, `1`=OS) is deferred to the register-map definition and is not resolved
+here.
+
+### 13.3 Accumulator Semantics (WS vs OS)
+
+**DECISION** — `dataflow_mode` selects only the accumulator addend source:
+
+```systemverilog
+assign psum_out = accumulator;
+
+always_ff @(posedge clk) begin
+    if (rst)                 accumulator <= '0;
+    else if (accum_clear)    accumulator <= '0;
+    else if (dataflow_mode)  accumulator <= psum_in + product;   // WS: cascade
+    else                     accumulator <= accumulator + product; // OS: hold (V1)
+end
+```
+
+- **OS (`dataflow_mode = 0`):** `accumulator <= accumulator + product` —
+  bit-identical to the V1 accumulator block. `psum_in` is ignored.
+- **WS (`dataflow_mode = 1`):** `accumulator <= psum_in + product` — the
+  accumulator register is reused as a partial-sum pass-through; `psum_out`
+  feeds the PE below.
+- `rst` and `accum_clear` clear `accumulator` (and `product`) in both modes,
+  independent of `dataflow_mode`.
+- `zero_skip` still zeroes `product` (§5.3/§9), so in WS a skipped MAC passes
+  `psum_in + 0` through unchanged — no new gating.
+
+### 13.4 Control Priority
+
+**DECISION** — The V1 control priority (§5.7) is **unchanged**:
+`rst` > `weight_load` > `accum_clear` > `result_request` > `zero_skip` > MAC.
+`dataflow_mode` is a static configuration input, stable throughout a layer's
+COMPUTE phase; it is not a per-cycle control and only selects the accumulator
+addend source. `rst`/`accum_clear` override it in both modes.
+
+### 13.5 OS Equivalence Requirement
+
+**REQUIREMENT** — PE-v2 in OS mode must be behaviourally equivalent to the V1
+PE. Acceptance criterion: the frozen `sim/tb_pe.sv` (55/55) and
+`sim/tb_systolic_array.sv` (379/379) pass unchanged against PE-v2 (and
+array-v2) with `dataflow_mode = 0` and `psum_in = 0`. `psum_out` is a passive
+tap of `accumulator` and does not affect OS behaviour.
+
+### 13.6 Open V2 Array-Level Items (not resolved in this delta)
+
+The PE-v2 contract above is complete for the PE change. The following V2
+array-level items were open when this delta was written and are now **resolved**
+(no PE change is required by any of them):
+
+| # | Item | Status |
+|---|------|--------|
+| 1 | WS weight-loading mechanism | **RESOLVED (2026-08-20)** — reuse `w_in[0:7]` + the single array-wide `weight_load` at cycles 0/15/23/31; per-tap weights from a small deterministic weight store (no BRAM/URAM). Physical memory primitive is an input-feed implementation detail. Decision 13 |
+| 2 | WS activation delivery (per-row streams vs diagonal skew) | **RESOLVED (2026-08-19)** — eight distinct per-row diagonal-skewed activation streams (`SYSTOLIC_ARRAY_V2_SPEC.md` §9.5) |
+| 3 | WS result collection (reuse `result_req` reading row 7 vs dedicated bottom-row bus) | **RESOLVED (2026-08-20)** — reuse `result_req[7]` (row 7) for one cycle at cycle 41; capture `result_out[0:7]` at cycle 42. No dedicated bottom-row bus. Decision 13 |
+| 4 | Reconfiguration flush sequence (full `rst` vs lighter flush) | **RESOLVED (2026-08-20)** — `accum_clear` at the group/sweep boundary; full `rst` is power-on only; never `accum_clear` between tiles. Decision 13 |
+| 5 | DSP48E2 inference of the mode mux / PCIN–PCOUT cascade | **RESOLVED (2026-08-19)** — Vivado ML 2023.1 implements the muxed WS addend (`psum_in`) through the DSP48E2 **C input** (OPMODE "C or P"), not PCIN/PCOUT. Functionally equivalent (array 335/335 PASS, 64 DSP48E2 / 0 CARRY8); PCIN/PCOUT is an implementation detail, not a V2 functional requirement |
+
+---
+
 ## Appendix A: References
 
 | Reference | Description |
