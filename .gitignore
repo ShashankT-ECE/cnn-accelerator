@@ -14,6 +14,11 @@ __pycache__/
 
 graphify-out/
 
+# Downloaded raw datasets (large; regenerable via torchvision.datasets.MNIST).
+# Checkpoints and generated vectors under data/checkpoint and data/vectors ARE
+# committed (small, and required for a clean-clone reproduction).
+/data/raw/
+
 xelab.pb
 xvlog.pb
 

@@ -1,0 +1,75 @@
+{
+  "experiment": "Phase 2 \u2014 runtime OS/WS reconfiguration + sparsity on real MNIST Conv1",
+  "layer": {
+    "in": "28x28x1",
+    "kernel": "5x5",
+    "pad": "SAME_UPPER pad=2",
+    "out": "28x28x8",
+    "macs": 156800
+  },
+  "sparsity": {
+    "total_mac_opportunities": 156800,
+    "zero_activation_macs": 133960,
+    "executed_macs": 22840,
+    "skip_percent": 85.43,
+    "note": "zero-activation = activation operand == 0 (incl. SAME padding zeros)"
+  },
+  "experiments": [
+    {
+      "id": "os_dense",
+      "mode": "OS",
+      "sparse": false,
+      "cycles": 9184,
+      "latency_us": 45.92,
+      "sustained_mac_per_cycle": 17.07,
+      "sustained_GOPS": 6.83
+    },
+    {
+      "id": "ws_dense",
+      "mode": "WS",
+      "sparse": false,
+      "cycles": 38528,
+      "latency_us": 192.64,
+      "sustained_mac_per_cycle": 4.07,
+      "sustained_GOPS": 1.63,
+      "provenance": "[ANALYTICAL] no-skip bound (896 groups x 43): the coarse zero-skip is always-on in WS mode, so this is not measured on a sparse input"
+    },
+    {
+      "id": "ws_sparse",
+      "mode": "WS",
+      "sparse": true,
+      "cycles": 18368,
+      "latency_us": 91.84,
+      "sustained_mac_per_cycle": 8.54,
+      "sustained_GOPS": 3.41,
+      "speedup_vs_ws_dense": 2.098,
+      "skip_method": "coarse zero-group skip (60/112 output positions all-zero)"
+    }
+  ],
+  "reconfiguration": {
+    "flush_cycles": 8,
+    "os_to_ws": "verified bit-exact (no reset)",
+    "ws_to_os": "verified bit-exact (no reset)",
+    "mode_switch_latency_cycles": 8,
+    "mode_switch_latency_ns": 40.0
+  },
+  "synthesis": {
+    "label": "[POST-ROUTE SYNTHESIS ESTIMATE]",
+    "device": "xck26-sfvc784-2LV-c",
+    "tool": "Vivado ML 2023.1",
+    "clock_mhz": 200.0,
+    "wns_ns": 0.189,
+    "tns_ns": 0.0,
+    "whs_ns": 0.073,
+    "ths_ns": 0.0,
+    "lut": 9372,
+    "ff": 5795,
+    "dsp48e2": 64,
+    "carry8": 20,
+    "bram": 0,
+    "uram": 0,
+    "critical_path": "s counter -> address look-ahead -> image dist-RAM -> stream reg",
+    "note": "HARDENED: WNS +0.030 -> +0.189 ns (6.3x); -3 DSP, -1873 LUT; ~208 MHz max"
+  },
+  "labels": "all figures [SIMULATION] except where marked; no fabricated speedup"
+}

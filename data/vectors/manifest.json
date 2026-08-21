@@ -1,0 +1,117 @@
+{
+  "experiment": "Phase 1 \u2014 INT8 golden pipeline for ONNX MNIST-12 Conv1",
+  "cnn": {
+    "name": "LeNet-5 variant (CNTK 103D), ONNX Model Zoo 'MNIST-12'",
+    "checkpoint": "data/checkpoint/mnist-12.onnx",
+    "source_url": "https://github.com/onnx/models/tree/main/validated/vision/classification/mnist",
+    "license": "MIT",
+    "sha256": "5c688690f8bacf667d4c2074af5ad0646ca328d7ab03eccf944a65b320171bdd",
+    "stated_top1_error": "1.1%"
+  },
+  "dataset": {
+    "name": "MNIST",
+    "source": "http://yann.lecun.com/exdb/mnist/ (mirror: ossci-datasets S3)",
+    "split": {
+      "train": 60000,
+      "test": 10000
+    },
+    "image": "28x28 greyscale, [0,1], no mean/std normalisation"
+  },
+  "accelerated_layer": {
+    "layer": "Conv1 (Convolution28)",
+    "in_channels": 1,
+    "out_channels": 8,
+    "kernel": 5,
+    "stride": 1,
+    "padding": "SAME_UPPER, pad=2",
+    "input_shape": [
+      1,
+      1,
+      28,
+      28
+    ],
+    "output_shape": [
+      1,
+      8,
+      28,
+      28
+    ],
+    "maccs": 156800,
+    "weights": 200,
+    "outputs": 6272
+  },
+  "quantization": {
+    "scheme": "symmetric, zero-point 0, full-range (q in [-127,127])",
+    "rounding": "round-half-to-even (RNE), float64",
+    "weights": "per-output-channel, S_w[c] = max|w_c|/127",
+    "activations": "per-tensor, S_a = max|a|/127",
+    "bias": "int32, scale S_a * S_w[c]",
+    "accumulator": "int32",
+    "S_a": 0.007874015748031496,
+    "S_w": [
+      0.008023342748326579,
+      0.004469894987391675,
+      0.007658907278316227,
+      0.003754038275696161,
+      0.005380030692093016,
+      0.0057738658011428955,
+      0.004405391497874823,
+      0.004465674790810412
+    ],
+    "q_b": [
+      -2557,
+      -12326,
+      1520,
+      -570,
+      -1535,
+      -2898,
+      589,
+      -3444
+    ],
+    "zero_point_activation": 0,
+    "zero_point_weight": 0,
+    "n_calibration_samples": 1024
+  },
+  "tensor_layout": {
+    "input": "row-major y*28 + x, single channel",
+    "weights": "ch*25 + ky*5 + kx (ch-major)",
+    "golden_canonical": "ch*784 + y*28 + x (ch/y/x order)",
+    "note": "HW emission order is a Phase 2 deliverable (see docs)."
+  },
+  "test_vectors": {
+    "primary_image": 0,
+    "indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "labels": [
+      7,
+      2,
+      1,
+      0,
+      4,
+      1,
+      4,
+      9,
+      5,
+      9
+    ],
+    "deterministic": "test split, fixed indices, no RNG"
+  },
+  "environment": {
+    "python": "3.10.12",
+    "torch": "2.1.2+cpu",
+    "torchvision": "0.16.2+cpu",
+    "numpy": "1.26.4",
+    "onnx": "1.16.1"
+  },
+  "git_sha": "318e7ed4bfe624fba05f2c2389258e1917027ec3"
+}

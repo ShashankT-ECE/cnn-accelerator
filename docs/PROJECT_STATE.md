@@ -29,6 +29,54 @@ is also implemented and verified: `rtl/common/systolic_array_v2.sv` passes
 implements the muxed WS addend through the DSP C input (not PCIN/PCOUT) — see
 Decision 12.
 
+### Phase 2 Research Accelerator — COMPLETE (2026-08-21)
+
+The Phase 2 research accelerator (`rtl/common/cnn_accelerator_v2.sv`) is
+implemented and verified against the real MNIST-12 Conv1 (SAME-padded, OC=8)
+golden model. It wraps the FROZEN V2 datapath (`systolic_array_v2.sv` /
+`pe_v2.sv`, unchanged) with new integration logic providing:
+
+- **Runtime OS/WS reconfiguration** on one datapath (Decision 14): 0=OS, 1=WS;
+  mode_commit only in IDLE; 8-cycle flush; verified OS→WS and WS→OS bit-exact
+  with no reset. OS = 9,184 cycles; WS dense = 38,528 cycles.
+- **SAME padding** (zero injection for OOB rows/cols — fixes the Phase-1 clamp
+  bug) and **OC=8** (all 8 PE rows in OS; 8 channel sweeps in WS).
+- **Genuine coarse zero-skip** (Decision 16): a 5×12 all-zero activation window
+  skips the whole WS group. Measured on real MNIST: 85.43% of MACs have zero
+  activation; WS drops 38,528 → 18,368 cycles (2.10×). The frozen array's
+  array-wide `zero_skip` is tied 0 (per-MAC gating is unsafe — gates the
+  *shifted* product) and documented as a limitation.
+- Exact `skipped/executed/total` MAC counters (156,800 / 133,960 / 22,840).
+
+Integration testbench `sim/tb_cnn_accelerator_v2.sv` passes **75,305/75,305**
+checks (OS/WS bit-exact vs golden, reconfiguration, padding boundaries, OC=8,
+sparsity counters, mode interlock). Synthesis/implementation and timing are
+recorded in `docs/PHASE2_SYNTHESIS.md`.
+
+### Phase 2 Hardening — COMPLETE (2026-08-21)
+
+The paper-readiness hardening milestone is complete and recorded in
+`docs/PHASE2_HARDENING.md` (machine-readable artifacts in `data/benchmark/`).
+All changes are localized to the Phase-2 controller (`cnn_accelerator_v2.sv`);
+**no frozen module changed** and results remain bit-exact (75,305/75,305,
+OS 9,184 / WS 18,368 cycles, counters 133,960/22,840/156,800 unchanged).
+
+- **Timing:** WNS **+0.030 → +0.189 ns** @ 200 MHz (6.3× margin, ~208 MHz max)
+  by registering `accum_clear`/`weight_load` at the array boundary, pipelining
+  the MAC/cycle counters, expanding `result_base` as shifts (removes 3
+  controller DSPs), and `max_fanout` on `s`/`mode_active_r`. Resources: LUT
+  11,245→9,372, FF 5,726→5,795, DSP 67→64, CARRY8 20.
+- **Fair OS/WS comparison:** OS 9,184 vs WS no-skip 38,528 = 4.195×; mechanism
+  is WS channel serialization (8×) vs OS channel parallelism on rows.
+- **Sparsity accounting:** 85.43% zero activations → 46.94% skippable MACs →
+  52.33% cycle reduction → 2.10× (single image), 1.77× mean over 200 images.
+  `zero_skip` per-MAC gating remains tied 0 (unsafe on the frozen array); the
+  genuine mechanism is the coarse WS zero-group skip.
+- **Accuracy:** FP32 == INT8 == 98.90% (0 flips, SQNR 46.44 dB, 0 clipping) on
+  the full 10k test set; checkpoint SHA-256 pinned in `data/vectors/manifest.json`.
+- **Reconfiguration:** 8-cycle flush (40 ns @ 200 MHz); OS→WS→OS and WS→OS→WS
+  bit-exact, no reset.
+
 ## Verified Development Environment
 
 - Host OS: Ubuntu 22.04.5 LTS 64-bit
@@ -611,6 +659,45 @@ These four close `SYSTOLIC_ARRAY_V2_SPEC.md` §10 items 1/2/3/5 and `PE_SPEC.md`
 Decision 12). The V2 controller/input-feed RTL that realizes the §9 schedule is
 now unblocked; only its internals (activation line-buffer sizing, weight-store
 primitive) remain future work.
+
+### Decision 14 — Phase 2 Controller Architecture — RESOLVED (2026-08-21)
+
+**The Phase 2 research accelerator is a single new integration module
+(`rtl/common/cnn_accelerator_v2.sv`) driving the frozen `systolic_array_v2` in
+both OS and WS modes, with SAME padding and OC=8.** No frozen module is
+modified.
+
+| Parameter | Value |
+|---|---|
+| Dataflow select | `dataflow_mode` (0=OS, 1=WS), latched to `mode_active` |
+| Mode switch | `mode_commit` honoured only in IDLE; 8-cycle flush (`accum_clear` + 7-cycle shift-chain drain); no `rst` |
+| OS mapping | rows = 8 output channels; 5-pass row-decomposed (Decision 9); 82 cyc/group × 112 groups = 9,184 cycles |
+| WS mapping | rows = 8 taps/tile, 4 tiles; channels serialized (8 sweeps); 43 cyc/group × 896 groups = 38,528 cycles |
+| Padding | zero injection via `row_ok`/`col_ok` predicate on the stream address (`-2` row/col offset) |
+| OC=8 / 28×28 | 4 groups/row; `base = 7,15,23,31`; last group partial (4 valid pixels) |
+| Result index | flat leftmost-pixel index `ch*784 + y*28 + (base-7)` (unambiguous for `base=31`) |
+
+### Decision 15 — Result Encoding — RESOLVED (2026-08-21)
+
+The result word carries `result_base = ch*784 + y*28 + (base-7)` (the group's
+**leftmost** pixel flat index). A naive rightmost encoding
+(`… + base`, `base=31`) overflows into the next row and is ambiguous; the
+leftmost encoding (`base-7 ∈ {0,8,16,24}`) never overflows.
+
+### Decision 16 — Sparsity Mechanism — RESOLVED (2026-08-21)
+
+The frozen array's `zero_skip` is **array-wide** and gates the **product**
+register, which samples the **shifted** activation (`act_delayed`), not the fed
+stream. Gating it on the fed stream (`act_out==0`) zeroes legitimate in-flight
+products (verified: sparse MNIST fails bit-exact). Therefore:
+
+| Parameter | Value |
+|---|---|
+| `zero_skip` | tied to 0 (per-MAC gating unsafe on frozen array — documented) |
+| Genuine mechanism | **coarse zero-group skip**: skip a WS group whose 5×12 activation window is all-zero (detected via a 784-bit non-zero mask maintained on image write) |
+| Measured MNIST | 85.43% zero-activation MACs; 60/112 positions all-zero; WS 38,528 → 18,368 cycles (2.10×) |
+| Counters | `total_macs`=156,800, `skipped_macs`=133,960, `executed_macs`=22,840, `cycle_count`, `zero_skip_cycles` |
+| Rejected | fine-grained compaction (breaks fixed systolic timing) |
 
 ### Unresolved PE Decisions
 

@@ -1,0 +1,7 @@
+config,mode,sparse,cycles,cycles_provenance,latency_us,useful_macs,zero_activation_macs,executed_macs,zero_fraction_pct,pe_utilization_pct,mac_per_cycle,sustained_GOPS
+os_dense,OS,False,9184,[SIMULATION],45.92,156800,133960,22840,85.43,26.68,17.07,6.83
+ws_dense,WS,False,38528,[ANALYTICAL] no-skip bound,192.64,156800,133960,22840,85.43,6.36,4.07,1.63
+os_sparse,OS,True,9184,[SIMULATION],45.92,156800,133960,22840,85.43,26.68,17.07,6.83
+ws_sparse,WS,True,18368,[SIMULATION],91.84,156800,133960,22840,85.43,13.34,8.54,3.41
+os_to_ws,switch,False,8,[SIMULATION] flush (commit -> quiesced),0.04,n/a,n/a,n/a,n/a,n/a,n/a,n/a
+ws_to_os,switch,False,8,[SIMULATION] flush (commit -> quiesced),0.04,n/a,n/a,n/a,n/a,n/a,n/a,n/a
