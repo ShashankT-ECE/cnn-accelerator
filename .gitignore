@@ -30,3 +30,6 @@ xvlog.pb
 # Vivado simulation artifacts
 xsim.dir/
 *.wdb
+
+# Private research findings (gitignored)
+.research/

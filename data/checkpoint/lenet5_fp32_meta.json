@@ -1,0 +1,126 @@
+{
+  "experiment": "Step 1B \u2014 L1 FP32 LeNet-5 reference",
+  "spec": "docs/LENET5_SPEC.md",
+  "seed": 42,
+  "architecture": {
+    "input": [
+      1,
+      1,
+      32,
+      32
+    ],
+    "layers": [
+      "conv1(1->6, 5x5 valid)",
+      "maxpool(2x2/2)",
+      "conv3(6->16, 5x5 valid, fully-connected)",
+      "maxpool(2x2/2)",
+      "conv5(16->120, 5x5 valid)",
+      "fc6(120->84)",
+      "fc_out(84->10)"
+    ],
+    "activations": "ReLU after each conv/FC except output; softmax on output",
+    "padding": "valid (no padding); input zero-pad-2 from 28x28 MNIST",
+    "total_params": 61706,
+    "total_macs": 416520
+  },
+  "training": {
+    "optimizer": "SGD",
+    "learning_rate": 0.01,
+    "momentum": 0.9,
+    "weight_decay": 0.0,
+    "batch_size": 64,
+    "epochs": 10,
+    "loss": "CrossEntropyLoss",
+    "lr_scheduler": "none",
+    "weight_init": "kaiming_uniform_(a=sqrt(5)); bias uniform(-1/sqrt(fan_in), 1/sqrt(fan_in))",
+    "device": "cpu",
+    "determinism": "seed-pinned; single-thread CPU; use_deterministic_algorithms(True)"
+  },
+  "data": {
+    "dataset": "MNIST (torchvision 0.16.2)",
+    "preprocess": "uint8->[0,1] (ToTensor) -> zero-pad-2 -> 32x32; no mean/std",
+    "split": {
+      "train": [
+        0,
+        50000
+      ],
+      "val": [
+        50000,
+        60000
+      ],
+      "test": [
+        0,
+        10000
+      ]
+    }
+  },
+  "metrics": {
+    "val_acc": 0.988,
+    "val_loss": 0.043225461077527144,
+    "test_acc": 0.9878,
+    "test_loss": 0.037183206725475614,
+    "history": [
+      {
+        "epoch": 1,
+        "val_acc": 0.9661,
+        "val_loss": 0.10984614297598601
+      },
+      {
+        "epoch": 2,
+        "val_acc": 0.9801,
+        "val_loss": 0.06492541357427835
+      },
+      {
+        "epoch": 3,
+        "val_acc": 0.984,
+        "val_loss": 0.05434982447987422
+      },
+      {
+        "epoch": 4,
+        "val_acc": 0.9845,
+        "val_loss": 0.05263654934838414
+      },
+      {
+        "epoch": 5,
+        "val_acc": 0.9859,
+        "val_loss": 0.044844959482364354
+      },
+      {
+        "epoch": 6,
+        "val_acc": 0.9889,
+        "val_loss": 0.04007692504157312
+      },
+      {
+        "epoch": 7,
+        "val_acc": 0.9876,
+        "val_loss": 0.042628689103084615
+      },
+      {
+        "epoch": 8,
+        "val_acc": 0.9881,
+        "val_loss": 0.04306817182015511
+      },
+      {
+        "epoch": 9,
+        "val_acc": 0.9882,
+        "val_loss": 0.042261926681944166
+      },
+      {
+        "epoch": 10,
+        "val_acc": 0.988,
+        "val_loss": 0.043225461077527144
+      }
+    ]
+  },
+  "checkpoint": {
+    "path": "/home/shashankt/cnn-accelerator/data/checkpoint/lenet5_fp32.pt",
+    "sha256": "9978676be5132f25ba2bbdf93cb3930541bbbc780ecffd49c5560ad03c1af9dd",
+    "canonical_weights_sha256": "202a965f849849a6e96061a6649098cfe28eb7d21b5a5f8ddb456f88f0558fb5"
+  },
+  "environment": {
+    "python": "3.10.12",
+    "torch": "2.1.2+cpu",
+    "torchvision": "0.16.2+cpu",
+    "numpy": "1.26.4"
+  }
+}
