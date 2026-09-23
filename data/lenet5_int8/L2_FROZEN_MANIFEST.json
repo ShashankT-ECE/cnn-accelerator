@@ -1,0 +1,25 @@
+{
+  "architecture": {
+    "macs": 416520,
+    "params": 61706
+  },
+  "artifacts": {
+    "layer_vectors.npz": "e2588573a772a27c96a31023b09cd4397d1bfd5feef2ba1c5ad25c092468aeae",
+    "manifest.json": "9d1d8c628c0af521f10da65ba8e365932aab96cfe448e1c944197d85f116fedc",
+    "quant_params.npz": "3d39eb008d0e20f934c3d70288d6142d50a55e933129aa285430a06407a6ff84"
+  },
+  "calibration_set": "train[0:1024]",
+  "environment": {
+    "numpy": "1.26.4",
+    "python": "3.10.12",
+    "torch": "2.1.2+cpu",
+    "torchvision": "0.16.2+cpu"
+  },
+  "freeze_statement": "These are the frozen L2 INT8 hardware-reference artifacts for all subsequent dataflow, sparsity, RTL, synthesis, and hardware experiments.",
+  "frozen_date": "2026-09-23",
+  "int8_convention": "symmetric signed INT8, zero-point 0, per-tensor activation scales, per-channel weight scales, int32 accumulation/bias, canonical RNE requantization",
+  "l1_canonical_weights_sha256": "202a965f849849a6e96061a6649098cfe28eb7d21b5a5f8ddb456f88f0558fb5",
+  "l1_checkpoint_sha256": "9978676be5132f25ba2bbdf93cb3930541bbbc780ecffd49c5560ad03c1af9dd",
+  "spec": "docs/LENET5_INT8_SPEC.md (FROZEN, Step 2.1)",
+  "status": "FROZEN"
+}

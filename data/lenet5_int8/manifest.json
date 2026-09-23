@@ -1,0 +1,246 @@
+{
+  "architecture": {
+    "layers": [
+      "conv1(1->6,5x5 valid)",
+      "maxpool(2x2/2)",
+      "conv3(6->16,5x5 valid)",
+      "maxpool(2x2/2)",
+      "conv5(16->120,5x5 valid)",
+      "fc1(120->84)",
+      "fc2(84->10)"
+    ],
+    "macs": 416520,
+    "params": 61706
+  },
+  "calibration": {
+    "n": 1024,
+    "split": "train[0:1024]"
+  },
+  "environment": {
+    "numpy": "1.26.4",
+    "python": "3.10.12",
+    "torch": "2.1.2+cpu",
+    "torchvision": "0.16.2+cpu"
+  },
+  "experiment": "Step 2.3 \u2014 frozen L2 INT8 LeNet-5 artifacts",
+  "int8_convention": "docs/LENET5_INT8_SPEC.md",
+  "l1": {
+    "canonical_weights_sha256": "202a965f849849a6e96061a6649098cfe28eb7d21b5a5f8ddb456f88f0558fb5",
+    "checkpoint": "data/checkpoint/lenet5_fp32.pt",
+    "sha256": "9978676be5132f25ba2bbdf93cb3930541bbbc780ecffd49c5560ad03c1af9dd"
+  },
+  "quant_param_shapes": {
+    "S_input": [],
+    "conv1_M": [
+      6
+    ],
+    "conv1_S_a": [],
+    "conv1_S_out": [],
+    "conv1_S_w": [
+      6
+    ],
+    "conv1_q_b": [
+      6
+    ],
+    "conv1_q_w": [
+      6,
+      1,
+      5,
+      5
+    ],
+    "conv3_M": [
+      16
+    ],
+    "conv3_S_a": [],
+    "conv3_S_out": [],
+    "conv3_S_w": [
+      16
+    ],
+    "conv3_q_b": [
+      16
+    ],
+    "conv3_q_w": [
+      16,
+      6,
+      5,
+      5
+    ],
+    "conv5_M": [
+      120
+    ],
+    "conv5_S_a": [],
+    "conv5_S_out": [],
+    "conv5_S_w": [
+      120
+    ],
+    "conv5_q_b": [
+      120
+    ],
+    "conv5_q_w": [
+      120,
+      16,
+      5,
+      5
+    ],
+    "fc1_M": [
+      84
+    ],
+    "fc1_S_a": [],
+    "fc1_S_out": [],
+    "fc1_S_w": [
+      84
+    ],
+    "fc1_q_b": [
+      84
+    ],
+    "fc1_q_w": [
+      84,
+      120
+    ],
+    "fc2_S_a": [],
+    "fc2_S_w": [
+      10
+    ],
+    "fc2_q_b": [
+      10
+    ],
+    "fc2_q_w": [
+      10,
+      84
+    ]
+  },
+  "representative_images": {
+    "indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "labels": [
+      7,
+      2,
+      1,
+      0,
+      4,
+      1,
+      4,
+      9,
+      5,
+      9
+    ]
+  },
+  "tensor_dtypes": {
+    "conv1_acc": "int64",
+    "conv1_in": "int8",
+    "conv1_out": "int8",
+    "conv3_acc": "int64",
+    "conv3_in": "int8",
+    "conv3_out": "int8",
+    "conv5_acc": "int64",
+    "conv5_in": "int8",
+    "conv5_out": "int8",
+    "fc1_acc": "int64",
+    "fc1_in": "int8",
+    "fc1_out": "int8",
+    "fc2_acc": "int64",
+    "fc2_in": "int8",
+    "fc2_out": "float32",
+    "input": "int8",
+    "labels": "int64"
+  },
+  "tensor_shapes": {
+    "conv1_acc": [
+      10,
+      6,
+      28,
+      28
+    ],
+    "conv1_in": [
+      10,
+      1,
+      32,
+      32
+    ],
+    "conv1_out": [
+      10,
+      6,
+      14,
+      14
+    ],
+    "conv3_acc": [
+      10,
+      16,
+      10,
+      10
+    ],
+    "conv3_in": [
+      10,
+      6,
+      14,
+      14
+    ],
+    "conv3_out": [
+      10,
+      16,
+      5,
+      5
+    ],
+    "conv5_acc": [
+      10,
+      120,
+      1,
+      1
+    ],
+    "conv5_in": [
+      10,
+      16,
+      5,
+      5
+    ],
+    "conv5_out": [
+      10,
+      120,
+      1,
+      1
+    ],
+    "fc1_acc": [
+      10,
+      84
+    ],
+    "fc1_in": [
+      10,
+      120
+    ],
+    "fc1_out": [
+      10,
+      84
+    ],
+    "fc2_acc": [
+      10,
+      10
+    ],
+    "fc2_in": [
+      10,
+      84
+    ],
+    "fc2_out": [
+      10,
+      10
+    ],
+    "input": [
+      10,
+      1,
+      32,
+      32
+    ],
+    "labels": [
+      10
+    ]
+  }
+}
