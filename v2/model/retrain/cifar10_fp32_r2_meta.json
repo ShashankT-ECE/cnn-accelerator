@@ -1,0 +1,48 @@
+{
+  "experiment": "V2 Step 2.1b - CIFAR-10 retrain r2 (same architecture), FP32",
+  "generator": "v2/model/retrain/train_cifar10_r2.py",
+  "architecture": "legacy cifar10.model.Cifar10Net (unchanged; no BatchNorm)",
+  "preprocess": "legacy cifar10.preprocess.make_transform (ToTensor, [0,1], no mean/std)",
+  "augmentation": "RandomCrop(32, padding=4, zero fill) + horizontal flip p=0.5 (train only)",
+  "split": {
+    "train": [
+      0,
+      45000
+    ],
+    "val": [
+      45000,
+      50000
+    ],
+    "test": "not used by this script"
+  },
+  "training": {
+    "optimizer": "SGD",
+    "momentum": 0.9,
+    "nesterov": true,
+    "weight_decay": 0.0005,
+    "lr0": 0.05,
+    "lr_schedule": "CosineAnnealingLR(T_max=60, eta_min=0), per epoch",
+    "batch_size": 128,
+    "epochs_run": 60,
+    "seed": 20260924,
+    "seeds": "random, numpy, torch.manual_seed and data generator = SEED"
+  },
+  "selection": "argmax FP32 val accuracy over epochs (earliest on ties); test not used",
+  "selected_epoch": 59,
+  "val_correct": 3927,
+  "val_total": 5000,
+  "val_acc_pct": 78.54,
+  "train_time_s": 1835.4,
+  "torch_threads": 16,
+  "checkpoint": {
+    "path": "v2/model/retrain/cifar10_fp32_r2.pt",
+    "sha256": "0e69ed90b744f8c9bf1557c4ad9d49439957ff544f58020aae93e0f8f5eb819f"
+  },
+  "log_csv": "v2/results/cifar10_retrain_log.csv",
+  "versions": {
+    "python": "3.10.12",
+    "numpy": "1.26.4",
+    "torch": "2.1.2+cpu",
+    "torchvision": "0.16.2+cpu"
+  }
+}

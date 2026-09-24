@@ -1,0 +1,2 @@
+timestamp,git_commit,git_dirty,vivado_version,bitstream_sha256,board_id,net,layer,clock_mhz,source,duration_s,num_inferences,images,argmax_match,logits_bitexact,max_abs_v,bound_abs_v,int32_fits,raw_argmax_differs
+2026-09-24T05:17:28+00:00,bd28a729ffb13bb3b0d875ba3666a1b559e56632,True,,,,cifar10,fc,,model,32.61,10000,10000,10000,10000,36603,1049956,True,1276

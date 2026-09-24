@@ -7,6 +7,11 @@ Run from the repository root:
 
 Default output: v2/model/frozen/cifar10_int8/{quant_params.npz, manifest.json, SHA256SUMS}.
 
+Step 2.1b: ``--ckpt REL --out DIR`` freezes another FP32 checkpoint of the same
+network (e.g. v2/model/retrain/cifar10_fp32_r2.pt -> frozen/cifar10_int8_r2/)
+through the identical legacy calibrate path. A non-default checkpoint may not be
+written into the default cifar10_int8/ directory.
+
 No reference math is implemented here. The parameters are produced by the legacy
 code exactly as python/eval_cifar10_int8.py does:
 
@@ -71,11 +76,11 @@ def stack(ds, idx) -> tuple[np.ndarray, np.ndarray]:
     return x, y
 
 
-def legacy_params(return_weights: bool = False):
+def legacy_params(return_weights: bool = False, ckpt_rel: str = CKPT_REL):
     """Exactly the params the legacy INT8 model uses (eval_cifar10_int8.py)."""
     train_ds, _ = cifar_datasets()
     calib, _ = stack(train_ds, range(CALIB_N))
-    w = load_weights(REPO_ROOT / CKPT_REL)
+    w = load_weights(REPO_ROOT / ckpt_rel)
     params = calibrate(w, calib)
     return (params, w) if return_weights else params
 
@@ -180,10 +185,13 @@ def versions() -> dict:
 
 
 # ---------------------------------------------------------------- export
-def export(out_dir: Path = OUT_DIR) -> dict:
+def export(out_dir: Path = OUT_DIR, ckpt_rel: str = CKPT_REL) -> dict:
     out_dir = Path(out_dir)
+    default_ckpt = ckpt_rel == CKPT_REL
+    if not default_ckpt and out_dir.resolve() == OUT_DIR.resolve():
+        raise SystemExit(f"refusing to overwrite {OUT_DIR} with non-default checkpoint {ckpt_rel}")
     out_dir.mkdir(parents=True, exist_ok=True)
-    params, w = legacy_params(return_weights=True)
+    params, w = legacy_params(return_weights=True, ckpt_rel=ckpt_rel)
     qp = params_to_arrays(params)
     check_arrays(qp, params, w)
 
@@ -192,14 +200,18 @@ def export(out_dir: Path = OUT_DIR) -> dict:
     n_rt = check_roundtrip(params, npz)
 
     closure = legacy_import_closure()
-    inputs = [CKPT_REL] + closure
+    # A retrained checkpoint does not exist at SOURCE_TAG; only the legacy code is
+    # compared against it then (the checkpoint is pinned by its sha256 below).
+    inputs = ([CKPT_REL] if default_ckpt else []) + closure
     manifest = {
-        "artifact": "V2 frozen CIFAR-10 INT8 reference parameters (Step 2.1, D3)",
+        "artifact": "V2 frozen CIFAR-10 INT8 reference parameters (Step 2.1, D3)" if default_ckpt
+                    else "V2 frozen CIFAR-10 INT8 reference parameters, retrained checkpoint "
+                         "(Step 2.1b, not yet adopted)",
         "generator": "v2/model/freeze_cifar10_int8.py",
         "source_tag": SOURCE_TAG,
         "source_commit": source_commit(),
         "legacy_inputs_unchanged_since_source_commit": unchanged_since_source(inputs),
-        "checkpoint": {"path": CKPT_REL, "sha256": sha256_file(REPO_ROOT / CKPT_REL)},
+        "checkpoint": {"path": ckpt_rel, "sha256": sha256_file(REPO_ROOT / ckpt_rel)},
         "legacy_code": {p: sha256_file(REPO_ROOT / p) for p in closure},
         "calibration": {
             "procedure": "cifar10.int8_model.calibrate(load_weights(checkpoint), calib) "
@@ -234,6 +246,7 @@ def export(out_dir: Path = OUT_DIR) -> dict:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", type=Path, default=OUT_DIR)
+    ap.add_argument("--ckpt", default=CKPT_REL, help="FP32 checkpoint, repo-relative")
     ap.add_argument("--check-determinism", action="store_true",
                     help="export twice to temp dirs and compare SHA256")
     args = ap.parse_args()
@@ -242,11 +255,11 @@ def main() -> int:
             h = []
             for i in (1, 2):
                 o = Path(d) / f"run{i}"
-                export(o)
+                export(o, args.ckpt)
                 h.append({n: sha256_file(o / n) for n in (NPZ_NAME, MANIFEST_NAME)})
             print(f"run1 {h[0]}\nrun2 {h[1]}\nDETERMINISTIC: {h[0] == h[1]}")
             return 0 if h[0] == h[1] else 1
-    m = export(args.out)
+    m = export(args.out, args.ckpt)
     print(f"Wrote {args.out}")
     for n in sorted([NPZ_NAME, MANIFEST_NAME, "SHA256SUMS"]):
         print(f"  {n}  sha256={sha256_file(args.out / n)}")
