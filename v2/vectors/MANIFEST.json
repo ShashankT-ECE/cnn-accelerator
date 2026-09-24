@@ -1,0 +1,2387 @@
+{
+ "generator": "v2/scripts/gen_vectors.py",
+ "git_commit": "304e60ea40a33af8337b88b1393a7d0cb8bb4b00",
+ "git_dirty": false,
+ "mode": "full",
+ "generated_dir": "v2/vectors/generated",
+ "sizes": {
+  "pe_random_seqs": 600,
+  "array_random_tiles": 40,
+  "rot_random_per_kx": 64,
+  "requant_samples": 100000,
+  "pool_cases": 512,
+  "layer_images": 3,
+  "net_images": 10
+ },
+ "seeds": {
+  "pe": [
+   20260924,
+   1
+  ],
+  "array": [
+   20260924,
+   2
+  ],
+  "rotator": [
+   20260924,
+   3
+  ],
+  "requant_lenet5": [
+   20260924,
+   4,
+   0
+  ],
+  "requant_cifar10": [
+   20260924,
+   4,
+   1
+  ],
+  "pool": [
+   20260924,
+   5
+  ],
+  "layer_garbage": [
+   20260924,
+   6
+  ],
+  "net_garbage": [
+   20260924,
+   7
+  ]
+ },
+ "image_indices": {
+  "layer": [
+   0,
+   1,
+   2
+  ],
+  "network": [
+   0,
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9
+  ],
+  "split": "test"
+ },
+ "params": {
+  "lenet5": {
+   "quant_params": {
+    "path": "data/lenet5_int8/quant_params.npz",
+    "sha256": "3d39eb008d0e20f934c3d70288d6142d50a55e933129aa285430a06407a6ff84"
+   },
+   "hw_requant": {
+    "path": "v2/model/frozen/lenet5_int8/hw_requant.npz",
+    "sha256": "0c94d949034165c598788bb3d044b4dad7958036a4aad05e2b2aa088a63cbc05"
+   }
+  },
+  "cifar10": {
+   "quant_params": {
+    "path": "v2/model/frozen/cifar10_int8/quant_params.npz",
+    "sha256": "d2401ff8013ff839ec99efc2b88536b2f2606898f25c9516f82d1fc54a801397"
+   },
+   "hw_requant": {
+    "path": "v2/model/frozen/cifar10_int8/hw_requant.npz",
+    "sha256": "23b58b5d9941b37b08f4247ad0728f7110e10de32272be4534134de54542493e"
+   }
+  }
+ },
+ "layouts": {
+  "pe": {
+   "width_bits": 64,
+   "fields": [
+    [
+     "acc",
+     0,
+     32,
+     true
+    ],
+    [
+     "w",
+     32,
+     8,
+     true
+    ],
+    [
+     "a",
+     40,
+     8,
+     true
+    ],
+    [
+     "first",
+     48,
+     1,
+     false
+    ],
+    [
+     "last",
+     49,
+     1,
+     false
+    ]
+   ]
+  },
+  "requant": {
+   "width_bits": 160,
+   "fields": [
+    [
+     "acc",
+     0,
+     32,
+     true
+    ],
+    [
+     "q_bias",
+     32,
+     32,
+     true
+    ],
+    [
+     "m",
+     64,
+     32,
+     false
+    ],
+    [
+     "v",
+     96,
+     32,
+     true
+    ],
+    [
+     "s",
+     128,
+     6,
+     false
+    ],
+    [
+     "near_tie",
+     134,
+     1,
+     false
+    ],
+    [
+     "exact_region",
+     135,
+     1,
+     false
+    ],
+    [
+     "q",
+     136,
+     8,
+     true
+    ],
+    [
+     "q_relu",
+     144,
+     8,
+     true
+    ],
+    [
+     "qp_ch",
+     152,
+     8,
+     false
+    ]
+   ]
+  },
+  "pool": {
+   "width_bits": 192,
+   "fields": [
+    [
+     "dy0[0]",
+     0,
+     8,
+     true
+    ],
+    [
+     "dy0[1]",
+     8,
+     8,
+     true
+    ],
+    [
+     "dy0[2]",
+     16,
+     8,
+     true
+    ],
+    [
+     "dy0[3]",
+     24,
+     8,
+     true
+    ],
+    [
+     "dy0[4]",
+     32,
+     8,
+     true
+    ],
+    [
+     "dy0[5]",
+     40,
+     8,
+     true
+    ],
+    [
+     "dy0[6]",
+     48,
+     8,
+     true
+    ],
+    [
+     "dy0[7]",
+     56,
+     8,
+     true
+    ],
+    [
+     "dy1[0]",
+     64,
+     8,
+     true
+    ],
+    [
+     "dy1[1]",
+     72,
+     8,
+     true
+    ],
+    [
+     "dy1[2]",
+     80,
+     8,
+     true
+    ],
+    [
+     "dy1[3]",
+     88,
+     8,
+     true
+    ],
+    [
+     "dy1[4]",
+     96,
+     8,
+     true
+    ],
+    [
+     "dy1[5]",
+     104,
+     8,
+     true
+    ],
+    [
+     "dy1[6]",
+     112,
+     8,
+     true
+    ],
+    [
+     "dy1[7]",
+     120,
+     8,
+     true
+    ],
+    [
+     "h[0]",
+     128,
+     8,
+     true
+    ],
+    [
+     "h[1]",
+     136,
+     8,
+     true
+    ],
+    [
+     "h[2]",
+     144,
+     8,
+     true
+    ],
+    [
+     "h[3]",
+     152,
+     8,
+     true
+    ],
+    [
+     "be",
+     160,
+     8,
+     false
+    ],
+    [
+     "j",
+     168,
+     4,
+     false
+    ],
+    [
+     "half",
+     172,
+     1,
+     false
+    ],
+    [
+     "signed_data",
+     173,
+     1,
+     false
+    ],
+    [
+     "rem",
+     176,
+     8,
+     false
+    ]
+   ]
+  },
+  "issue": {
+   "width_bits": 256,
+   "fields": [
+    [
+     "rd_addr[0]",
+     0,
+     16,
+     false
+    ],
+    [
+     "rd_addr[1]",
+     16,
+     16,
+     false
+    ],
+    [
+     "rd_addr[2]",
+     32,
+     16,
+     false
+    ],
+    [
+     "rd_addr[3]",
+     48,
+     16,
+     false
+    ],
+    [
+     "rd_addr[4]",
+     64,
+     16,
+     false
+    ],
+    [
+     "rd_addr[5]",
+     80,
+     16,
+     false
+    ],
+    [
+     "rd_addr[6]",
+     96,
+     16,
+     false
+    ],
+    [
+     "rd_addr[7]",
+     112,
+     16,
+     false
+    ],
+    [
+     "wgt_addr",
+     128,
+     16,
+     false
+    ],
+    [
+     "row_mask",
+     144,
+     8,
+     false
+    ],
+    [
+     "rot",
+     152,
+     4,
+     false
+    ],
+    [
+     "first",
+     156,
+     1,
+     false
+    ],
+    [
+     "last",
+     157,
+     1,
+     false
+    ],
+    [
+     "dy",
+     158,
+     1,
+     false
+    ],
+    [
+     "k",
+     160,
+     16,
+     false
+    ],
+    [
+     "ic",
+     176,
+     16,
+     false
+    ],
+    [
+     "ky",
+     192,
+     8,
+     false
+    ],
+    [
+     "kx",
+     200,
+     8,
+     false
+    ],
+    [
+     "ox_tile",
+     208,
+     8,
+     false
+    ],
+    [
+     "oy",
+     216,
+     8,
+     false
+    ],
+    [
+     "oc_tile",
+     224,
+     8,
+     false
+    ],
+    [
+     "tile",
+     240,
+     16,
+     false
+    ]
+   ]
+  },
+  "drain": {
+   "width_bits": 160,
+   "fields": [
+    [
+     "word",
+     0,
+     16,
+     false
+    ],
+    [
+     "be",
+     16,
+     8,
+     false
+    ],
+    [
+     "row_mask",
+     24,
+     8,
+     false
+    ],
+    [
+     "qp_idx",
+     32,
+     16,
+     false
+    ],
+    [
+     "ch",
+     48,
+     16,
+     false
+    ],
+    [
+     "j",
+     64,
+     4,
+     false
+    ],
+    [
+     "kind",
+     68,
+     4,
+     false
+    ],
+    [
+     "we",
+     72,
+     1,
+     false
+    ],
+    [
+     "ch_valid",
+     73,
+     1,
+     false
+    ],
+    [
+     "buf",
+     74,
+     1,
+     false
+    ],
+    [
+     "dy",
+     75,
+     1,
+     false
+    ],
+    [
+     "logit_idx",
+     80,
+     8,
+     false
+    ],
+    [
+     "ox_tile",
+     88,
+     8,
+     false
+    ],
+    [
+     "out_row",
+     96,
+     8,
+     false
+    ],
+    [
+     "oy",
+     104,
+     8,
+     false
+    ],
+    [
+     "oc_tile",
+     112,
+     8,
+     false
+    ],
+    [
+     "tile",
+     128,
+     16,
+     false
+    ]
+   ]
+  }
+ },
+ "summary": {
+  "unit": {
+   "pe": {
+    "cycles": 43708,
+    "sequences": 641,
+    "max_abs_acc": 13107200
+   },
+   "array": {
+    "tiles": 52,
+    "cycles": 5069,
+    "K_values": [
+     1,
+     5,
+     6,
+     8,
+     9,
+     10,
+     11,
+     13,
+     14,
+     15,
+     18,
+     19,
+     22,
+     23,
+     24,
+     25,
+     26,
+     33,
+     40,
+     41,
+     45,
+     47,
+     52,
+     55,
+     56,
+     59,
+     61,
+     62,
+     64,
+     153,
+     226,
+     283,
+     800
+    ],
+    "max_abs_acc": 13107200
+   },
+   "rotator": {
+    "vectors": 552
+   },
+   "pool": {
+    "cases": 512,
+    "columns": 4096
+   },
+   "requant": {
+    "lenet5": {
+     "rows": 100004,
+     "sampled": 100000,
+     "near_tie_rows": 4,
+     "exact_region_rows": 52404,
+     "channels": 226,
+     "near_ties": [
+      {
+       "layer": "conv5",
+       "ch": 82,
+       "v": -55930
+      },
+      {
+       "layer": "conv5",
+       "ch": 82,
+       "v": 55930
+      },
+      {
+       "layer": "fc1",
+       "ch": 54,
+       "v": -31044
+      },
+      {
+       "layer": "fc1",
+       "ch": 54,
+       "v": 31044
+      }
+     ]
+    },
+    "cifar10": {
+     "rows": 100002,
+     "sampled": 100000,
+     "near_tie_rows": 2,
+     "exact_region_rows": 54696,
+     "channels": 128,
+     "near_ties": [
+      {
+       "layer": "conv2",
+       "ch": 0,
+       "v": -80582
+      },
+      {
+       "layer": "conv2",
+       "ch": 0,
+       "v": 80582
+      }
+     ]
+    }
+   }
+  },
+  "nets": {
+   "lenet5": {
+    "n_layers": 5,
+    "layers": [
+     {
+      "layer": "conv1",
+      "dir": "lenet5/layers/L0_conv1",
+      "in_sel": 0,
+      "T": 112,
+      "K": 25,
+      "T_times_K": 2800,
+      "issues": 2800,
+      "drain_records": 896,
+      "writes": 336,
+      "in_words": 128,
+      "out_words": 168,
+      "out_raw": false
+     },
+     {
+      "layer": "conv3",
+      "dir": "lenet5/layers/L1_conv3",
+      "in_sel": 1,
+      "T": 40,
+      "K": 150,
+      "T_times_K": 6000,
+      "issues": 6000,
+      "drain_records": 320,
+      "writes": 160,
+      "in_words": 168,
+      "out_words": 80,
+      "out_raw": false
+     },
+     {
+      "layer": "conv5",
+      "dir": "lenet5/layers/L2_conv5",
+      "in_sel": 0,
+      "T": 15,
+      "K": 400,
+      "T_times_K": 6000,
+      "issues": 6000,
+      "drain_records": 120,
+      "writes": 120,
+      "in_words": 80,
+      "out_words": 120,
+      "out_raw": false
+     },
+     {
+      "layer": "fc1",
+      "dir": "lenet5/layers/L3_fc1",
+      "in_sel": 1,
+      "T": 11,
+      "K": 120,
+      "T_times_K": 1320,
+      "issues": 1320,
+      "drain_records": 88,
+      "writes": 84,
+      "in_words": 120,
+      "out_words": 84,
+      "out_raw": false
+     },
+     {
+      "layer": "fc2",
+      "dir": "lenet5/layers/L4_fc2",
+      "in_sel": 0,
+      "T": 2,
+      "K": 84,
+      "T_times_K": 168,
+      "issues": 168,
+      "drain_records": 16,
+      "writes": 10,
+      "in_words": 84,
+      "out_words": null,
+      "out_raw": true
+     }
+    ],
+    "network": {
+     "images": 10,
+     "preds": [
+      7,
+      2,
+      1,
+      0,
+      4,
+      1,
+      4,
+      9,
+      5,
+      9
+     ],
+     "labels": [
+      7,
+      2,
+      1,
+      0,
+      4,
+      1,
+      4,
+      9,
+      5,
+      9
+     ],
+     "correct": 10
+    }
+   },
+   "cifar10": {
+    "n_layers": 4,
+    "layers": [
+     {
+      "layer": "conv1",
+      "dir": "cifar10/layers/L0_conv1",
+      "in_sel": 0,
+      "T": 448,
+      "K": 75,
+      "T_times_K": 33600,
+      "issues": 33600,
+      "drain_records": 3584,
+      "writes": 1792,
+      "in_words": 384,
+      "out_words": 896,
+      "out_raw": false
+     },
+     {
+      "layer": "conv2",
+      "dir": "cifar10/layers/L1_conv2",
+      "in_sel": 1,
+      "T": 80,
+      "K": 800,
+      "T_times_K": 64000,
+      "issues": 64000,
+      "drain_records": 640,
+      "writes": 320,
+      "in_words": 896,
+      "out_words": 160,
+      "out_raw": false
+     },
+     {
+      "layer": "conv3",
+      "dir": "cifar10/layers/L2_conv3",
+      "in_sel": 0,
+      "T": 8,
+      "K": 800,
+      "T_times_K": 6400,
+      "issues": 6400,
+      "drain_records": 64,
+      "writes": 64,
+      "in_words": 160,
+      "out_words": 64,
+      "out_raw": false
+     },
+     {
+      "layer": "fc",
+      "dir": "cifar10/layers/L3_fc",
+      "in_sel": 1,
+      "T": 2,
+      "K": 64,
+      "T_times_K": 128,
+      "issues": 128,
+      "drain_records": 16,
+      "writes": 10,
+      "in_words": 64,
+      "out_words": null,
+      "out_raw": true
+     }
+    ],
+    "network": {
+     "images": 10,
+     "preds": [
+      3,
+      8,
+      8,
+      0,
+      4,
+      6,
+      1,
+      6,
+      5,
+      1
+     ],
+     "labels": [
+      3,
+      8,
+      8,
+      0,
+      6,
+      6,
+      1,
+      6,
+      3,
+      1
+     ],
+     "correct": 8
+    }
+   }
+  }
+ },
+ "n_files": 186,
+ "total_bytes": 18066154,
+ "files": [
+  {
+   "path": "cifar10/desc.hex",
+   "sha256": "2743b2ee0169087071fb10a8a2065cfc2835471f517c2fae415f4e1c151f2e9d",
+   "bytes": 576,
+   "lines": 64,
+   "width_bits": 32,
+   "description": "cifar10: descriptors, line 16*layer + w = DESC[layer] word w (FORMATS 5)"
+  },
+  {
+   "path": "cifar10/layers/L0_conv1/act_out_mask.hex",
+   "sha256": "1eb310a2e0fd2fa5d94dbdc268523ecbb49d825e143a69fc218868e5e98d156b",
+   "bytes": 2688,
+   "lines": 896,
+   "width_bits": 8,
+   "description": "cifar10/conv1: byte-enable mask of the written bytes of each output word"
+  },
+  {
+   "path": "cifar10/layers/L0_conv1/desc.hex",
+   "sha256": "d064ad93a49fda3c381609a2f335bfe95effd42a7cd56807115aa84c09edd4fc",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "cifar10/conv1: descriptor (16 words); WGT_BASE/QP_BASE index the net-level wgt/qparam files"
+  },
+  {
+   "path": "cifar10/layers/L0_conv1/drain.hex",
+   "sha256": "dfbc6ed8e0c67a9e5d602ec0431e4d9e9db096aa6b2938b4fc743d16cd3b865f",
+   "bytes": 146944,
+   "lines": 3584,
+   "width_bits": 160,
+   "description": "cifar10/conv1: drain/write event stream, 8 records per tile (3584)"
+  },
+  {
+   "path": "cifar10/layers/L0_conv1/expect_tk.hex",
+   "sha256": "ed74caadae8f182ee09acc2d9d8762b2a4cf50d6f4341d1f7796d6447bbd5c16",
+   "bytes": 27,
+   "lines": 3,
+   "width_bits": 32,
+   "description": "cifar10/conv1: expected T, K, T*K (gos_cycle_model, compute only)"
+  },
+  {
+   "path": "cifar10/layers/L0_conv1/img0/act_in.hex",
+   "sha256": "9c77c89d5adc85601541d3bc726f5d161afc4ee8a86766ddc1bf1faf7c48d06d",
+   "bytes": 6528,
+   "lines": 384,
+   "width_bits": 64,
+   "description": "cifar10/conv1 test[0]: input ACT[in_sel=0] words 0..IN_END"
+  },
+  {
+   "path": "cifar10/layers/L0_conv1/img0/act_out.hex",
+   "sha256": "1dce04f2869c12b6e80f20246456310ffb39b1a34230c5593bb8d973dbebbf61",
+   "bytes": 15232,
+   "lines": 896,
+   "width_bits": 64,
+   "description": "cifar10/conv1 test[0]: expected ACT[1] words 0..OUT_END (unwritten bytes 0; compare under act_out_mask)"
+  },
+  {
+   "path": "cifar10/layers/L0_conv1/img1/act_in.hex",
+   "sha256": "b03c7f1761b77ad4b3e6011963bacad6b120291d71ccdeb3af757265b909ca90",
+   "bytes": 6528,
+   "lines": 384,
+   "width_bits": 64,
+   "description": "cifar10/conv1 test[1]: input ACT[in_sel=0] words 0..IN_END"
+  },
+  {
+   "path": "cifar10/layers/L0_conv1/img1/act_out.hex",
+   "sha256": "309935993927cc0457e14831b5ee5f79d0497045e3d034460642fa675a3b35df",
+   "bytes": 15232,
+   "lines": 896,
+   "width_bits": 64,
+   "description": "cifar10/conv1 test[1]: expected ACT[1] words 0..OUT_END (unwritten bytes 0; compare under act_out_mask)"
+  },
+  {
+   "path": "cifar10/layers/L0_conv1/img2/act_in.hex",
+   "sha256": "76f0974eda744666ac4e3e7b74161feb44e27c777cc903d6debc15ad6b9954b9",
+   "bytes": 6528,
+   "lines": 384,
+   "width_bits": 64,
+   "description": "cifar10/conv1 test[2]: input ACT[in_sel=0] words 0..IN_END"
+  },
+  {
+   "path": "cifar10/layers/L0_conv1/img2/act_out.hex",
+   "sha256": "fddb651d32c8ee54d0fb65367f9e9ea783b4eb33009c1d8b943d79b0b1e483a1",
+   "bytes": 15232,
+   "lines": 896,
+   "width_bits": 64,
+   "description": "cifar10/conv1 test[2]: expected ACT[1] words 0..OUT_END (unwritten bytes 0; compare under act_out_mask)"
+  },
+  {
+   "path": "cifar10/layers/L0_conv1/issue.hex",
+   "sha256": "9ea4b53fafadbc341b58683932525ac66f2bf1a5b19afe526b6337a117fc27d0",
+   "bytes": 2184000,
+   "lines": 33600,
+   "width_bits": 256,
+   "description": "cifar10/conv1: issue stream, one record per cycle (T*K = 33600)"
+  },
+  {
+   "path": "cifar10/layers/L1_conv2/act_out_mask.hex",
+   "sha256": "8696ed0315ac2429781554fad7c572f1f945d77b243493f5c5cec92a801a2a50",
+   "bytes": 480,
+   "lines": 160,
+   "width_bits": 8,
+   "description": "cifar10/conv2: byte-enable mask of the written bytes of each output word"
+  },
+  {
+   "path": "cifar10/layers/L1_conv2/desc.hex",
+   "sha256": "764aba42f8080f4b6dd8791cb07d99df7fe3e5235db941f987027020ed4bd96a",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "cifar10/conv2: descriptor (16 words); WGT_BASE/QP_BASE index the net-level wgt/qparam files"
+  },
+  {
+   "path": "cifar10/layers/L1_conv2/drain.hex",
+   "sha256": "94d06183389a272ab73ef11616844709031f92487e28fb10f577472255c66491",
+   "bytes": 26240,
+   "lines": 640,
+   "width_bits": 160,
+   "description": "cifar10/conv2: drain/write event stream, 8 records per tile (640)"
+  },
+  {
+   "path": "cifar10/layers/L1_conv2/expect_tk.hex",
+   "sha256": "5309c11cf62f6138da761b243e39e4ef02e3d08d93923025b04c0532392ba0e8",
+   "bytes": 27,
+   "lines": 3,
+   "width_bits": 32,
+   "description": "cifar10/conv2: expected T, K, T*K (gos_cycle_model, compute only)"
+  },
+  {
+   "path": "cifar10/layers/L1_conv2/img0/act_in.hex",
+   "sha256": "1dce04f2869c12b6e80f20246456310ffb39b1a34230c5593bb8d973dbebbf61",
+   "bytes": 15232,
+   "lines": 896,
+   "width_bits": 64,
+   "description": "cifar10/conv2 test[0]: input ACT[in_sel=1] words 0..IN_END"
+  },
+  {
+   "path": "cifar10/layers/L1_conv2/img0/act_out.hex",
+   "sha256": "a95f883a6301f5be76665e00b998cc2788cb8594567247fd76f15ba5399ad476",
+   "bytes": 2720,
+   "lines": 160,
+   "width_bits": 64,
+   "description": "cifar10/conv2 test[0]: expected ACT[0] words 0..OUT_END (unwritten bytes 0; compare under act_out_mask)"
+  },
+  {
+   "path": "cifar10/layers/L1_conv2/img1/act_in.hex",
+   "sha256": "309935993927cc0457e14831b5ee5f79d0497045e3d034460642fa675a3b35df",
+   "bytes": 15232,
+   "lines": 896,
+   "width_bits": 64,
+   "description": "cifar10/conv2 test[1]: input ACT[in_sel=1] words 0..IN_END"
+  },
+  {
+   "path": "cifar10/layers/L1_conv2/img1/act_out.hex",
+   "sha256": "f55dc7a266010dd662fddc84a98cceb2013639203a03e958ed22939aaf0a3a79",
+   "bytes": 2720,
+   "lines": 160,
+   "width_bits": 64,
+   "description": "cifar10/conv2 test[1]: expected ACT[0] words 0..OUT_END (unwritten bytes 0; compare under act_out_mask)"
+  },
+  {
+   "path": "cifar10/layers/L1_conv2/img2/act_in.hex",
+   "sha256": "fddb651d32c8ee54d0fb65367f9e9ea783b4eb33009c1d8b943d79b0b1e483a1",
+   "bytes": 15232,
+   "lines": 896,
+   "width_bits": 64,
+   "description": "cifar10/conv2 test[2]: input ACT[in_sel=1] words 0..IN_END"
+  },
+  {
+   "path": "cifar10/layers/L1_conv2/img2/act_out.hex",
+   "sha256": "66df4a7a76efaed83f71b7192246a324fb0593fe2c8ef1679c7dae401ff314c8",
+   "bytes": 2720,
+   "lines": 160,
+   "width_bits": 64,
+   "description": "cifar10/conv2 test[2]: expected ACT[0] words 0..OUT_END (unwritten bytes 0; compare under act_out_mask)"
+  },
+  {
+   "path": "cifar10/layers/L1_conv2/issue.hex",
+   "sha256": "a97bf613dfb8e143655f24f10c4ff9b913e2807374d57709d409748e8f0c74fb",
+   "bytes": 4160000,
+   "lines": 64000,
+   "width_bits": 256,
+   "description": "cifar10/conv2: issue stream, one record per cycle (T*K = 64000)"
+  },
+  {
+   "path": "cifar10/layers/L2_conv3/act_out_mask.hex",
+   "sha256": "cf49a79103e31702affef37e63bbd3939e60ca3465d976f12a11401dce8a3c9e",
+   "bytes": 192,
+   "lines": 64,
+   "width_bits": 8,
+   "description": "cifar10/conv3: byte-enable mask of the written bytes of each output word"
+  },
+  {
+   "path": "cifar10/layers/L2_conv3/desc.hex",
+   "sha256": "c3aabc3962d41abd61ef72ed066fcfc38a806323e498d5c3251c98214649cb6f",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "cifar10/conv3: descriptor (16 words); WGT_BASE/QP_BASE index the net-level wgt/qparam files"
+  },
+  {
+   "path": "cifar10/layers/L2_conv3/drain.hex",
+   "sha256": "2abcb607d9c1fed882bfbdeddc4447b6a3dd6766835e961e08437894fec12e7c",
+   "bytes": 2624,
+   "lines": 64,
+   "width_bits": 160,
+   "description": "cifar10/conv3: drain/write event stream, 8 records per tile (64)"
+  },
+  {
+   "path": "cifar10/layers/L2_conv3/expect_tk.hex",
+   "sha256": "dbfe8e4dca309166eef14d71e0e1f71421bc115fe367ef6bb8e24ab6c11d370e",
+   "bytes": 27,
+   "lines": 3,
+   "width_bits": 32,
+   "description": "cifar10/conv3: expected T, K, T*K (gos_cycle_model, compute only)"
+  },
+  {
+   "path": "cifar10/layers/L2_conv3/img0/act_in.hex",
+   "sha256": "a95f883a6301f5be76665e00b998cc2788cb8594567247fd76f15ba5399ad476",
+   "bytes": 2720,
+   "lines": 160,
+   "width_bits": 64,
+   "description": "cifar10/conv3 test[0]: input ACT[in_sel=0] words 0..IN_END"
+  },
+  {
+   "path": "cifar10/layers/L2_conv3/img0/act_out.hex",
+   "sha256": "231b638192ca98b17d935639e6965868ff5e8acc827eed2d22000db1cdde8e4e",
+   "bytes": 1088,
+   "lines": 64,
+   "width_bits": 64,
+   "description": "cifar10/conv3 test[0]: expected ACT[1] words 0..OUT_END (unwritten bytes 0; compare under act_out_mask)"
+  },
+  {
+   "path": "cifar10/layers/L2_conv3/img1/act_in.hex",
+   "sha256": "f55dc7a266010dd662fddc84a98cceb2013639203a03e958ed22939aaf0a3a79",
+   "bytes": 2720,
+   "lines": 160,
+   "width_bits": 64,
+   "description": "cifar10/conv3 test[1]: input ACT[in_sel=0] words 0..IN_END"
+  },
+  {
+   "path": "cifar10/layers/L2_conv3/img1/act_out.hex",
+   "sha256": "845651c7c58bb5d454371d95a4e2bd491c3b8a7c41aae304f6457b7c8bee69de",
+   "bytes": 1088,
+   "lines": 64,
+   "width_bits": 64,
+   "description": "cifar10/conv3 test[1]: expected ACT[1] words 0..OUT_END (unwritten bytes 0; compare under act_out_mask)"
+  },
+  {
+   "path": "cifar10/layers/L2_conv3/img2/act_in.hex",
+   "sha256": "66df4a7a76efaed83f71b7192246a324fb0593fe2c8ef1679c7dae401ff314c8",
+   "bytes": 2720,
+   "lines": 160,
+   "width_bits": 64,
+   "description": "cifar10/conv3 test[2]: input ACT[in_sel=0] words 0..IN_END"
+  },
+  {
+   "path": "cifar10/layers/L2_conv3/img2/act_out.hex",
+   "sha256": "fa77e61cfc8a44d122a82912fef1f2e8af4c8947fe15967db94a89a56ac52d43",
+   "bytes": 1088,
+   "lines": 64,
+   "width_bits": 64,
+   "description": "cifar10/conv3 test[2]: expected ACT[1] words 0..OUT_END (unwritten bytes 0; compare under act_out_mask)"
+  },
+  {
+   "path": "cifar10/layers/L2_conv3/issue.hex",
+   "sha256": "95081a498221ba0b1e0d8bfb9016c680d629d8b4caf9460432950038d0633bd9",
+   "bytes": 416000,
+   "lines": 6400,
+   "width_bits": 256,
+   "description": "cifar10/conv3: issue stream, one record per cycle (T*K = 6400)"
+  },
+  {
+   "path": "cifar10/layers/L3_fc/desc.hex",
+   "sha256": "762360e38be629fb38fd2466e7a06154c51ef13d4a6f19fbc85249208a93701b",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "cifar10/fc: descriptor (16 words); WGT_BASE/QP_BASE index the net-level wgt/qparam files"
+  },
+  {
+   "path": "cifar10/layers/L3_fc/drain.hex",
+   "sha256": "13551c02585263ca3846b4b7ba01986c5252003d16485674565db84067568258",
+   "bytes": 656,
+   "lines": 16,
+   "width_bits": 160,
+   "description": "cifar10/fc: drain/write event stream, 8 records per tile (16)"
+  },
+  {
+   "path": "cifar10/layers/L3_fc/expect_tk.hex",
+   "sha256": "87f5135c3165cdcdbe6a0a657c123170491da3447d23e08b5f0d279f84a443d6",
+   "bytes": 27,
+   "lines": 3,
+   "width_bits": 32,
+   "description": "cifar10/fc: expected T, K, T*K (gos_cycle_model, compute only)"
+  },
+  {
+   "path": "cifar10/layers/L3_fc/img0/act_in.hex",
+   "sha256": "231b638192ca98b17d935639e6965868ff5e8acc827eed2d22000db1cdde8e4e",
+   "bytes": 1088,
+   "lines": 64,
+   "width_bits": 64,
+   "description": "cifar10/fc test[0]: input ACT[in_sel=1] words 0..IN_END"
+  },
+  {
+   "path": "cifar10/layers/L3_fc/img0/logit16.hex",
+   "sha256": "d52a09b9df7997f1ce907101a8e44c5b5839aa06029c088a85bd708a2cba3bda",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "cifar10/fc test[0]: expected LOGIT[0..15] int32 (unused = 0)"
+  },
+  {
+   "path": "cifar10/layers/L3_fc/img1/act_in.hex",
+   "sha256": "845651c7c58bb5d454371d95a4e2bd491c3b8a7c41aae304f6457b7c8bee69de",
+   "bytes": 1088,
+   "lines": 64,
+   "width_bits": 64,
+   "description": "cifar10/fc test[1]: input ACT[in_sel=1] words 0..IN_END"
+  },
+  {
+   "path": "cifar10/layers/L3_fc/img1/logit16.hex",
+   "sha256": "5cb49e8230d07e2658d80431b3208656021902843dc8d49c4e5782614785dc37",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "cifar10/fc test[1]: expected LOGIT[0..15] int32 (unused = 0)"
+  },
+  {
+   "path": "cifar10/layers/L3_fc/img2/act_in.hex",
+   "sha256": "fa77e61cfc8a44d122a82912fef1f2e8af4c8947fe15967db94a89a56ac52d43",
+   "bytes": 1088,
+   "lines": 64,
+   "width_bits": 64,
+   "description": "cifar10/fc test[2]: input ACT[in_sel=1] words 0..IN_END"
+  },
+  {
+   "path": "cifar10/layers/L3_fc/img2/logit16.hex",
+   "sha256": "f7671bcee3dbab8aff29bb48a6f4315463873d73825b0dee0bd37372149b10a8",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "cifar10/fc test[2]: expected LOGIT[0..15] int32 (unused = 0)"
+  },
+  {
+   "path": "cifar10/layers/L3_fc/issue.hex",
+   "sha256": "768b12c46915e91802c6ce40e35bf3a4fd5be7fd87caa1a4d7ab916770c19a36",
+   "bytes": 8320,
+   "lines": 128,
+   "width_bits": 256,
+   "description": "cifar10/fc: issue stream, one record per cycle (T*K = 128)"
+  },
+  {
+   "path": "cifar10/n_layers.hex",
+   "sha256": "b596659d005974101f82a9e365eba1b188a97200f6b010039ccfd00db78c4f4d",
+   "bytes": 9,
+   "lines": 1,
+   "width_bits": 32,
+   "description": "cifar10: N_LAYERS"
+  },
+  {
+   "path": "cifar10/net/img0/act0.hex",
+   "sha256": "9c77c89d5adc85601541d3bc726f5d161afc4ee8a86766ddc1bf1faf7c48d06d",
+   "bytes": 6528,
+   "lines": 384,
+   "width_bits": 64,
+   "description": "cifar10 test[0]: initial ACT0 image, words 0..IN_END of layer 0"
+  },
+  {
+   "path": "cifar10/net/img0/logit10.hex",
+   "sha256": "5e180a5e7f9b50c56a9b74771bfb554bd3900845a2bed1377468f769e3427e51",
+   "bytes": 90,
+   "lines": 10,
+   "width_bits": 32,
+   "description": "cifar10 test[0]: expected LOGIT[0..9] int32"
+  },
+  {
+   "path": "cifar10/net/img0/logit16.hex",
+   "sha256": "d52a09b9df7997f1ce907101a8e44c5b5839aa06029c088a85bd708a2cba3bda",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "cifar10 test[0]: expected LOGIT[0..15] int32 (unused = 0)"
+  },
+  {
+   "path": "cifar10/net/img1/act0.hex",
+   "sha256": "b03c7f1761b77ad4b3e6011963bacad6b120291d71ccdeb3af757265b909ca90",
+   "bytes": 6528,
+   "lines": 384,
+   "width_bits": 64,
+   "description": "cifar10 test[1]: initial ACT0 image, words 0..IN_END of layer 0"
+  },
+  {
+   "path": "cifar10/net/img1/logit10.hex",
+   "sha256": "16efce8a65fabfec27b0d2b2a5e2787c75580dd0bf6bad354f0ac8623a159a5f",
+   "bytes": 90,
+   "lines": 10,
+   "width_bits": 32,
+   "description": "cifar10 test[1]: expected LOGIT[0..9] int32"
+  },
+  {
+   "path": "cifar10/net/img1/logit16.hex",
+   "sha256": "5cb49e8230d07e2658d80431b3208656021902843dc8d49c4e5782614785dc37",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "cifar10 test[1]: expected LOGIT[0..15] int32 (unused = 0)"
+  },
+  {
+   "path": "cifar10/net/img2/act0.hex",
+   "sha256": "76f0974eda744666ac4e3e7b74161feb44e27c777cc903d6debc15ad6b9954b9",
+   "bytes": 6528,
+   "lines": 384,
+   "width_bits": 64,
+   "description": "cifar10 test[2]: initial ACT0 image, words 0..IN_END of layer 0"
+  },
+  {
+   "path": "cifar10/net/img2/logit10.hex",
+   "sha256": "60fd31be30ffedc3812269fb9c4080b4220d8563c0a7054deffac8e681ecb6ef",
+   "bytes": 90,
+   "lines": 10,
+   "width_bits": 32,
+   "description": "cifar10 test[2]: expected LOGIT[0..9] int32"
+  },
+  {
+   "path": "cifar10/net/img2/logit16.hex",
+   "sha256": "f7671bcee3dbab8aff29bb48a6f4315463873d73825b0dee0bd37372149b10a8",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "cifar10 test[2]: expected LOGIT[0..15] int32 (unused = 0)"
+  },
+  {
+   "path": "cifar10/net/img3/act0.hex",
+   "sha256": "5cd74b98d6de7dd53d51466311435e5794a93e02c819cdec8fe7518b71393aeb",
+   "bytes": 6528,
+   "lines": 384,
+   "width_bits": 64,
+   "description": "cifar10 test[3]: initial ACT0 image, words 0..IN_END of layer 0"
+  },
+  {
+   "path": "cifar10/net/img3/logit10.hex",
+   "sha256": "316e4c25817ef9b16890df6b9c8d017e28ccfe65a747b5950d1ad14811a16e19",
+   "bytes": 90,
+   "lines": 10,
+   "width_bits": 32,
+   "description": "cifar10 test[3]: expected LOGIT[0..9] int32"
+  },
+  {
+   "path": "cifar10/net/img3/logit16.hex",
+   "sha256": "5df2410eae185863ec77a1522550e4df619f219ac92156b754754029654e5223",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "cifar10 test[3]: expected LOGIT[0..15] int32 (unused = 0)"
+  },
+  {
+   "path": "cifar10/net/img4/act0.hex",
+   "sha256": "9d5bbccf69173d43152fed534bf74b60ef8d48e930c75be42f423d82ea6f7b99",
+   "bytes": 6528,
+   "lines": 384,
+   "width_bits": 64,
+   "description": "cifar10 test[4]: initial ACT0 image, words 0..IN_END of layer 0"
+  },
+  {
+   "path": "cifar10/net/img4/logit10.hex",
+   "sha256": "c2da59b521efb9d23464e728b2db0fe03b66c472e7820eac32b8c954e1b233e8",
+   "bytes": 90,
+   "lines": 10,
+   "width_bits": 32,
+   "description": "cifar10 test[4]: expected LOGIT[0..9] int32"
+  },
+  {
+   "path": "cifar10/net/img4/logit16.hex",
+   "sha256": "8442b1e6e3cc3a5178bfc3714efddee93375941ccc23ad3993e8f107a9e1550e",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "cifar10 test[4]: expected LOGIT[0..15] int32 (unused = 0)"
+  },
+  {
+   "path": "cifar10/net/img5/act0.hex",
+   "sha256": "d916c60e9c66818de36a181fca5f5f9c4d185f4282398e40b938c596a6d03162",
+   "bytes": 6528,
+   "lines": 384,
+   "width_bits": 64,
+   "description": "cifar10 test[5]: initial ACT0 image, words 0..IN_END of layer 0"
+  },
+  {
+   "path": "cifar10/net/img5/logit10.hex",
+   "sha256": "30524758e057d36eb4c0d43a95012b8d8a3dcdd04ee59c95730c0bf3969a2cbe",
+   "bytes": 90,
+   "lines": 10,
+   "width_bits": 32,
+   "description": "cifar10 test[5]: expected LOGIT[0..9] int32"
+  },
+  {
+   "path": "cifar10/net/img5/logit16.hex",
+   "sha256": "97741ace41d721c53e35b7be51215e8398b5b7fadffce1643fc3008131e7f8d9",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "cifar10 test[5]: expected LOGIT[0..15] int32 (unused = 0)"
+  },
+  {
+   "path": "cifar10/net/img6/act0.hex",
+   "sha256": "844a2d7a13734baf5451b4e8fffe13e50a95f5adfa3f18dc44413915820422b8",
+   "bytes": 6528,
+   "lines": 384,
+   "width_bits": 64,
+   "description": "cifar10 test[6]: initial ACT0 image, words 0..IN_END of layer 0"
+  },
+  {
+   "path": "cifar10/net/img6/logit10.hex",
+   "sha256": "66b397b2edf202ce7294318a80a14817b97421a5092b9b0ba0a9164731263354",
+   "bytes": 90,
+   "lines": 10,
+   "width_bits": 32,
+   "description": "cifar10 test[6]: expected LOGIT[0..9] int32"
+  },
+  {
+   "path": "cifar10/net/img6/logit16.hex",
+   "sha256": "ef73d5bca7a81b8e80be355447565154716b92312c5bc5713504484e492df07e",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "cifar10 test[6]: expected LOGIT[0..15] int32 (unused = 0)"
+  },
+  {
+   "path": "cifar10/net/img7/act0.hex",
+   "sha256": "92a62e11d70b24f705b0e8672c4e1a19e7ea0d85ccd4c3cf5744c66a20dce110",
+   "bytes": 6528,
+   "lines": 384,
+   "width_bits": 64,
+   "description": "cifar10 test[7]: initial ACT0 image, words 0..IN_END of layer 0"
+  },
+  {
+   "path": "cifar10/net/img7/logit10.hex",
+   "sha256": "926df0396b1d533b84bed26f354e00472b981db35774d923399a3a49d42760b2",
+   "bytes": 90,
+   "lines": 10,
+   "width_bits": 32,
+   "description": "cifar10 test[7]: expected LOGIT[0..9] int32"
+  },
+  {
+   "path": "cifar10/net/img7/logit16.hex",
+   "sha256": "2bcc7084e4356769c4eda5e99eb3fbff87bd80e0c34eba47c4a70725012ed8f3",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "cifar10 test[7]: expected LOGIT[0..15] int32 (unused = 0)"
+  },
+  {
+   "path": "cifar10/net/img8/act0.hex",
+   "sha256": "d593dcc0e25dd27f9b260075b1fe8a099984971ccdf7a709f6faf1e576c5bcf9",
+   "bytes": 6528,
+   "lines": 384,
+   "width_bits": 64,
+   "description": "cifar10 test[8]: initial ACT0 image, words 0..IN_END of layer 0"
+  },
+  {
+   "path": "cifar10/net/img8/logit10.hex",
+   "sha256": "ef0a8237d6040d67cd45e84d1472d1173b7f219c8abf1c813c725ea4f6a4f69b",
+   "bytes": 90,
+   "lines": 10,
+   "width_bits": 32,
+   "description": "cifar10 test[8]: expected LOGIT[0..9] int32"
+  },
+  {
+   "path": "cifar10/net/img8/logit16.hex",
+   "sha256": "dbd5a44c812ee1c14529112d55f6b0ea9fc020569c7f192c8515184c1cd03706",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "cifar10 test[8]: expected LOGIT[0..15] int32 (unused = 0)"
+  },
+  {
+   "path": "cifar10/net/img9/act0.hex",
+   "sha256": "f32638f66234cc569cbb2880b07303c7ae648a7ae2ffca188f5cf59ce1ab2980",
+   "bytes": 6528,
+   "lines": 384,
+   "width_bits": 64,
+   "description": "cifar10 test[9]: initial ACT0 image, words 0..IN_END of layer 0"
+  },
+  {
+   "path": "cifar10/net/img9/logit10.hex",
+   "sha256": "e7e06dbec75fe220132bd52d24c8badb819a9bc8aa5d8dc004e70d19eb09a07b",
+   "bytes": 90,
+   "lines": 10,
+   "width_bits": 32,
+   "description": "cifar10 test[9]: expected LOGIT[0..9] int32"
+  },
+  {
+   "path": "cifar10/net/img9/logit16.hex",
+   "sha256": "ed8a30f9be8b76b2a1095f168139a0d4fd2eaee2503dc5110924566e0487ddf0",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "cifar10 test[9]: expected LOGIT[0..15] int32 (unused = 0)"
+  },
+  {
+   "path": "cifar10/net/label.hex",
+   "sha256": "62e07d6785ae4190858543d957e94fc1b5eddce96efc386dde9f8c8272e52e9a",
+   "bytes": 30,
+   "lines": 10,
+   "width_bits": 8,
+   "description": "cifar10: dataset label per image"
+  },
+  {
+   "path": "cifar10/net/pred.hex",
+   "sha256": "62eaef7af189dfc4c8aafda3fda4bd3dd5dc1e57bf432f3dbf49a5662de41978",
+   "bytes": 30,
+   "lines": 10,
+   "width_bits": 8,
+   "description": "cifar10: expected prediction per image (PS float32 argmax)"
+  },
+  {
+   "path": "cifar10/qparam.hex",
+   "sha256": "11c24335b16061f9281a7e5fafa42058ed7f95d5a2f4dad08e3c8b8dbc9eb653",
+   "bytes": 4692,
+   "lines": 276,
+   "width_bits": 64,
+   "description": "cifar10: QPARAM combined PS view, word 2i = {m, q_bias}, 2i+1 = {0, s} (FORMATS 3)"
+  },
+  {
+   "path": "cifar10/qparam_e.hex",
+   "sha256": "16ed8a1f9dcd1e23a54748efbd808e196a326b51d2968c9451fba94695d7b668",
+   "bytes": 2346,
+   "lines": 138,
+   "width_bits": 64,
+   "description": "cifar10: QPARAM bank QP_E[i] = combined word 2i"
+  },
+  {
+   "path": "cifar10/qparam_o.hex",
+   "sha256": "c6b589767941243ff7cf77db4dfd5da78f6ff521c258b0e489b91da7f6cc62fa",
+   "bytes": 2346,
+   "lines": 138,
+   "width_bits": 64,
+   "description": "cifar10: QPARAM bank QP_O[i] = combined word 2i+1"
+  },
+  {
+   "path": "cifar10/wgt.hex",
+   "sha256": "2b34ecacf794c59b232396638bc2d6dc5b7dc61d1d2e572505f6d0833d9b4ff3",
+   "bytes": 170476,
+   "lines": 10028,
+   "width_bits": 64,
+   "description": "cifar10: full WGT image from word 0 (all layers, FORMATS 2)"
+  },
+  {
+   "path": "lenet5/desc.hex",
+   "sha256": "061d921ffc23d788ebccb7e76fb1396b8754d39aac75d1f97e3684705643a492",
+   "bytes": 720,
+   "lines": 80,
+   "width_bits": 32,
+   "description": "lenet5: descriptors, line 16*layer + w = DESC[layer] word w (FORMATS 5)"
+  },
+  {
+   "path": "lenet5/layers/L0_conv1/act_out_mask.hex",
+   "sha256": "8ef3b31b9dd5c4de9706e7d9f4ae3b9ab5cb10f0c84a4bde335360673003dbbf",
+   "bytes": 504,
+   "lines": 168,
+   "width_bits": 8,
+   "description": "lenet5/conv1: byte-enable mask of the written bytes of each output word"
+  },
+  {
+   "path": "lenet5/layers/L0_conv1/desc.hex",
+   "sha256": "ff1cdea51dc3e15cb3843f43b718b5b42435eb1edbb7fab0b658cecfbeb31b44",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "lenet5/conv1: descriptor (16 words); WGT_BASE/QP_BASE index the net-level wgt/qparam files"
+  },
+  {
+   "path": "lenet5/layers/L0_conv1/drain.hex",
+   "sha256": "28801e2d5cbd57378c88d152062bdcbf5ab2d1cf221ca5ab680f74228151541f",
+   "bytes": 36736,
+   "lines": 896,
+   "width_bits": 160,
+   "description": "lenet5/conv1: drain/write event stream, 8 records per tile (896)"
+  },
+  {
+   "path": "lenet5/layers/L0_conv1/expect_tk.hex",
+   "sha256": "f511203e59bffc84b97d483222d80b14f8ddfcd851dd6467e26b747a067226d3",
+   "bytes": 27,
+   "lines": 3,
+   "width_bits": 32,
+   "description": "lenet5/conv1: expected T, K, T*K (gos_cycle_model, compute only)"
+  },
+  {
+   "path": "lenet5/layers/L0_conv1/img0/act_in.hex",
+   "sha256": "0dc9010a7535126615345b44df1935b0b71bdaab383af424c975ca91e89d1711",
+   "bytes": 2176,
+   "lines": 128,
+   "width_bits": 64,
+   "description": "lenet5/conv1 test[0]: input ACT[in_sel=0] words 0..IN_END"
+  },
+  {
+   "path": "lenet5/layers/L0_conv1/img0/act_out.hex",
+   "sha256": "970fd66c314c81755a9374b2185a873427190d2134f55efeb12eca143fe58c76",
+   "bytes": 2856,
+   "lines": 168,
+   "width_bits": 64,
+   "description": "lenet5/conv1 test[0]: expected ACT[1] words 0..OUT_END (unwritten bytes 0; compare under act_out_mask)"
+  },
+  {
+   "path": "lenet5/layers/L0_conv1/img1/act_in.hex",
+   "sha256": "ce08100b5b0ecbc771413f10122c4fd147f240e0a1f365cf2ac93cbd5ce43129",
+   "bytes": 2176,
+   "lines": 128,
+   "width_bits": 64,
+   "description": "lenet5/conv1 test[1]: input ACT[in_sel=0] words 0..IN_END"
+  },
+  {
+   "path": "lenet5/layers/L0_conv1/img1/act_out.hex",
+   "sha256": "14a95e35f95e19a1115c9d9f49dbc0f17923fe5fa29aad501ac0b69460f2180e",
+   "bytes": 2856,
+   "lines": 168,
+   "width_bits": 64,
+   "description": "lenet5/conv1 test[1]: expected ACT[1] words 0..OUT_END (unwritten bytes 0; compare under act_out_mask)"
+  },
+  {
+   "path": "lenet5/layers/L0_conv1/img2/act_in.hex",
+   "sha256": "82be1786705e4f6a655f7f5cde0bf55fdc9398461de3fa0bed233881ab1527d3",
+   "bytes": 2176,
+   "lines": 128,
+   "width_bits": 64,
+   "description": "lenet5/conv1 test[2]: input ACT[in_sel=0] words 0..IN_END"
+  },
+  {
+   "path": "lenet5/layers/L0_conv1/img2/act_out.hex",
+   "sha256": "18a1aafa26a7291f76029ed83f3a9ba200d18923154b798b0ab2e49a621dd089",
+   "bytes": 2856,
+   "lines": 168,
+   "width_bits": 64,
+   "description": "lenet5/conv1 test[2]: expected ACT[1] words 0..OUT_END (unwritten bytes 0; compare under act_out_mask)"
+  },
+  {
+   "path": "lenet5/layers/L0_conv1/issue.hex",
+   "sha256": "2f08dee9defc4926d17925803c8ac7ff99a2adb859f11f4b7e0b4fc869af5462",
+   "bytes": 182000,
+   "lines": 2800,
+   "width_bits": 256,
+   "description": "lenet5/conv1: issue stream, one record per cycle (T*K = 2800)"
+  },
+  {
+   "path": "lenet5/layers/L1_conv3/act_out_mask.hex",
+   "sha256": "557d2fbcfceeb621f200c6351658a067ad83e09813e0f058fe491a5217765c83",
+   "bytes": 240,
+   "lines": 80,
+   "width_bits": 8,
+   "description": "lenet5/conv3: byte-enable mask of the written bytes of each output word"
+  },
+  {
+   "path": "lenet5/layers/L1_conv3/desc.hex",
+   "sha256": "0e94d78e44e6fb7ef4a0760264a53f2c4c4eab131d60c993d6b045447761850a",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "lenet5/conv3: descriptor (16 words); WGT_BASE/QP_BASE index the net-level wgt/qparam files"
+  },
+  {
+   "path": "lenet5/layers/L1_conv3/drain.hex",
+   "sha256": "8a28a2bea6f0a7efab1bfd7be0711954b6dff3a110470dc459ed9a9d8e049412",
+   "bytes": 13120,
+   "lines": 320,
+   "width_bits": 160,
+   "description": "lenet5/conv3: drain/write event stream, 8 records per tile (320)"
+  },
+  {
+   "path": "lenet5/layers/L1_conv3/expect_tk.hex",
+   "sha256": "8789c457306164eb3cbcc543be13519569166f18ba8c33b5b2b29f06fd41f6c0",
+   "bytes": 27,
+   "lines": 3,
+   "width_bits": 32,
+   "description": "lenet5/conv3: expected T, K, T*K (gos_cycle_model, compute only)"
+  },
+  {
+   "path": "lenet5/layers/L1_conv3/img0/act_in.hex",
+   "sha256": "970fd66c314c81755a9374b2185a873427190d2134f55efeb12eca143fe58c76",
+   "bytes": 2856,
+   "lines": 168,
+   "width_bits": 64,
+   "description": "lenet5/conv3 test[0]: input ACT[in_sel=1] words 0..IN_END"
+  },
+  {
+   "path": "lenet5/layers/L1_conv3/img0/act_out.hex",
+   "sha256": "76a38c370490de941caf3734c8648c97a30faa60ee6fb6a530f983de822ad893",
+   "bytes": 1360,
+   "lines": 80,
+   "width_bits": 64,
+   "description": "lenet5/conv3 test[0]: expected ACT[0] words 0..OUT_END (unwritten bytes 0; compare under act_out_mask)"
+  },
+  {
+   "path": "lenet5/layers/L1_conv3/img1/act_in.hex",
+   "sha256": "14a95e35f95e19a1115c9d9f49dbc0f17923fe5fa29aad501ac0b69460f2180e",
+   "bytes": 2856,
+   "lines": 168,
+   "width_bits": 64,
+   "description": "lenet5/conv3 test[1]: input ACT[in_sel=1] words 0..IN_END"
+  },
+  {
+   "path": "lenet5/layers/L1_conv3/img1/act_out.hex",
+   "sha256": "5d470b15ab11795a4fb8406502880081b679b78266073368e803d7b303ba87c3",
+   "bytes": 1360,
+   "lines": 80,
+   "width_bits": 64,
+   "description": "lenet5/conv3 test[1]: expected ACT[0] words 0..OUT_END (unwritten bytes 0; compare under act_out_mask)"
+  },
+  {
+   "path": "lenet5/layers/L1_conv3/img2/act_in.hex",
+   "sha256": "18a1aafa26a7291f76029ed83f3a9ba200d18923154b798b0ab2e49a621dd089",
+   "bytes": 2856,
+   "lines": 168,
+   "width_bits": 64,
+   "description": "lenet5/conv3 test[2]: input ACT[in_sel=1] words 0..IN_END"
+  },
+  {
+   "path": "lenet5/layers/L1_conv3/img2/act_out.hex",
+   "sha256": "28abb3b22fbb51dc0a623e15066afacce30166ba56d08f9b2ce5f6fd01c414eb",
+   "bytes": 1360,
+   "lines": 80,
+   "width_bits": 64,
+   "description": "lenet5/conv3 test[2]: expected ACT[0] words 0..OUT_END (unwritten bytes 0; compare under act_out_mask)"
+  },
+  {
+   "path": "lenet5/layers/L1_conv3/issue.hex",
+   "sha256": "209a183be8d27672c1d8b09f50cf6015dc6371778e6bdda7a110e9946caf542e",
+   "bytes": 390000,
+   "lines": 6000,
+   "width_bits": 256,
+   "description": "lenet5/conv3: issue stream, one record per cycle (T*K = 6000)"
+  },
+  {
+   "path": "lenet5/layers/L2_conv5/act_out_mask.hex",
+   "sha256": "ec75b85c90c9946af1c8b2d561fb60bd115a2b6844469ab8d2471d60e98c5568",
+   "bytes": 360,
+   "lines": 120,
+   "width_bits": 8,
+   "description": "lenet5/conv5: byte-enable mask of the written bytes of each output word"
+  },
+  {
+   "path": "lenet5/layers/L2_conv5/desc.hex",
+   "sha256": "c8130738509325c6706354aa7d409b641daf2432556092bb0747be56729830a5",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "lenet5/conv5: descriptor (16 words); WGT_BASE/QP_BASE index the net-level wgt/qparam files"
+  },
+  {
+   "path": "lenet5/layers/L2_conv5/drain.hex",
+   "sha256": "75d7b6b7907096181c1c5247404d74f636c383cb90c623b6aa6d071e081a8331",
+   "bytes": 4920,
+   "lines": 120,
+   "width_bits": 160,
+   "description": "lenet5/conv5: drain/write event stream, 8 records per tile (120)"
+  },
+  {
+   "path": "lenet5/layers/L2_conv5/expect_tk.hex",
+   "sha256": "ff5f5e15a9c186890d7623149c9f3c9531ca8d34c69a74b7383b02f536c5dd1e",
+   "bytes": 27,
+   "lines": 3,
+   "width_bits": 32,
+   "description": "lenet5/conv5: expected T, K, T*K (gos_cycle_model, compute only)"
+  },
+  {
+   "path": "lenet5/layers/L2_conv5/img0/act_in.hex",
+   "sha256": "76a38c370490de941caf3734c8648c97a30faa60ee6fb6a530f983de822ad893",
+   "bytes": 1360,
+   "lines": 80,
+   "width_bits": 64,
+   "description": "lenet5/conv5 test[0]: input ACT[in_sel=0] words 0..IN_END"
+  },
+  {
+   "path": "lenet5/layers/L2_conv5/img0/act_out.hex",
+   "sha256": "46d45e1e35c7fddd4b9e6a00439bb4c37af2d8bc0284e96f6883af9b9adc9a20",
+   "bytes": 2040,
+   "lines": 120,
+   "width_bits": 64,
+   "description": "lenet5/conv5 test[0]: expected ACT[1] words 0..OUT_END (unwritten bytes 0; compare under act_out_mask)"
+  },
+  {
+   "path": "lenet5/layers/L2_conv5/img1/act_in.hex",
+   "sha256": "5d470b15ab11795a4fb8406502880081b679b78266073368e803d7b303ba87c3",
+   "bytes": 1360,
+   "lines": 80,
+   "width_bits": 64,
+   "description": "lenet5/conv5 test[1]: input ACT[in_sel=0] words 0..IN_END"
+  },
+  {
+   "path": "lenet5/layers/L2_conv5/img1/act_out.hex",
+   "sha256": "67d2c7dd71d0ad0df58ea3a21e1902fe9ae39a61a9d8dca58304fbc02590f56f",
+   "bytes": 2040,
+   "lines": 120,
+   "width_bits": 64,
+   "description": "lenet5/conv5 test[1]: expected ACT[1] words 0..OUT_END (unwritten bytes 0; compare under act_out_mask)"
+  },
+  {
+   "path": "lenet5/layers/L2_conv5/img2/act_in.hex",
+   "sha256": "28abb3b22fbb51dc0a623e15066afacce30166ba56d08f9b2ce5f6fd01c414eb",
+   "bytes": 1360,
+   "lines": 80,
+   "width_bits": 64,
+   "description": "lenet5/conv5 test[2]: input ACT[in_sel=0] words 0..IN_END"
+  },
+  {
+   "path": "lenet5/layers/L2_conv5/img2/act_out.hex",
+   "sha256": "df7d8dfd421362168e8ba2cfac807456895c3f7a22e93e5d1b4238680469be38",
+   "bytes": 2040,
+   "lines": 120,
+   "width_bits": 64,
+   "description": "lenet5/conv5 test[2]: expected ACT[1] words 0..OUT_END (unwritten bytes 0; compare under act_out_mask)"
+  },
+  {
+   "path": "lenet5/layers/L2_conv5/issue.hex",
+   "sha256": "1130b5acfa480a16a2f02f03674d3174649b6b73c02ad3c69e62d122dd8c7bf8",
+   "bytes": 390000,
+   "lines": 6000,
+   "width_bits": 256,
+   "description": "lenet5/conv5: issue stream, one record per cycle (T*K = 6000)"
+  },
+  {
+   "path": "lenet5/layers/L3_fc1/act_out_mask.hex",
+   "sha256": "c4da4311f75f86626e4eff6a1a209cb1296aaf657cffb544646477e6213f84a1",
+   "bytes": 252,
+   "lines": 84,
+   "width_bits": 8,
+   "description": "lenet5/fc1: byte-enable mask of the written bytes of each output word"
+  },
+  {
+   "path": "lenet5/layers/L3_fc1/desc.hex",
+   "sha256": "4133d2b8e49eb8a5b80e265df88569b3c4f5b494573cc9db8086f54e39622da0",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "lenet5/fc1: descriptor (16 words); WGT_BASE/QP_BASE index the net-level wgt/qparam files"
+  },
+  {
+   "path": "lenet5/layers/L3_fc1/drain.hex",
+   "sha256": "c69d157b4800fbd09ce6ceba266fba95b312b228581e257cc459ebdbd2587be5",
+   "bytes": 3608,
+   "lines": 88,
+   "width_bits": 160,
+   "description": "lenet5/fc1: drain/write event stream, 8 records per tile (88)"
+  },
+  {
+   "path": "lenet5/layers/L3_fc1/expect_tk.hex",
+   "sha256": "9545fdbb6244980444dce300dc9bb4ea856517894235549c979e5fd02b774e2a",
+   "bytes": 27,
+   "lines": 3,
+   "width_bits": 32,
+   "description": "lenet5/fc1: expected T, K, T*K (gos_cycle_model, compute only)"
+  },
+  {
+   "path": "lenet5/layers/L3_fc1/img0/act_in.hex",
+   "sha256": "46d45e1e35c7fddd4b9e6a00439bb4c37af2d8bc0284e96f6883af9b9adc9a20",
+   "bytes": 2040,
+   "lines": 120,
+   "width_bits": 64,
+   "description": "lenet5/fc1 test[0]: input ACT[in_sel=1] words 0..IN_END"
+  },
+  {
+   "path": "lenet5/layers/L3_fc1/img0/act_out.hex",
+   "sha256": "5d3bb8bd35b030103de509ba07ea4a0c1c30e2c61d65e387bb462168600c07a7",
+   "bytes": 1428,
+   "lines": 84,
+   "width_bits": 64,
+   "description": "lenet5/fc1 test[0]: expected ACT[0] words 0..OUT_END (unwritten bytes 0; compare under act_out_mask)"
+  },
+  {
+   "path": "lenet5/layers/L3_fc1/img1/act_in.hex",
+   "sha256": "67d2c7dd71d0ad0df58ea3a21e1902fe9ae39a61a9d8dca58304fbc02590f56f",
+   "bytes": 2040,
+   "lines": 120,
+   "width_bits": 64,
+   "description": "lenet5/fc1 test[1]: input ACT[in_sel=1] words 0..IN_END"
+  },
+  {
+   "path": "lenet5/layers/L3_fc1/img1/act_out.hex",
+   "sha256": "2463d5e6aee234fb9f7776d351e286f05e9080547e83f4b5fefd86ae655e74d9",
+   "bytes": 1428,
+   "lines": 84,
+   "width_bits": 64,
+   "description": "lenet5/fc1 test[1]: expected ACT[0] words 0..OUT_END (unwritten bytes 0; compare under act_out_mask)"
+  },
+  {
+   "path": "lenet5/layers/L3_fc1/img2/act_in.hex",
+   "sha256": "df7d8dfd421362168e8ba2cfac807456895c3f7a22e93e5d1b4238680469be38",
+   "bytes": 2040,
+   "lines": 120,
+   "width_bits": 64,
+   "description": "lenet5/fc1 test[2]: input ACT[in_sel=1] words 0..IN_END"
+  },
+  {
+   "path": "lenet5/layers/L3_fc1/img2/act_out.hex",
+   "sha256": "8f860f20fb1b7982141181a98794e446eac5799d0ffe568130ee78d6935c7973",
+   "bytes": 1428,
+   "lines": 84,
+   "width_bits": 64,
+   "description": "lenet5/fc1 test[2]: expected ACT[0] words 0..OUT_END (unwritten bytes 0; compare under act_out_mask)"
+  },
+  {
+   "path": "lenet5/layers/L3_fc1/issue.hex",
+   "sha256": "d8948b9f4da81220cc2c3899686a626dfc6d48c78bbff80b6601d7aeaf65a0ed",
+   "bytes": 85800,
+   "lines": 1320,
+   "width_bits": 256,
+   "description": "lenet5/fc1: issue stream, one record per cycle (T*K = 1320)"
+  },
+  {
+   "path": "lenet5/layers/L4_fc2/desc.hex",
+   "sha256": "09531a302e93ac8fbdbd93c89bc94314af41047ed430b374287ab1ac7f8d7648",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "lenet5/fc2: descriptor (16 words); WGT_BASE/QP_BASE index the net-level wgt/qparam files"
+  },
+  {
+   "path": "lenet5/layers/L4_fc2/drain.hex",
+   "sha256": "2e65b87ef583d05b6ff9f2a3a259100bebb4de4d6c34e5e80b1d999409601856",
+   "bytes": 656,
+   "lines": 16,
+   "width_bits": 160,
+   "description": "lenet5/fc2: drain/write event stream, 8 records per tile (16)"
+  },
+  {
+   "path": "lenet5/layers/L4_fc2/expect_tk.hex",
+   "sha256": "f775baa312f9ae75683c859cbfaea7e4ad34472519dfe5c1e47d78ea3155cbb4",
+   "bytes": 27,
+   "lines": 3,
+   "width_bits": 32,
+   "description": "lenet5/fc2: expected T, K, T*K (gos_cycle_model, compute only)"
+  },
+  {
+   "path": "lenet5/layers/L4_fc2/img0/act_in.hex",
+   "sha256": "5d3bb8bd35b030103de509ba07ea4a0c1c30e2c61d65e387bb462168600c07a7",
+   "bytes": 1428,
+   "lines": 84,
+   "width_bits": 64,
+   "description": "lenet5/fc2 test[0]: input ACT[in_sel=0] words 0..IN_END"
+  },
+  {
+   "path": "lenet5/layers/L4_fc2/img0/logit16.hex",
+   "sha256": "3ea480ddd51ca42ef6e7f51fdea131861ffa91ac7c6a7c4e3f345152f5bd0c8c",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "lenet5/fc2 test[0]: expected LOGIT[0..15] int32 (unused = 0)"
+  },
+  {
+   "path": "lenet5/layers/L4_fc2/img1/act_in.hex",
+   "sha256": "2463d5e6aee234fb9f7776d351e286f05e9080547e83f4b5fefd86ae655e74d9",
+   "bytes": 1428,
+   "lines": 84,
+   "width_bits": 64,
+   "description": "lenet5/fc2 test[1]: input ACT[in_sel=0] words 0..IN_END"
+  },
+  {
+   "path": "lenet5/layers/L4_fc2/img1/logit16.hex",
+   "sha256": "724ba8b35120741942c72500647ab0a30d1b7b19468f20101210ac691c0900b8",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "lenet5/fc2 test[1]: expected LOGIT[0..15] int32 (unused = 0)"
+  },
+  {
+   "path": "lenet5/layers/L4_fc2/img2/act_in.hex",
+   "sha256": "8f860f20fb1b7982141181a98794e446eac5799d0ffe568130ee78d6935c7973",
+   "bytes": 1428,
+   "lines": 84,
+   "width_bits": 64,
+   "description": "lenet5/fc2 test[2]: input ACT[in_sel=0] words 0..IN_END"
+  },
+  {
+   "path": "lenet5/layers/L4_fc2/img2/logit16.hex",
+   "sha256": "0a785f557723f46ec73ce70506d84892092100c0d4baf587946db6587b4d58c2",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "lenet5/fc2 test[2]: expected LOGIT[0..15] int32 (unused = 0)"
+  },
+  {
+   "path": "lenet5/layers/L4_fc2/issue.hex",
+   "sha256": "d2c733c0fd4af0ba6ab5937df59a60d958aa6005606ffeb5914a61bfabd2bd3e",
+   "bytes": 10920,
+   "lines": 168,
+   "width_bits": 256,
+   "description": "lenet5/fc2: issue stream, one record per cycle (T*K = 168)"
+  },
+  {
+   "path": "lenet5/n_layers.hex",
+   "sha256": "676c70f4e9eb3437b20f7711cb2b3692f0a7f986015e09462564e885aa3e1433",
+   "bytes": 9,
+   "lines": 1,
+   "width_bits": 32,
+   "description": "lenet5: N_LAYERS"
+  },
+  {
+   "path": "lenet5/net/img0/act0.hex",
+   "sha256": "0dc9010a7535126615345b44df1935b0b71bdaab383af424c975ca91e89d1711",
+   "bytes": 2176,
+   "lines": 128,
+   "width_bits": 64,
+   "description": "lenet5 test[0]: initial ACT0 image, words 0..IN_END of layer 0"
+  },
+  {
+   "path": "lenet5/net/img0/logit10.hex",
+   "sha256": "b95583cef708bde36ca6d4084e451c0c9391473ebb780127cecae81bdc6d7283",
+   "bytes": 90,
+   "lines": 10,
+   "width_bits": 32,
+   "description": "lenet5 test[0]: expected LOGIT[0..9] int32"
+  },
+  {
+   "path": "lenet5/net/img0/logit16.hex",
+   "sha256": "3ea480ddd51ca42ef6e7f51fdea131861ffa91ac7c6a7c4e3f345152f5bd0c8c",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "lenet5 test[0]: expected LOGIT[0..15] int32 (unused = 0)"
+  },
+  {
+   "path": "lenet5/net/img1/act0.hex",
+   "sha256": "ce08100b5b0ecbc771413f10122c4fd147f240e0a1f365cf2ac93cbd5ce43129",
+   "bytes": 2176,
+   "lines": 128,
+   "width_bits": 64,
+   "description": "lenet5 test[1]: initial ACT0 image, words 0..IN_END of layer 0"
+  },
+  {
+   "path": "lenet5/net/img1/logit10.hex",
+   "sha256": "22229612d5c743a702a1d9df6e0a98dc1415c74942b854ad41b356bab980c5c1",
+   "bytes": 90,
+   "lines": 10,
+   "width_bits": 32,
+   "description": "lenet5 test[1]: expected LOGIT[0..9] int32"
+  },
+  {
+   "path": "lenet5/net/img1/logit16.hex",
+   "sha256": "724ba8b35120741942c72500647ab0a30d1b7b19468f20101210ac691c0900b8",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "lenet5 test[1]: expected LOGIT[0..15] int32 (unused = 0)"
+  },
+  {
+   "path": "lenet5/net/img2/act0.hex",
+   "sha256": "82be1786705e4f6a655f7f5cde0bf55fdc9398461de3fa0bed233881ab1527d3",
+   "bytes": 2176,
+   "lines": 128,
+   "width_bits": 64,
+   "description": "lenet5 test[2]: initial ACT0 image, words 0..IN_END of layer 0"
+  },
+  {
+   "path": "lenet5/net/img2/logit10.hex",
+   "sha256": "fee6e43f001120f871c33b2f4cb9d1a5cbed03d4b0deb4a188dae8020d2f000b",
+   "bytes": 90,
+   "lines": 10,
+   "width_bits": 32,
+   "description": "lenet5 test[2]: expected LOGIT[0..9] int32"
+  },
+  {
+   "path": "lenet5/net/img2/logit16.hex",
+   "sha256": "0a785f557723f46ec73ce70506d84892092100c0d4baf587946db6587b4d58c2",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "lenet5 test[2]: expected LOGIT[0..15] int32 (unused = 0)"
+  },
+  {
+   "path": "lenet5/net/img3/act0.hex",
+   "sha256": "b2562f987a08baa8cb6ba07cadf48fbd011ef591e625e978777d9c4e0a8d8512",
+   "bytes": 2176,
+   "lines": 128,
+   "width_bits": 64,
+   "description": "lenet5 test[3]: initial ACT0 image, words 0..IN_END of layer 0"
+  },
+  {
+   "path": "lenet5/net/img3/logit10.hex",
+   "sha256": "6c36fb97647864a757b8607dafd647b9aa4969a8b9d1d53de84d52bf7d89e95d",
+   "bytes": 90,
+   "lines": 10,
+   "width_bits": 32,
+   "description": "lenet5 test[3]: expected LOGIT[0..9] int32"
+  },
+  {
+   "path": "lenet5/net/img3/logit16.hex",
+   "sha256": "bbebfbc269da63be1a7c0042b6233ce2f14d29a9751e12875d6cb3d86deb7fe7",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "lenet5 test[3]: expected LOGIT[0..15] int32 (unused = 0)"
+  },
+  {
+   "path": "lenet5/net/img4/act0.hex",
+   "sha256": "3dc5c0aec6bc86a7df57fb87e146c7e2e12c54c1bcd7b9b028f08cf34cbd1ecc",
+   "bytes": 2176,
+   "lines": 128,
+   "width_bits": 64,
+   "description": "lenet5 test[4]: initial ACT0 image, words 0..IN_END of layer 0"
+  },
+  {
+   "path": "lenet5/net/img4/logit10.hex",
+   "sha256": "7a6c197794583e5bd9b8e3c3165d6812044530d4d33c38cb2a2737f2f3f95986",
+   "bytes": 90,
+   "lines": 10,
+   "width_bits": 32,
+   "description": "lenet5 test[4]: expected LOGIT[0..9] int32"
+  },
+  {
+   "path": "lenet5/net/img4/logit16.hex",
+   "sha256": "208d96b6dad4cb6872aa2ee8bc524d38dd5ab096c183edc93ec28d5bf1f4aa1b",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "lenet5 test[4]: expected LOGIT[0..15] int32 (unused = 0)"
+  },
+  {
+   "path": "lenet5/net/img5/act0.hex",
+   "sha256": "b9bf7e5ab5ef1c1ed3aecbcb73caf5a21b751fecccff7f614eecec08aa94f914",
+   "bytes": 2176,
+   "lines": 128,
+   "width_bits": 64,
+   "description": "lenet5 test[5]: initial ACT0 image, words 0..IN_END of layer 0"
+  },
+  {
+   "path": "lenet5/net/img5/logit10.hex",
+   "sha256": "b7894e70226c2f4ac4bf407c5d5277189c7879aeba86f22220789911081e20b5",
+   "bytes": 90,
+   "lines": 10,
+   "width_bits": 32,
+   "description": "lenet5 test[5]: expected LOGIT[0..9] int32"
+  },
+  {
+   "path": "lenet5/net/img5/logit16.hex",
+   "sha256": "7e27f0320471cecba238fd23801ba6412324355387ac56b96f891f6d39319456",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "lenet5 test[5]: expected LOGIT[0..15] int32 (unused = 0)"
+  },
+  {
+   "path": "lenet5/net/img6/act0.hex",
+   "sha256": "fa6617e48e3cf4d4cef03388265288fadcf46f59e1b716440a08dea7e4ba752d",
+   "bytes": 2176,
+   "lines": 128,
+   "width_bits": 64,
+   "description": "lenet5 test[6]: initial ACT0 image, words 0..IN_END of layer 0"
+  },
+  {
+   "path": "lenet5/net/img6/logit10.hex",
+   "sha256": "066287304936b1e26499f9baf1fe470b4f8dd99e668d7dc787b390579b9a9a69",
+   "bytes": 90,
+   "lines": 10,
+   "width_bits": 32,
+   "description": "lenet5 test[6]: expected LOGIT[0..9] int32"
+  },
+  {
+   "path": "lenet5/net/img6/logit16.hex",
+   "sha256": "e5ddb4d315a9856e30f96ecbf115072e7ebc47162bd098eba1be100041bfe0fd",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "lenet5 test[6]: expected LOGIT[0..15] int32 (unused = 0)"
+  },
+  {
+   "path": "lenet5/net/img7/act0.hex",
+   "sha256": "ad8aeeaf43ccc265d55b13c064e49c6381754aca3ff499bbfdfc4420dd69d9f9",
+   "bytes": 2176,
+   "lines": 128,
+   "width_bits": 64,
+   "description": "lenet5 test[7]: initial ACT0 image, words 0..IN_END of layer 0"
+  },
+  {
+   "path": "lenet5/net/img7/logit10.hex",
+   "sha256": "957b9ae6e4378195d1b99e90830a54d59a9ea1be18d2871ec23775dbe82c7b3f",
+   "bytes": 90,
+   "lines": 10,
+   "width_bits": 32,
+   "description": "lenet5 test[7]: expected LOGIT[0..9] int32"
+  },
+  {
+   "path": "lenet5/net/img7/logit16.hex",
+   "sha256": "f9bd75ff0a30abb96a69a1e1311e79fc2890337b8b18baaa02189be3d1cf4b02",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "lenet5 test[7]: expected LOGIT[0..15] int32 (unused = 0)"
+  },
+  {
+   "path": "lenet5/net/img8/act0.hex",
+   "sha256": "7532f53086177c4dcc58ac74d4f067385a18af60c35826bb7e6c695dcbd17938",
+   "bytes": 2176,
+   "lines": 128,
+   "width_bits": 64,
+   "description": "lenet5 test[8]: initial ACT0 image, words 0..IN_END of layer 0"
+  },
+  {
+   "path": "lenet5/net/img8/logit10.hex",
+   "sha256": "ac9b1bec79dbe15f8270c7e036c5d67be6d15668c99ee5b5ce4358e248a89fde",
+   "bytes": 90,
+   "lines": 10,
+   "width_bits": 32,
+   "description": "lenet5 test[8]: expected LOGIT[0..9] int32"
+  },
+  {
+   "path": "lenet5/net/img8/logit16.hex",
+   "sha256": "cb11b91039a67077f97c06f6f49699863fda596339065f0855be219999e721bd",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "lenet5 test[8]: expected LOGIT[0..15] int32 (unused = 0)"
+  },
+  {
+   "path": "lenet5/net/img9/act0.hex",
+   "sha256": "0137030f45695905861d54ec1384d983b4768bad9094cb5a95e1087cafaf981a",
+   "bytes": 2176,
+   "lines": 128,
+   "width_bits": 64,
+   "description": "lenet5 test[9]: initial ACT0 image, words 0..IN_END of layer 0"
+  },
+  {
+   "path": "lenet5/net/img9/logit10.hex",
+   "sha256": "139140d842833f7c62b5eda36d29770c649151fb7b3e43aa155620dfe4335f8f",
+   "bytes": 90,
+   "lines": 10,
+   "width_bits": 32,
+   "description": "lenet5 test[9]: expected LOGIT[0..9] int32"
+  },
+  {
+   "path": "lenet5/net/img9/logit16.hex",
+   "sha256": "db176833ef274eaacaea41e1bbfe97efe934f82549fc49bf3b51b90f73b902d9",
+   "bytes": 144,
+   "lines": 16,
+   "width_bits": 32,
+   "description": "lenet5 test[9]: expected LOGIT[0..15] int32 (unused = 0)"
+  },
+  {
+   "path": "lenet5/net/label.hex",
+   "sha256": "d6a8c596832f40b3ca69d9e7a121549d7bcdd989d55f324f7a5a15a8cf311462",
+   "bytes": 30,
+   "lines": 10,
+   "width_bits": 8,
+   "description": "lenet5: dataset label per image"
+  },
+  {
+   "path": "lenet5/net/pred.hex",
+   "sha256": "d6a8c596832f40b3ca69d9e7a121549d7bcdd989d55f324f7a5a15a8cf311462",
+   "bytes": 30,
+   "lines": 10,
+   "width_bits": 8,
+   "description": "lenet5: expected prediction per image (PS float32 argmax)"
+  },
+  {
+   "path": "lenet5/qparam.hex",
+   "sha256": "91dcd50ca93514b1817b413de464a1d0bcf0ff49f437372b9a5b0225c0ac5af4",
+   "bytes": 8024,
+   "lines": 472,
+   "width_bits": 64,
+   "description": "lenet5: QPARAM combined PS view, word 2i = {m, q_bias}, 2i+1 = {0, s} (FORMATS 3)"
+  },
+  {
+   "path": "lenet5/qparam_e.hex",
+   "sha256": "27a84184025a69b2b7c11465a626245b526868a34529675272bfecc18de3dd1b",
+   "bytes": 4012,
+   "lines": 236,
+   "width_bits": 64,
+   "description": "lenet5: QPARAM bank QP_E[i] = combined word 2i"
+  },
+  {
+   "path": "lenet5/qparam_o.hex",
+   "sha256": "f881e3e59c4787d5934cdebc437a92968871cf74bfe8bc1ca4984c7ffff180a2",
+   "bytes": 4012,
+   "lines": 236,
+   "width_bits": 64,
+   "description": "lenet5: QPARAM bank QP_O[i] = combined word 2i+1"
+  },
+  {
+   "path": "lenet5/wgt.hex",
+   "sha256": "5a28c6c6b61eb1b01dee77ab9c06c13298457ac9a77650ab05b256f706e5c05f",
+   "bytes": 132821,
+   "lines": 7813,
+   "width_bits": 64,
+   "description": "lenet5: full WGT image from word 0 (all layers, FORMATS 2)"
+  },
+  {
+   "path": "unit/array/array_a.hex",
+   "sha256": "7007a684d12e15e294579d2d35d0cffd237c2842587274ceac1e36e40e0dfe35",
+   "bytes": 86173,
+   "lines": 5069,
+   "width_bits": 64,
+   "description": "array: per cycle, 8 activations; byte r (bits 8r+7:8r) = a[row r]"
+  },
+  {
+   "path": "unit/array/array_acc.hex",
+   "sha256": "41d9cb2be8f6d2130096fec06fe2b15e3a7839a4871dbbdf2b350cd68f57459a",
+   "bytes": 29952,
+   "lines": 3328,
+   "width_bits": 32,
+   "description": "array: expected int32 acc at last, 64 lines per tile, line tile*64 + r*8 + j"
+  },
+  {
+   "path": "unit/array/array_ctl.hex",
+   "sha256": "8b9ce7d9909048daad7ed20b05a05467bcc278be38f4fd077d84cfa867508c39",
+   "bytes": 15207,
+   "lines": 5069,
+   "width_bits": 8,
+   "description": "array: per cycle control, bit0 first, bit1 last"
+  },
+  {
+   "path": "unit/array/array_k.hex",
+   "sha256": "b30a47b3d466857996fe79e9c2d4330b777a5625eff9fe4b2c8279da15a46d77",
+   "bytes": 468,
+   "lines": 52,
+   "width_bits": 32,
+   "description": "array: K (cycles) of each tile, in order"
+  },
+  {
+   "path": "unit/array/array_w.hex",
+   "sha256": "5dfb1978a21d20587d9764e392eee3ad2f7e0548210045ed03b039b928ef8e78",
+   "bytes": 86173,
+   "lines": 5069,
+   "width_bits": 64,
+   "description": "array: per cycle, 8 weights; byte j (bits 8j+7:8j) = w[column j]"
+  },
+  {
+   "path": "unit/pe/pe_cycles.hex",
+   "sha256": "6fefe6a149862b84462f41fdd087184aa9cddcc359931de092b6dbfc6ac99e8d",
+   "bytes": 743036,
+   "lines": 43708,
+   "width_bits": 64,
+   "description": "PE: one cycle per line {a, w, first, last, expected acc after the cycle}"
+  },
+  {
+   "path": "unit/pe/pe_results.hex",
+   "sha256": "eba50330944a68bd71861dcc7f575f566041bc68d330ed888329492413bde351",
+   "bytes": 5769,
+   "lines": 641,
+   "width_bits": 32,
+   "description": "PE: expected acc (int32) at the last cycle of each sequence, in order"
+  },
+  {
+   "path": "unit/pool/pool_cols.hex",
+   "sha256": "4b6ab7a145a5bd52d7447fac5d8388072f12e187e6129e38f201ad3a002aabb7",
+   "bytes": 200704,
+   "lines": 4096,
+   "width_bits": 192,
+   "description": "pool: one drain column per line {dy0 col, dy1 col, expected 4 pooled bytes, be}"
+  },
+  {
+   "path": "unit/requant/cifar10_requant.hex",
+   "sha256": "4c52971bca679fbb09f2e1254d909f88e2565ea8d172512bf8b16655e19e46e9",
+   "bytes": 4100082,
+   "lines": 100002,
+   "width_bits": 160,
+   "description": "requant lane (cifar10): 100000 seeded rows + 2 near-tie rows {acc, q_bias, m, v, s, flags, q pre-ReLU, q post-ReLU, QPARAM channel}"
+  },
+  {
+   "path": "unit/requant/lenet5_requant.hex",
+   "sha256": "7d69fcd66d590e1cc7b8a5b2c716cd886a49bf837c1c0be85320cf84a2ef7f82",
+   "bytes": 4100164,
+   "lines": 100004,
+   "width_bits": 160,
+   "description": "requant lane (lenet5): 100000 seeded rows + 4 near-tie rows {acc, q_bias, m, v, s, flags, q pre-ReLU, q post-ReLU, QPARAM channel}"
+  },
+  {
+   "path": "unit/rotator/rot_banks.hex",
+   "sha256": "3e8591265936ffd893c915a461fdd4784db00657f7b72e5db376aa762de8b0c6",
+   "bytes": 9384,
+   "lines": 552,
+   "width_bits": 64,
+   "description": "rotator: input, byte b = ACT bank b"
+  },
+  {
+   "path": "unit/rotator/rot_kx.hex",
+   "sha256": "7a464b9dbd993d1fe3432ef88324e840ed2d4d4e661e95cd6586c0545998cca4",
+   "bytes": 1656,
+   "lines": 552,
+   "width_bits": 8,
+   "description": "rotator: kx (0..7) for each input line"
+  },
+  {
+   "path": "unit/rotator/rot_rows.hex",
+   "sha256": "588465255c8b38dfa7f6c66a1baa076398f840613cf4a416362cc1a8ffead537",
+   "bytes": 9384,
+   "lines": 552,
+   "width_bits": 64,
+   "description": "rotator: expected output, byte r = row r = bank (r + kx) mod 8"
+  }
+ ]
+}
