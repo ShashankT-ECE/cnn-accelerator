@@ -8,7 +8,7 @@ V2="$(cd "$(dirname "$0")/.." && pwd)"
 PY="$V2/../.venv/bin/python"
 export PYTHONDONTWRITEBYTECODE=1
 source "$HOME/Xilinx/Vivado/2023.1/settings64.sh" >/dev/null 2>&1
-JOBS="${OOC_JOBS:-4}"
+JOBS=1   # one Vivado job at a time (user rule after the OOM freeze); OOC_JOBS is ignored
 
 # top : rtl sources (relative to v2/rtl, gos_pkg.sv first). PS_RD_LAT uses its default (1).
 MODULES=(
@@ -27,6 +27,7 @@ MODULES=(
 run_one() {
     local top="$1"; shift
     local out="$V2/build/ooc/$top"
+    "$V2/scripts/vivado_guard.sh" || { echo "ooc_all.sh: $top not started (guard)" >&2; return 1; }
     rm -rf "$out"; mkdir -p "$out"
     local srcs=()
     for f in "$@"; do srcs+=("$V2/rtl/$f"); done

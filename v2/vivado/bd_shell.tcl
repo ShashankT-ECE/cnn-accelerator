@@ -19,9 +19,12 @@
 # Outputs in <outdir>: <name>.bit, <name>.hwh, <name>.bit.sha256, utilization.rpt,
 # utilization_hier.rpt, timing_summary.rpt, address_map.txt, critical_warnings.txt, summary.json.
 
+set_param general.maxThreads 8   ;# user rule after the OOM freeze: one Vivado job, <= 8 threads
+
 # ------------------------------------------------------------------ arguments
 array set A {top gos_shell_top build_id "" outdir "" filelist "" name gos_shell jobs 8 bd_only 0
              pl_mhz 200 freq_tol_pct 1.0 strategy default}
+set A(jobs) 1   ;# one run at a time (synth, IP OOC and impl runs are serialized)
 foreach a $argv {
     set kv [split $a =]
     if {[llength $kv] < 2} { error "bd_shell.tcl: bad argument '$a' (expected key=value)" }

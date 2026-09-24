@@ -47,10 +47,11 @@ $V2/rtl/gos_top_ports.vh
 $V2/rtl/gos_top_wrapper.v
 FL
 
+"$V2/scripts/vivado_guard.sh" || exit 1
 echo "build_gos.sh: top=gos_top_wrapper ${MHZ} MHz strategy=$STRATEGY build_id=$BUILD_ID out=$OUT"
 ( cd "$OUT" && vivado -mode batch -nojournal -log vivado.log -source "$V2/vivado/bd_shell.tcl" \
     -tclargs top=gos_top_wrapper build_id=$BUILD_ID outdir="$OUT" filelist="$OUT/filelist.txt" \
-    name=$NAME pl_mhz=$MHZ freq_tol_pct=$TOL strategy=$STRATEGY bd_only=$BD_ONLY jobs=6 \
+    name=$NAME pl_mhz=$MHZ freq_tol_pct=$TOL strategy=$STRATEGY bd_only=$BD_ONLY jobs=1 \
     > stdout.log 2>&1 ) || { echo "build_gos.sh: vivado FAILED (see $OUT/vivado.log)" >&2; exit 1; }
 if [[ $BD_ONLY -eq 1 ]]; then echo "build_gos.sh: BD-only check done"; exit 0; fi
 ( cd "$OUT" && sha256sum "$NAME.bit" > "$NAME.bit.sha256" && sha256sum "$NAME.hwh" > "$NAME.hwh.sha256" )

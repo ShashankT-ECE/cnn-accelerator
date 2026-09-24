@@ -50,7 +50,8 @@ REGEN = {"reference_accuracy", "requant_equivalence", "final_layer_check", "cycl
 OTHER_PRODUCERS = {"unit_tb": "run_unit_all.sh", "ooc_synth": "ooc_all.sh",
                    "rtl_cycles": "run_core.sh", "rtl_network": "run_core.sh",
                    "rtl_checker": "run_core.sh", "impl_shell": "vivado/build_shell.sh",
-                   "impl_gos": "vivado/build_gos.sh + impl_collect.py"}
+                   "impl_gos": "vivado/build_gos.sh + impl_collect.py",
+                   "rtl_netlist": "run_netlist_sim.sh"}
 paths = sorted(glob.glob("v2/results/*.csv"))
 found = {p.split("/")[-1][:-4] for p in paths if p not in TRAINING_ARTIFACTS} - set(OTHER_PRODUCERS)
 assert found == REGEN, f"results CSVs not produced by any known script: {sorted(found - REGEN)}; missing {sorted(REGEN - found)}"

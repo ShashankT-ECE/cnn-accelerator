@@ -38,6 +38,7 @@ $V2/rtl/gos_shell_scratch.v
 $V2/rtl/gos_shell_top.v
 EOF
 
+"$V2/scripts/vivado_guard.sh" || exit 1
 echo "build_shell.sh: top=$TOP build_id=$BUILD_ID out=$OUT"
 ( cd "$OUT" && vivado -mode batch -nojournal -log vivado.log -source "$V2/vivado/bd_shell.tcl" \
     -tclargs top=$TOP build_id=$BUILD_ID outdir="$OUT" filelist="$OUT/filelist.txt" name=$NAME \

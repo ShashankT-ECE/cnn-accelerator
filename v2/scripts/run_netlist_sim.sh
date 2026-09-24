@@ -14,6 +14,7 @@ RTL=(gos_pkg.sv gos_csr.sv gos_cfg_check.sv gos_ctrl.sv gos_act_buf.sv gos_wgt_m
 SRCS=(); for f in "${RTL[@]}"; do SRCS+=("$V2/rtl/$f"); done
 
 if [[ "${SKIP_SYNTH:-0}" != 1 ]]; then
+    "$V2/scripts/vivado_guard.sh" || exit 1
     rm -rf "$NL"; mkdir -p "$NL"
     ( cd "$NL" && vivado -mode batch -nojournal -log synth.log -source "$V2/vivado/netlist_synth.tcl" \
         -tclargs "$NL" "$BID" "${SRCS[@]}" > stdout.log 2>&1 )
@@ -43,4 +44,5 @@ wait
 for tb in tb_gos_top tb_gos_top_backtoback; do
     grep -q "TEST PASSED" "$V2/build/sim/netlist_$tb/run.log" 2>/dev/null || fail=1
 done
+PYTHONDONTWRITEBYTECODE=1 "$V2/../.venv/bin/python" "$V2/scripts/netlist_collect.py" || fail=1
 exit $fail

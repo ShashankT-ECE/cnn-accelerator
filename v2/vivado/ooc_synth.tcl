@@ -5,6 +5,7 @@
 #   utilization.rpt, utilization_hier.rpt, timing_summary.rpt, summary.json
 # summary.json: top, part, clk_period_ns, lut, lutram, ff, carry8, dsp, ramb36, ramb18, wns_ns, tns_ns,
 #               failing_endpoints, vivado_version
+set_param general.maxThreads 8   ;# user rule after the OOM freeze: one Vivado job, <= 8 threads
 set top    [lindex $argv 0]
 set outdir [lindex $argv 1]
 set files  {}
