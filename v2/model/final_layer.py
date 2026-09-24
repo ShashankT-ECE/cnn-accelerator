@@ -80,18 +80,20 @@ def raw_to_int32(acc: np.ndarray, q_b: np.ndarray) -> np.ndarray:
 # Legacy model / data loading (legacy code called, not re-implemented)
 # --------------------------------------------------------------------------
 
-def _legacy(net: str):
+def _legacy(net: str, ckpt=None):
     from torchvision import datasets
     if net == "lenet5":
         from lenet5.int8_model import Int8LeNet5 as Model, calibrate, load_weights
         from lenet5.preprocess import make_transform
-        ds_cls, ckpt = datasets.MNIST, REPO_ROOT / "data/checkpoint/lenet5_fp32.pt"
+        ds_cls, default = datasets.MNIST, REPO_ROOT / "data/checkpoint/lenet5_fp32.pt"
     elif net == "cifar10":
         from cifar10.int8_model import Int8Cifar10Net as Model, calibrate, load_weights
         from cifar10.preprocess import make_transform
-        ds_cls, ckpt = datasets.CIFAR10, REPO_ROOT / "data/checkpoint/cifar10_fp32.pt"
+        ds_cls, default = datasets.CIFAR10, REPO_ROOT / "data/checkpoint/cifar10_fp32.pt"
     else:
         raise ValueError(net)
+    # Step 2.1b: ckpt (repo-relative) overrides the checkpoint of the same net.
+    ckpt = default if ckpt is None else REPO_ROOT / ckpt
     return Model, calibrate, load_weights, make_transform, ds_cls, ckpt
 
 
@@ -102,9 +104,9 @@ def _dataset(net: str, train: bool):
 
 
 @lru_cache(maxsize=None)
-def calibrated_params(net: str) -> dict:
+def calibrated_params(net: str, ckpt=None) -> dict:
     """Legacy calibrate(load_weights(ckpt), train[0:1024]) as eval_*_int8.py."""
-    _, calibrate, load_weights, _, _, ckpt = _legacy(net)
+    _, calibrate, load_weights, _, _, ckpt = _legacy(net, ckpt)
     tr = _dataset(net, train=True)
     calib = np.stack([tr[i][0].numpy() for i in range(CALIB_N)]).astype(np.float32)
     return calibrate(load_weights(ckpt), calib)
@@ -116,19 +118,22 @@ def test_images(net: str, n: int = TEST_N) -> np.ndarray:
     return np.stack([te[i][0].numpy() for i in range(n)]).astype(np.float32)
 
 
-def legacy_model(net: str):
-    return _legacy(net)[0](calibrated_params(net))
+def legacy_model(net: str, ckpt=None):
+    return _legacy(net)[0](calibrated_params(net, ckpt))
 
 
 # --------------------------------------------------------------------------
 # Equivalence check
 # --------------------------------------------------------------------------
 
-def check_net(net: str, n: int = TEST_N, batch: int = 500) -> dict:
-    """Compare logits_from_raw(v) against legacy forward_layers on n test images."""
+def check_net(net: str, n: int = TEST_N, batch: int = 500, ckpt=None) -> dict:
+    """Compare logits_from_raw(v) against legacy forward_layers on n test images.
+
+    ``ckpt`` (repo-relative) overrides the legacy FP32 checkpoint (Step 2.1b).
+    """
     layer, acc_key, K = NETS[net]
-    model = legacy_model(net)
-    P = calibrated_params(net)[layer]
+    model = legacy_model(net, ckpt)
+    P = calibrated_params(net, ckpt)[layer]
     x_all = test_images(net, TEST_N)[:n]
 
     argmax_match = bitexact = raw_diff = 0
