@@ -54,6 +54,7 @@ import numpy as np
 import common  # noqa: F401  (puts legacy python/ on sys.path)
 from common import FROZEN_DIR, REPO_ROOT, RESULTS_DIR, base_meta, write_results_csv
 from lenet5.int8_quant import requantize  # legacy float64 reference (read-only)
+from net_config import NET_CONFIGS
 
 BITS = (32, 40, 48)
 ACT_PROD_MAX = 128 * 128          # |a*w| <= 16384 for INT8 x INT8
@@ -69,14 +70,8 @@ NET_LAYERS = {
     "lenet5": (("conv1", 25), ("conv3", 150), ("conv5", 400), ("fc1", 120)),
     "cifar10": (("conv1", 75), ("conv2", 800), ("conv3", 800)),
 }
-DEFAULT_NPZ = {
-    "lenet5": REPO_ROOT / "data" / "lenet5_int8" / "quant_params.npz",
-    "cifar10": FROZEN_DIR / "cifar10_int8" / "quant_params.npz",
-}
-HW_NPZ = {
-    "lenet5": FROZEN_DIR / "lenet5_int8" / "hw_requant.npz",
-    "cifar10": FROZEN_DIR / "cifar10_int8" / "hw_requant.npz",
-}
+DEFAULT_NPZ = {n: NET_CONFIGS[n]["quant_params"] for n in NET_LAYERS}
+HW_NPZ = {n: NET_CONFIGS[n]["hw_requant"] for n in NET_LAYERS}
 CSV_PATH = RESULTS_DIR / "requant_equivalence.csv"
 CSV_FIELDS = ["net", "layer", "channel", "B", "s", "m", "values_checked_exact",
               "values_checked_saturated", "mismatches", "first_mismatch_v",

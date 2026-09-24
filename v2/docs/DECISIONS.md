@@ -38,6 +38,25 @@ Selected **B = 32** (smallest passing B; 32, 40 and 48 all pass with the search 
 - LeNet-5: pointer only (`v2/model/frozen/lenet5_int8/POINTER.md` → `data/lenet5_int8/quant_params.npz`, sha256 verified).
 - Accuracies of record (model, full 10,000-image test sets, `v2/results/reference_accuracy.csv`): LeNet-5 FP32 98.78% (9878), INT8 98.79% (9879); CIFAR-10 FP32 65.87% (6587), INT8 65.76% (6576). Confirmed equal to D3 values.
 
+## D8 — Step 2.2 format and dataflow resolutions (2026-09-24)
+Approved at the Step 2.2 plan (user) unless marked "(Step 2.2 impl)" — those were resolved during implementation, reported to the user, and are open to override.
+1. **Descriptor = 16 x 32-bit words per layer** with host-precomputed derived fields (K, IN_WPR, IN_PLANE, OC_TILES, OW_TILES, OUT_W, OUT_H, OUT_WPR, OUT_PLANE, WGT_END, IN_END, OUT_END, QP_END) so the RTL needs no multipliers, even at configuration time. Packing and checker rules: `docs/FORMATS.md`. The RTL config checker only compares; derived-field consistency is the host's responsibility (asserted in `gos_pack`). CSR byte offsets are deferred to the CSR step.
+2. **Final layer has QPARAM entries** (q_bias, m=0, s=0; m/s unused because out_raw). LeNet 236 channels, CIFAR 138 (≤ 256).
+3. **The address stream is data-independent**; vectors emit it once per layer.
+4. **Requant-lane vectors:** 100k seeded (channel, v) pairs per net plus every near-tie v (exact |v·M − (n+½)| < 1e-9 in the exact region), including the Step 2.1 values.
+5. **Unit-vector layouts are provisional** until the RTL interfaces are fixed (`v2/vectors/README.md`).
+6. **`regen_results.sh` regenerates every results CSV** (reference_accuracy, requant_equivalence, final_layer_check, cycle_model, golden_crosscheck). `common.git_dirty()` excludes the generated outputs (`v2/results/`, `v2/vectors/MANIFEST.json`) so a regeneration run reports the state of the code that produced them; the script itself refuses a dirty tree at start.
+7. (Step 2.2 impl) **Unwritten ACT bytes:** the model initializes buffers to 0; the RTL must not rely on unwritten bytes and writes with per-bank byte enables. Garbage may only reach masked x-tail rows / OC-tail lanes.
+8. (Step 2.2 impl) **Rotator over-read:** masked rows may read word IN_END+1 (< 4096 for both nets; at IN_END = 4095 the 12-bit address wraps to 0, still harmless) — the checker rule IN_END ≤ 4095 suffices.
+9. (Step 2.2 impl) **out_raw requires a 1x1 output** (OH = OW = 1, no pool, no ReLU); the address stream refuses other out_raw layers. The config checker (comparisons only) also requires out_raw → OC ≤ 16.
+10. (Step 2.2 impl) **Masked output channels (≥ OC) still take their drain cycle** with byte-enable 0; their QPARAM read index may point past QP_END (wraps on the 8-bit port) and the data is discarded.
+11. (Step 2.2 impl) **Pool write data:** the 4 pooled bytes are presented on both bank halves; the byte enables select the half (banks 0–3 for even ox_tile, 4–7 for odd). The dy=0 buffer holds post-requant/ReLU bytes; pooled = horizontal pair max of the vertical max.
+12. (Step 2.2 impl) Drain/next-tile overlap and back-pressure are not modeled in the tile model (functional order only); cycle timing is the cycle model's and later the RTL's job.
+
+13. (Step 2.2 impl, vectors) Layer-level vectors use the full-net WGT/QPARAM images (so each descriptor's WGT_BASE/QP_BASE is used as is); QPARAM is emitted as combined, even (QP_E) and odd (QP_O) views; expected ACT outputs come with a byte mask (`act_out_mask.hex`) — unmasked bytes are don't-care; LOGIT[OC..15] is 0-padded and don't-care.
+14. (Step 2.2 impl, vectors) ARCH_SPEC does not fix where ReLU sits in the requant lane: requant vectors carry both the pre-ReLU and post-ReLU q. Max-pool compares signed int8 (after ReLU all values are 0..127; unit pool vectors also cover full signed int8). Placement of the 4 pooled bytes inside the 64-bit write word is left to the RTL; vectors give the 4 bytes + byte enable.
+15. (Step 2.2 impl, vectors) Address-stream records carry the full read-address counter in 16 bits; the ACT port uses bits 11:0. Unit PE/array vectors include K < 8 (the per-layer checker's K ≥ 8 rule does not apply to the PE/array units).
+
 ## Open conflicts
 
 ### OC-1 — RESOLVED (option 2, user decision 2026-09-24; see D1 outcome) — D1 requant: no B in {32, 40, 48} is bit-exact with m = RNE(M·2^s) (2026-09-24, Step 2.1)

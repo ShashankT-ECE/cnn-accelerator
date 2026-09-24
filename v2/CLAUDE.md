@@ -7,5 +7,6 @@
 - Every RTL module has a self-checking xsim testbench in `v2/tb/` that prints PASS/FAIL and exits nonzero on failure. Simulations run in `v2/build/sim/<tb_name>/`, never in the repo root.
 - Golden data comes only from `v2/model` (Python, `.venv`). Vectors are hex files loaded with `$readmemh`.
 - **Honesty:** never type a result number by hand. All results come from scripts that write `v2/results/*.csv` with metadata. Never present simulation or model numbers as hardware measurements. Label every number: model / RTL sim / post-implementation / measured on KV260.
+  Results CSVs are generated only from a clean, committed tree (git_dirty=False). Workflow: commit code → run result scripts → commit CSVs in a separate commit. Rows with git_dirty=True are invalid for the paper.
 - Graphify is not required for `v2/` work.
 - Use parallel subagents for independent work (e.g. separate leaf modules and their testbenches), then integrate and run all checks in the main session.

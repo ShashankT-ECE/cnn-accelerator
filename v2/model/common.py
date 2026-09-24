@@ -43,8 +43,14 @@ def git_commit() -> str:
     return _git("rev-parse", "HEAD")
 
 
+# Generated outputs are excluded from the dirty check so that a regeneration
+# run (which rewrites them) keeps reporting the state of the code that produced
+# them. Everything else - code, frozen params, docs - counts.
+OUTPUT_PATHSPECS = (":!v2/results", ":!v2/vectors/MANIFEST.json")
+
+
 def git_dirty() -> bool:
-    return bool(_git("status", "--porcelain"))
+    return bool(_git("status", "--porcelain", "--", ".", *OUTPUT_PATHSPECS))
 
 
 def base_meta(net: str = "", layer: str = "", source: str = "model",
