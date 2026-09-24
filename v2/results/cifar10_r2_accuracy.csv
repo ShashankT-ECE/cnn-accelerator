@@ -1,9 +1,9 @@
 timestamp,git_commit,git_dirty,vivado_version,bitstream_sha256,board_id,net,layer,clock_mhz,source,duration_s,num_inferences,model,reference_version,checkpoint,split,precision,correct,total,accuracy_pct
-2026-09-24T11:28:41+00:00,2c0f09f0181d67478557b194543bc56738db1015,False,,,,cifar10,all,,model,7.162,5000,r1,cifar10_r1,data/checkpoint/cifar10_fp32.pt,val,FP32,3359,5000,67.18
-2026-09-24T11:28:41+00:00,2c0f09f0181d67478557b194543bc56738db1015,False,,,,cifar10,all,,model,7.162,10000,r1,cifar10_r1,data/checkpoint/cifar10_fp32.pt,test,FP32,6587,10000,65.87
-2026-09-24T11:30:09+00:00,2c0f09f0181d67478557b194543bc56738db1015,False,,,,cifar10,all,,model,87.855,5000,r1,cifar10_r1,data/checkpoint/cifar10_fp32.pt,val,INT8,3371,5000,67.42
-2026-09-24T11:30:09+00:00,2c0f09f0181d67478557b194543bc56738db1015,False,,,,cifar10,all,,model,87.855,10000,r1,cifar10_r1,data/checkpoint/cifar10_fp32.pt,test,INT8,6576,10000,65.76
-2026-09-24T11:30:16+00:00,2c0f09f0181d67478557b194543bc56738db1015,False,,,,cifar10,all,,model,6.914,5000,r2,cifar10_r2,v2/model/retrain/cifar10_fp32_r2.pt,val,FP32,3927,5000,78.54
-2026-09-24T11:30:16+00:00,2c0f09f0181d67478557b194543bc56738db1015,False,,,,cifar10,all,,model,6.914,10000,r2,cifar10_r2,v2/model/retrain/cifar10_fp32_r2.pt,test,FP32,7856,10000,78.56
-2026-09-24T11:31:44+00:00,2c0f09f0181d67478557b194543bc56738db1015,False,,,,cifar10,all,,model,87.874,5000,r2,cifar10_r2,v2/model/retrain/cifar10_fp32_r2.pt,val,INT8,3915,5000,78.30
-2026-09-24T11:31:44+00:00,2c0f09f0181d67478557b194543bc56738db1015,False,,,,cifar10,all,,model,87.874,10000,r2,cifar10_r2,v2/model/retrain/cifar10_fp32_r2.pt,test,INT8,7852,10000,78.52
+2026-09-24T16:32:54+00:00,c6ff5d9686e36de54234b0d9261cdaeaeced59a5,False,,,,cifar10,all,,model,17.109,5000,r1,cifar10_r1,data/checkpoint/cifar10_fp32.pt,val,FP32,3359,5000,67.18
+2026-09-24T16:32:55+00:00,c6ff5d9686e36de54234b0d9261cdaeaeced59a5,False,,,,cifar10,all,,model,17.109,10000,r1,cifar10_r1,data/checkpoint/cifar10_fp32.pt,test,FP32,6587,10000,65.87
+2026-09-24T16:34:28+00:00,c6ff5d9686e36de54234b0d9261cdaeaeced59a5,False,,,,cifar10,all,,model,93.211,5000,r1,cifar10_r1,data/checkpoint/cifar10_fp32.pt,val,INT8,3371,5000,67.42
+2026-09-24T16:34:28+00:00,c6ff5d9686e36de54234b0d9261cdaeaeced59a5,False,,,,cifar10,all,,model,93.211,10000,r1,cifar10_r1,data/checkpoint/cifar10_fp32.pt,test,INT8,6576,10000,65.76
+2026-09-24T16:34:41+00:00,c6ff5d9686e36de54234b0d9261cdaeaeced59a5,False,,,,cifar10,all,,model,13.327,5000,r2,cifar10_r2,v2/model/retrain/cifar10_fp32_r2.pt,val,FP32,3927,5000,78.54
+2026-09-24T16:34:41+00:00,c6ff5d9686e36de54234b0d9261cdaeaeced59a5,False,,,,cifar10,all,,model,13.327,10000,r2,cifar10_r2,v2/model/retrain/cifar10_fp32_r2.pt,test,FP32,7856,10000,78.56
+2026-09-24T16:36:08+00:00,c6ff5d9686e36de54234b0d9261cdaeaeced59a5,False,,,,cifar10,all,,model,86.541,5000,r2,cifar10_r2,v2/model/retrain/cifar10_fp32_r2.pt,val,INT8,3915,5000,78.30
+2026-09-24T16:36:08+00:00,c6ff5d9686e36de54234b0d9261cdaeaeced59a5,False,,,,cifar10,all,,model,86.541,10000,r2,cifar10_r2,v2/model/retrain/cifar10_fp32_r2.pt,test,INT8,7852,10000,78.52
