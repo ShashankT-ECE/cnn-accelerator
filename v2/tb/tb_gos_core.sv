@@ -377,7 +377,9 @@ module tb_gos_core;
       exp_code = f32[base + 129];
       @(negedge clk); start = 1;
       @(negedge clk); start = 0;
-      repeat (3) @(negedge clk);          // CHK1, CHK2, then LOAD (accepted) or IDLE (error)
+      // wait for the checker's decision: refused (busy falls) or accepted (first S_LOAD)
+      for (int w = 0; w < 16 && busy && !dut.ctrl_load; w++) @(negedge clk);
+      @(negedge clk);
       if (exp_code != 0) ok = !busy && error && (err_code == exp_code);
       else               ok = busy && !error;
       chk(ok, $sformatf("checker case %0d: busy=%0d error=%0d code=%h exp=%h", c, busy, error, err_code, exp_code));

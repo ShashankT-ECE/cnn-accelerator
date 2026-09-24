@@ -29,7 +29,11 @@ module tb_gos_top;
   logic [QP_AW:0]    qp_addr;
   logic [63:0] wgt_wdata, wgt_rdata, qp_wdata, qp_rdata;
 
+`ifdef NETLIST
+  gos_top dut (
+`else
   gos_top #(.BUILD_ID(BID), .PS_RD_LAT(1)) dut (
+`endif
     .clk, .rst,
     .s_axi_awaddr(awaddr), .s_axi_awprot(3'b0), .s_axi_awvalid(awvalid), .s_axi_awready(awready),
     .s_axi_wdata(wdata), .s_axi_wstrb(wstrb), .s_axi_wvalid(wvalid), .s_axi_wready(wready),

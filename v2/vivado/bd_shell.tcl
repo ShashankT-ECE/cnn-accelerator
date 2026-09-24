@@ -20,7 +20,8 @@
 # utilization_hier.rpt, timing_summary.rpt, address_map.txt, critical_warnings.txt, summary.json.
 
 # ------------------------------------------------------------------ arguments
-array set A {top gos_shell_top build_id "" outdir "" filelist "" name gos_shell jobs 8 bd_only 0}
+array set A {top gos_shell_top build_id "" outdir "" filelist "" name gos_shell jobs 8 bd_only 0
+             pl_mhz 200 freq_tol_pct 1.0 strategy default}
 foreach a $argv {
     set kv [split $a =]
     if {[llength $kv] < 2} { error "bd_shell.tcl: bad argument '$a' (expected key=value)" }
@@ -37,7 +38,8 @@ set outdir  [file normalize $A(outdir)]
 set name    $A(name)
 set part    xck26-sfvc784-2LV-c
 set bdname  gos_system
-set PL0_MHZ_REQ 200
+set PL0_MHZ_REQ $A(pl_mhz)
+if {[lsearch -exact {default explore} $A(strategy)] < 0} { error "bd_shell.tcl: strategy must be default|explore" }
 file mkdir $outdir
 set projdir [file join $outdir proj]
 file delete -force $projdir
@@ -113,7 +115,8 @@ foreach src {IOPLL RPLL} {
     set act [get_property CONFIG.PSU__CRL_APB__PL0_REF_CTRL__ACT_FREQMHZ $ps]
     puts "bd_shell: pl_clk0 source $src -> actual $act MHz"
     set err [expr {abs($act - $PL0_MHZ_REQ)}]
-    if {$err < $best_err - 1e-6} { set best_err $err; set best_src $src }
+    # ties go to RPLL (the source of the 200 MHz baseline), so all variants share one PL0 source
+    if {$err <= $best_err + 1e-6} { set best_err $err; set best_src $src }
 }
 set_property -dict [list CONFIG.PSU__CRL_APB__PL0_REF_CTRL__SRCSEL $best_src \
     CONFIG.PSU__CRL_APB__PL0_REF_CTRL__FREQMHZ $PL0_MHZ_REQ] $ps
@@ -121,8 +124,8 @@ set pl0_act [get_property CONFIG.PSU__CRL_APB__PL0_REF_CTRL__ACT_FREQMHZ $ps]
 set pl0_div [list [get_property CONFIG.PSU__CRL_APB__PL0_REF_CTRL__DIVISOR0 $ps] \
                   [get_property CONFIG.PSU__CRL_APB__PL0_REF_CTRL__DIVISOR1 $ps]]
 puts "bd_shell: pl_clk0 requested $PL0_MHZ_REQ MHz, source $best_src, divisors $pl0_div, actual $pl0_act MHz"
-if {abs($pl0_act - $PL0_MHZ_REQ) > 0.01 * $PL0_MHZ_REQ} {
-    error "bd_shell: pl_clk0 actual $pl0_act MHz is more than 1% off the requested $PL0_MHZ_REQ MHz"
+if {abs($pl0_act - $PL0_MHZ_REQ) > 0.01 * $A(freq_tol_pct) * $PL0_MHZ_REQ} {
+    error "bd_shell: pl_clk0 actual $pl0_act MHz is more than $A(freq_tol_pct)% off the requested $PL0_MHZ_REQ MHz"
 }
 
 set rstc [create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset rst_pl0]
@@ -202,6 +205,12 @@ generate_target all [get_files $bdname.bd]
 if {$A(bd_only)} { puts "bd_shell: bd_only done"; exit 0 }
 
 # ------------------------------------------------------------------ build
+if {$A(strategy) eq "explore"} {
+    set_property strategy Performance_Explore [get_runs impl_1]
+    set_property STEPS.PHYS_OPT_DESIGN.IS_ENABLED true [get_runs impl_1]
+    set_property STEPS.POST_ROUTE_PHYS_OPT_DESIGN.IS_ENABLED true [get_runs impl_1]
+}
+puts "bd_shell: impl_1 strategy [get_property STRATEGY [get_runs impl_1]]"
 launch_runs impl_1 -to_step write_bitstream -jobs $A(jobs)
 wait_on_run impl_1
 if {[get_property PROGRESS [get_runs impl_1]] ne "100%"} {
@@ -212,6 +221,24 @@ open_run impl_1
 report_utilization -file [file join $outdir utilization.rpt]
 report_utilization -hierarchical -file [file join $outdir utilization_hier.rpt]
 report_timing_summary -max_paths 10 -file [file join $outdir timing_summary.rpt]
+report_timing -max_paths 1 -nworst 1 -delay_type max -file [file join $outdir worst_path.rpt]
+report_power -file [file join $outdir power.rpt]
+# static checks (Step 4.5)
+report_methodology -file [file join $outdir methodology.rpt]
+report_drc -file [file join $outdir drc.rpt]
+check_timing -verbose -file [file join $outdir check_timing.rpt]
+set fh [open [file join $outdir static_counts.txt] w]
+foreach sev {{CRITICAL WARNING} WARNING ERROR {ADVISORY}} {
+    puts $fh "methodology [string map {{ } _} $sev] [llength [get_methodology_violations -quiet -filter "SEVERITY == \"$sev\""]]"
+    puts $fh "drc [string map {{ } _} $sev] [llength [get_drc_violations -quiet -filter "SEVERITY == \"$sev\""]]"
+}
+close $fh
+set wp [lindex [get_timing_paths -quiet -delay_type max -max_paths 1] 0]
+set wp_desc "none"
+if {$wp ne ""} {
+    set wp_desc "[get_property STARTPOINT_PIN $wp] -> [get_property ENDPOINT_PIN $wp] levels [get_property LOGIC_LEVELS $wp] datapath [get_property DATAPATH_DELAY $wp]"
+}
+set wp_desc [string map [list "\"" "'" "\\" "/"] $wp_desc]
 
 proc slack_sum {type} {
     set wns "null"; set tot 0.0; set n 0
@@ -257,6 +284,7 @@ puts $fh " \"pl_clk0_srcsel\": \"$best_src\", \"pl_clk0_divisors\": \"$pl0_div\"
 puts $fh " \"wns_ns\": $wns, \"tns_ns\": $tns, \"failing_setup_endpoints\": $nfs,"
 puts $fh " \"whs_ns\": $whs, \"ths_ns\": $ths, \"failing_hold_endpoints\": $nfh,"
 puts $fh " \"critical_warnings\": [llength $cw], \"bit\": \"$name.bit\", \"hwh\": \"$name.hwh\","
+puts $fh " \"strategy\": \"[get_property STRATEGY [get_runs impl_1]]\", \"worst_path\": \"$wp_desc\","
 puts $fh " \"vivado_version\": \"[version -short]\"}"
 close $fh
 puts "BD_SHELL_SUMMARY top=$top pl_clk0=$pl0_act MHz wns=$wns whs=$whs tns=$tns ths=$ths cw=[llength $cw]"
