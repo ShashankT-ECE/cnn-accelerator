@@ -1,0 +1,8 @@
+build/
+vectors/generated/
+results/raw/
+*.jou
+*.log
+*.pb
+xsim.dir/
+.Xil/

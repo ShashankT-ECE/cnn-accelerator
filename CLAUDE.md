@@ -74,6 +74,8 @@ Before using Vivado tools from a new shell:
 
 ```bash
 source ~/Xilinx/Vivado/2023.1/settings64.sh
+```
+
 SystemVerilog Coding Rules
 
 For synthesizable RTL:
@@ -177,3 +179,10 @@ when query/path/explain do not surface enough context.
 After modifying code, run graphify update . to keep the graph current.
 
 Generated Graphify data is local project state and must not be committed.
+
+## V2 accelerator work
+
+All V2 work lives in `v2/` on branch `v2-dev`. For any file under `v2/`,
+`v2/CLAUDE.md` takes precedence over this file. `v2/` is an approved top-level
+directory. Legacy files (rtl/, sim/, python/, data/, docs/, scripts/,
+software/) are read-only references for V2 work.
