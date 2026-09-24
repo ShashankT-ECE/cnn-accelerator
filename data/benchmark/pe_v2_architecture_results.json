@@ -1,0 +1,60 @@
+{
+  "frozen_baseline": {
+    "OS_dense": 43021,
+    "WS_dense": 140412,
+    "coarse_sparse": 39132,
+    "fine_gating_cycles": 43021
+  },
+  "options": {
+    "A_keep_current_pe": {
+      "OS_cycles": 43021,
+      "WS_cycles": 140412,
+      "fine_sparse_cycles": 43021,
+      "supports": {
+        "OS": true,
+        "WS": true,
+        "reconfig": true,
+        "fine_sparsity_cycles": false
+      },
+      "note": "verified; zero_skip gates product (coarse skip only)"
+    },
+    "B_modified_zero_aware_mac": {
+      "OS_cycles": 43021,
+      "WS_cycles": 140412,
+      "fine_sparse_cycles": 43021,
+      "supports": {
+        "OS": true,
+        "WS": true,
+        "reconfig": true,
+        "fine_sparsity_cycles": false
+      },
+      "note": "+per-PE zero detect; energy-only, ~0 on DSP48E2, no cycle gain"
+    },
+    "C_mask_routing": {
+      "OS_cycles": 43021,
+      "WS_cycles": 140412,
+      "fine_sparse_cycles": 43021,
+      "supports": {
+        "OS": true,
+        "WS": true,
+        "reconfig": true,
+        "fine_sparsity_cycles": false
+      },
+      "note": "mask alongside activations; same as B unless it compacts (breaks WS)"
+    },
+    "D_compacted_sparse": {
+      "OS_cycles": null,
+      "WS_cycles": null,
+      "fine_sparse_cycles": 22885,
+      "supports": {
+        "OS": false,
+        "WS": false,
+        "reconfig": false,
+        "fine_sparsity_cycles": true
+      },
+      "note": "SCNN-style crossbar; sparse 2.44x (theor) / 1.88x (est); abandons systolic OS/WS"
+    }
+  },
+  "recommendation": "KEEP CURRENT PE",
+  "rationale": "The PE already supports OS+WS+reconfiguration (the project's actual contribution). Fine-grained activation sparsity requires compaction (data-dependent timing), which is incompatible with the fixed-timing systolic OS/WS datapaths; options B/C add no cycle savings (and ~0 energy on DSP48E2), and option D abandons OS/WS for a different accelerator. No PE modification produces a meaningful OS+WS+sparsity win on the same datapath."
+}

@@ -1,0 +1,108 @@
+{
+  "experiment": "Step 6.2 \u2014 CIFAR-10 cuda-convnet FP32 reference",
+  "seed": 42,
+  "architecture": {
+    "layers": [
+      "conv1(3->32,5x5 valid)",
+      "maxpool(2x2/2)",
+      "conv2(32->32,5x5 valid)",
+      "maxpool(2x2/2)",
+      "conv3(32->64,5x5 valid)",
+      "fc(64->10)"
+    ],
+    "total_params": 79978,
+    "total_macs": 4493440
+  },
+  "training": {
+    "optimizer": "SGD",
+    "learning_rate": 0.01,
+    "momentum": 0.9,
+    "batch_size": 128,
+    "epochs": 10,
+    "weight_decay": 0.0
+  },
+  "data": {
+    "dataset": "CIFAR-10",
+    "preprocess": "uint8->[0,1] (ToTensor), no mean/std",
+    "split": {
+      "train": [
+        0,
+        45000
+      ],
+      "val": [
+        45000,
+        50000
+      ],
+      "test": [
+        0,
+        10000
+      ]
+    }
+  },
+  "metrics": {
+    "val_acc": 0.6718,
+    "test_acc": 0.6587,
+    "history": [
+      {
+        "epoch": 1,
+        "val_acc": 0.3804,
+        "val_loss": 1.7098380430221558
+      },
+      {
+        "epoch": 2,
+        "val_acc": 0.4514,
+        "val_loss": 1.5037148441314698
+      },
+      {
+        "epoch": 3,
+        "val_acc": 0.5198,
+        "val_loss": 1.327699913406372
+      },
+      {
+        "epoch": 4,
+        "val_acc": 0.5488,
+        "val_loss": 1.2603545799255371
+      },
+      {
+        "epoch": 5,
+        "val_acc": 0.5804,
+        "val_loss": 1.1982256593704224
+      },
+      {
+        "epoch": 6,
+        "val_acc": 0.5872,
+        "val_loss": 1.1701048250198365
+      },
+      {
+        "epoch": 7,
+        "val_acc": 0.6214,
+        "val_loss": 1.0934265794754028
+      },
+      {
+        "epoch": 8,
+        "val_acc": 0.6268,
+        "val_loss": 1.063622967529297
+      },
+      {
+        "epoch": 9,
+        "val_acc": 0.6478,
+        "val_loss": 1.0123522266387939
+      },
+      {
+        "epoch": 10,
+        "val_acc": 0.6718,
+        "val_loss": 0.967164408493042
+      }
+    ]
+  },
+  "checkpoint": {
+    "path": "/home/shashankt/cnn-accelerator/data/checkpoint/cifar10_fp32.pt",
+    "sha256": "febc11d84d4bbfb957bfeaffd38d69eb861915dcc170e23c793f5b74726984ed"
+  },
+  "environment": {
+    "python": "3.10.12",
+    "torch": "2.1.2+cpu",
+    "torchvision": "0.16.2+cpu",
+    "numpy": "1.26.4"
+  }
+}

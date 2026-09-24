@@ -1,0 +1,65 @@
+{
+  "dense": {
+    "conv1": 9184,
+    "conv3": 16280,
+    "conv5": 15855,
+    "fc1": 1510,
+    "fc2": 192
+  },
+  "coarse": {
+    "conv1": {
+      "spatial_groups_per_image": 112,
+      "skipped_groups_per_image": 47.353,
+      "skip_rate_pct": 42.27946428571428,
+      "dense_cycles": 9184,
+      "sparse_cycles": 5301.054,
+      "skipped_cycles": 3882.946,
+      "skipped_macs_per_image": 42766.32
+    },
+    "conv3": {
+      "spatial_groups_per_image": 20,
+      "skipped_groups_per_image": 0.0072,
+      "skip_rate_pct": 0.036,
+      "dense_cycles": 16280,
+      "sparse_cycles": 16274.1392,
+      "skipped_cycles": 5.8608,
+      "skipped_macs_per_image": 34.56
+    },
+    "conv5": {
+      "spatial_groups_per_image": 1,
+      "skipped_groups_per_image": 0.0,
+      "skip_rate_pct": 0.0,
+      "dense_cycles": 15855,
+      "sparse_cycles": 15855.0,
+      "skipped_cycles": 0.0,
+      "skipped_macs_per_image": 0.0
+    },
+    "fc1": {
+      "spatial_groups_per_image": 1,
+      "skipped_groups_per_image": 0.0,
+      "skip_rate_pct": 0.0,
+      "dense_cycles": 1510,
+      "sparse_cycles": 1510.0,
+      "skipped_cycles": 0.0,
+      "skipped_macs_per_image": 0.0
+    },
+    "fc2": {
+      "spatial_groups_per_image": 1,
+      "skipped_groups_per_image": 0.0,
+      "skip_rate_pct": 0.0,
+      "dense_cycles": 192,
+      "sparse_cycles": 192.0,
+      "skipped_cycles": 0.0,
+      "skipped_macs_per_image": 0.0
+    }
+  },
+  "fine": {},
+  "totals": {
+    "dense_cycles": 43021,
+    "coarse_sparse_cycles": 39132.1932,
+    "coarse_speedup_vs_dense": 1.0993761525229309,
+    "coarse_skipped_macs_per_image": 42800.88,
+    "fine_theoretical_mac_reduction_pct": 59.08017021991741,
+    "fine_note": "per-MAC upper bound only; no cycle speedup claimed on the current PE"
+  }
+}

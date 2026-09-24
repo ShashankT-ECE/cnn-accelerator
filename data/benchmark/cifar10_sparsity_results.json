@@ -1,0 +1,111 @@
+{
+  "calibration": 1024,
+  "test_images": 10000,
+  "dense_os": {
+    "conv1": 94976,
+    "conv2": 167760,
+    "conv3": 16776,
+    "fc": 152
+  },
+  "coarse": {
+    "conv1": {
+      "spatial_groups_per_image": 112,
+      "dense_cycles": 94976,
+      "skipped_cycles": 19.4192,
+      "sparse_cycles": 94956.5808,
+      "skipped_macs_per_image": 300.48
+    },
+    "conv2": {
+      "spatial_groups_per_image": 20,
+      "dense_cycles": 167760,
+      "skipped_cycles": 0.0,
+      "sparse_cycles": 167760.0,
+      "skipped_macs_per_image": 0.0
+    },
+    "conv3": {
+      "spatial_groups_per_image": 1,
+      "dense_cycles": 16776,
+      "skipped_cycles": 0.0,
+      "sparse_cycles": 16776.0,
+      "skipped_macs_per_image": 0.0
+    },
+    "fc": {
+      "spatial_groups_per_image": 1,
+      "dense_cycles": 152,
+      "skipped_cycles": 0.0,
+      "sparse_cycles": 152.0,
+      "skipped_macs_per_image": 0.0
+    }
+  },
+  "fine": {
+    "conv1": {
+      "skippable_macs_per_image": 7306.3968,
+      "skippable_pct": 0.3883076530612245
+    },
+    "conv2": {
+      "skippable_macs_per_image": 1465927.1296,
+      "skippable_pct": 57.2627785
+    },
+    "conv3": {
+      "skippable_macs_per_image": 26285.024,
+      "skippable_pct": 51.337937499999995
+    },
+    "fc": {
+      "skippable_macs_per_image": 360.078,
+      "skippable_pct": 56.2621875
+    }
+  },
+  "layers": {
+    "conv1": {
+      "tensor": "q_input",
+      "kind": "structural",
+      "output_channels": 32,
+      "zero_pct": 0.4475911458333333,
+      "fine_skippable_pct": 0.3883076530612245,
+      "coarse_skipped_groups_per_image": 0.0229,
+      "coarse_skip_rate_pct": 0.02044642857142857
+    },
+    "conv2": {
+      "tensor": "pool1",
+      "kind": "relu",
+      "output_channels": 32,
+      "zero_pct": 58.13183673469388,
+      "fine_skippable_pct": 57.2627785,
+      "coarse_skipped_groups_per_image": 0.0,
+      "coarse_skip_rate_pct": 0.0
+    },
+    "conv3": {
+      "tensor": "pool2",
+      "kind": "relu",
+      "output_channels": 64,
+      "zero_pct": 51.337937499999995,
+      "fine_skippable_pct": 51.337937499999995,
+      "coarse_skipped_groups_per_image": 0.0,
+      "coarse_skip_rate_pct": 0.0
+    },
+    "fc": {
+      "tensor": "c3",
+      "kind": "relu",
+      "output_channels": 10,
+      "zero_pct": 56.2621875,
+      "fine_skippable_pct": 56.2621875,
+      "coarse_skipped_groups_per_image": 0.0,
+      "coarse_skip_rate_pct": 0.0
+    }
+  },
+  "totals": {
+    "dense_os_cycles": 279664,
+    "coarse_sparse_cycles": 279644.5808,
+    "coarse_speedup_vs_dense": 1.0000694424327639,
+    "coarse_cycle_reduction_pct": 0.006943761084731646,
+    "coarse_skipped_macs_per_image": 300.48,
+    "fine_skippable_macs_per_image": 1499878.6284,
+    "fine_theoretical_mac_reduction_pct": 33.37929578229597
+  },
+  "verdict": {
+    "threshold_pct": 5.0,
+    "coarse_cycle_reduction_pct": 0.006943761084731646,
+    "meaningful": false,
+    "conclusion": "coarse-skip provides only 0.01% cycle reduction (<= 5% => pure overhead on CIFAR-10)"
+  }
+}

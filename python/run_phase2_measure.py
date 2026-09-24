@@ -84,8 +84,8 @@ def main() -> None:
                 "latency_us": round(ws_dense / CLK_MHZ, 3),
                 "sustained_mac_per_cycle": round(TOTAL_MAC / ws_dense, 2),
                 "sustained_GOPS": round(TOTAL_MAC * 2 * CLK_MHZ / ws_dense / 1e3, 2),
-                "provenance": "[ANALYTICAL] no-skip bound (896 groups x 43): the coarse "
-                              "zero-skip is always-on in WS mode, so this is not measured on a sparse input",
+                "provenance": "[SIMULATION] sparsity_disable=1 (896 groups x 43, "
+                              "measured bit-exact via the sparsity_disable control)",
             },
             {
                 "id": "ws_sparse", "mode": "WS", "sparse": True,

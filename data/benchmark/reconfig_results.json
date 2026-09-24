@@ -1,0 +1,68 @@
+{
+  "switch_overhead_cycles": 8,
+  "selected_modes": {
+    "conv1": "OS",
+    "conv3": "OS",
+    "conv5": "OS",
+    "fc1": "OS",
+    "fc2": "OS"
+  },
+  "layers": [
+    {
+      "name": "conv1",
+      "type": "conv",
+      "best": "OS",
+      "best_cycles": 9184,
+      "os_cycles": 9184,
+      "ws_cycles": 28224,
+      "switch_benefit": 19040
+    },
+    {
+      "name": "conv3",
+      "type": "conv",
+      "best": "OS",
+      "best_cycles": 16280,
+      "os_cycles": 16280,
+      "ws_cycles": 51840,
+      "switch_benefit": 35560
+    },
+    {
+      "name": "conv5",
+      "type": "conv",
+      "best": "OS",
+      "best_cycles": 15855,
+      "os_cycles": 15855,
+      "ws_cycles": 49200,
+      "switch_benefit": 33345
+    },
+    {
+      "name": "fc1",
+      "type": "fc",
+      "best": "OS",
+      "best_cycles": 1510,
+      "os_cycles": 1510,
+      "ws_cycles": 10248,
+      "switch_benefit": 8738
+    },
+    {
+      "name": "fc2",
+      "type": "fc",
+      "best": "OS",
+      "best_cycles": 192,
+      "os_cycles": 192,
+      "ws_cycles": 900,
+      "switch_benefit": 708
+    }
+  ],
+  "num_switches": 0,
+  "total_switch_overhead": 0,
+  "oracle_cycles": 43021,
+  "reconfigurable_cycles": 43021,
+  "fixed_os_cycles": 43021,
+  "fixed_ws_cycles": 140412,
+  "speedup_vs_fixed_os": 1.0,
+  "speedup_vs_fixed_ws": 3.2638013993166126,
+  "overhead_fraction": 0.0,
+  "switches_declined_by_overhead": [],
+  "reconfigurable_beneficial_vs_os": false
+}

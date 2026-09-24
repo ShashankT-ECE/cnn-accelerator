@@ -56,5 +56,30 @@
     "Residual critical path is the registered stream read (address look-ahead -> image dist-RAM); full 2-deep address pipelining is the remaining lever, documented in PHASE2_HARDENING.md.",
     "DSP48E2 = 64 = 64 PE MACs (1/PE); the 3 controller address-arithmetic DSPs are eliminated.",
     "BREG=0 for all PE MACs (mode-muxed weight path prevents DSP BREG inference; weight registered in fabric). Functional, bit-exact; documented (Decision 12 class)."
-  ]
+  ],
+  "cnn_top_axi": {
+    "label": "[POST-ROUTE SYNTHESIS ESTIMATE]",
+    "top": "cnn_top (AXI4-Lite slave + result BRAM + cnn_accelerator_v2)",
+    "clock_mhz": 200.0,
+    "wns_ns": 0.202,
+    "tns_ns": 0.0,
+    "whs_ns": 0.058,
+    "ths_ns": 0.0,
+    "pulse_width_slack_ns": 1.738,
+    "failing_endpoints": 0,
+    "lut": 9462,
+    "ff": 5903,
+    "dsp48e2": 64,
+    "carry8": 24,
+    "bram": 8,
+    "uram": 0,
+    "critical_path": "controller FSM (phase_reg) -> result_data_reg[7][7] (5 logic levels, routing-dominated)",
+    "delta_vs_hardened": {
+      "lut": "+90",
+      "ff": "+108",
+      "dsp48e2": "0",
+      "carry8": "+4 (result address/decode arithmetic)",
+      "bram": "+8 (8 result banks, 1024x32, column-residue)"
+    }
+  }
 }

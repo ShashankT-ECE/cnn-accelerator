@@ -1,0 +1,17 @@
+{
+  "dense_cycles": 43021,
+  "coarse_cycles": 39132,
+  "coarse_speedup": 1.099381580292344,
+  "fine_gating_cycles": 43021,
+  "fine_gating_speedup": 1.0,
+  "fine_compaction": {
+    "nonzero_macs_per_image": 170439,
+    "theoretical_cycles_zero_overhead": 17604.09156583117,
+    "theoretical_speedup": 2.443806875187017,
+    "metadata_overhead_est": 1.3,
+    "estimated_cycles": 22885.319035580524,
+    "estimated_speedup": 1.8798514424515516,
+    "practicality": "IMPRACTICAL \u2014 requires crossbar/indirection (non-systolic), abandons the frozen 8x8 array; index+value metadata and sparse-detection become new bottlenecks"
+  },
+  "conclusion": "No practical fine-grained mechanism converts the 59.08% MAC sparsity into cycle savings on the frozen 8x8 DSP48E2 systolic array: gating (A/C) saves neither cycles nor (on DSP48E2) energy; compaction (B) is a different architecture."
+}

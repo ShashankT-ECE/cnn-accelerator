@@ -1,0 +1,296 @@
+{
+  "workload": "CIFAR-10 cuda-convnet (frozen, docs/CIFAR10_WORKLOAD_SPEC.md)",
+  "array": {
+    "PEs": 64,
+    "rows": 8,
+    "cols": 8,
+    "anchor_os": "82 cyc (IC=1,K=5)",
+    "anchor_ws": "42 cyc (T=25)",
+    "fc_os_verified": "IC+2*rows+2 (bit-exact)",
+    "fc_ws_derived": "8*ceil(IC/8)+2"
+  },
+  "note": "Same frozen formula family as the LeNet-5 baseline. Conv OS/WS timings for IC>1/OC>8 are unverified generalizations (controller gaps G1/G3); FC OS is RTL-verified, FC WS analytically derived. No dataflow or sparsity benefit is assumed.",
+  "layers": {
+    "conv1": {
+      "type": "conv",
+      "IC": 3,
+      "OC": 32,
+      "K": 5,
+      "H_out": 28,
+      "W_out": 28,
+      "MACs": 1881600,
+      "reduction_taps": 75,
+      "OS": {
+        "reduction_taps": 75,
+        "ic_tiling": "serialized (3 IC x 5 rows = 15 passes/group)",
+        "oc_tiling": "4 channel group(s) of 8 rows (OC=32)",
+        "spatial_groups": 112,
+        "channel_groups": 4,
+        "passes": 15,
+        "cycles_per_group": 212,
+        "groups": 448,
+        "cycles": 94976,
+        "partial_column_valid_pixels": 4,
+        "weight_reads": 268800,
+        "PE_utilization": 0.3095518867924528,
+        "idle_PE_cycles": 4196864,
+        "psum_operations": 0,
+        "psum_behavior": "local accumulator (acc += product)",
+        "timing_status": "unverified generalization (IC>1 and/or OC>8 \u2014 controller gaps G1/G3)"
+      },
+      "WS": {
+        "reduction_taps": 75,
+        "ic_tiling": "folded into 75 taps -> 10 tile(s) of 8",
+        "oc_tiling": "32 serialized sweeps (1 channel/sweep)",
+        "spatial_groups": 112,
+        "tiles": 10,
+        "sweeps": 32,
+        "cycles_per_group": 90,
+        "groups": 3584,
+        "cycles": 322560,
+        "partial_column_valid_pixels": 4,
+        "weight_reads": 268800,
+        "PE_utilization": 0.09114583333333333,
+        "idle_PE_cycles": 18762240,
+        "psum_operations": 1881600,
+        "psum_behavior": "vertical cascade + bottom-to-top tile feedback",
+        "timing_status": "unverified generalization (T != 25 \u2014 controller gap G1)"
+      },
+      "winner": "OS",
+      "os_over_ws": 0.29444444444444445,
+      "os_faster_by": 3.3962264150943398
+    },
+    "conv2": {
+      "type": "conv",
+      "IC": 32,
+      "OC": 32,
+      "K": 5,
+      "H_out": 10,
+      "W_out": 10,
+      "MACs": 2560000,
+      "reduction_taps": 800,
+      "OS": {
+        "reduction_taps": 800,
+        "ic_tiling": "serialized (32 IC x 5 rows = 160 passes/group)",
+        "oc_tiling": "4 channel group(s) of 8 rows (OC=32)",
+        "spatial_groups": 20,
+        "channel_groups": 4,
+        "passes": 160,
+        "cycles_per_group": 2097,
+        "groups": 80,
+        "cycles": 167760,
+        "partial_column_valid_pixels": 2,
+        "weight_reads": 512000,
+        "PE_utilization": 0.23843586075345732,
+        "idle_PE_cycles": 8176640,
+        "psum_operations": 0,
+        "psum_behavior": "local accumulator (acc += product)",
+        "timing_status": "unverified generalization (IC>1 and/or OC>8 \u2014 controller gaps G1/G3)"
+      },
+      "WS": {
+        "reduction_taps": 800,
+        "ic_tiling": "folded into 800 taps -> 100 tile(s) of 8",
+        "oc_tiling": "32 serialized sweeps (1 channel/sweep)",
+        "spatial_groups": 20,
+        "tiles": 100,
+        "sweeps": 32,
+        "cycles_per_group": 810,
+        "groups": 640,
+        "cycles": 518400,
+        "partial_column_valid_pixels": 2,
+        "weight_reads": 512000,
+        "PE_utilization": 0.07716049382716049,
+        "idle_PE_cycles": 30617600,
+        "psum_operations": 2560000,
+        "psum_behavior": "vertical cascade + bottom-to-top tile feedback",
+        "timing_status": "unverified generalization (T != 25 \u2014 controller gap G1)"
+      },
+      "winner": "OS",
+      "os_over_ws": 0.3236111111111111,
+      "os_faster_by": 3.0901287553648067
+    },
+    "conv3": {
+      "type": "conv",
+      "IC": 32,
+      "OC": 64,
+      "K": 5,
+      "H_out": 1,
+      "W_out": 1,
+      "MACs": 51200,
+      "reduction_taps": 800,
+      "OS": {
+        "reduction_taps": 800,
+        "ic_tiling": "serialized (32 IC x 5 rows = 160 passes/group)",
+        "oc_tiling": "8 channel group(s) of 8 rows (OC=64)",
+        "spatial_groups": 1,
+        "channel_groups": 8,
+        "passes": 160,
+        "cycles_per_group": 2097,
+        "groups": 8,
+        "cycles": 16776,
+        "partial_column_valid_pixels": 1,
+        "weight_reads": 51200,
+        "PE_utilization": 0.047687172150691466,
+        "idle_PE_cycles": 1022464,
+        "psum_operations": 0,
+        "psum_behavior": "local accumulator (acc += product)",
+        "timing_status": "unverified generalization (IC>1 and/or OC>8 \u2014 controller gaps G1/G3)"
+      },
+      "WS": {
+        "reduction_taps": 800,
+        "ic_tiling": "folded into 800 taps -> 100 tile(s) of 8",
+        "oc_tiling": "64 serialized sweeps (1 channel/sweep)",
+        "spatial_groups": 1,
+        "tiles": 100,
+        "sweeps": 64,
+        "cycles_per_group": 810,
+        "groups": 64,
+        "cycles": 51840,
+        "partial_column_valid_pixels": 1,
+        "weight_reads": 51200,
+        "PE_utilization": 0.015432098765432098,
+        "idle_PE_cycles": 3266560,
+        "psum_operations": 51200,
+        "psum_behavior": "vertical cascade + bottom-to-top tile feedback",
+        "timing_status": "unverified generalization (T != 25 \u2014 controller gap G1)"
+      },
+      "winner": "OS",
+      "os_over_ws": 0.3236111111111111,
+      "os_faster_by": 3.0901287553648067
+    },
+    "fc": {
+      "type": "fc",
+      "IC": 64,
+      "OC": 10,
+      "K": 1,
+      "H_out": 1,
+      "W_out": 1,
+      "MACs": 640,
+      "reduction_taps": 64,
+      "OS": {
+        "reduction_taps": 64,
+        "ic_tiling": "serialized (IC features, 1/cycle)",
+        "oc_tiling": "2 channel group(s) of 8 rows",
+        "spatial_groups": 1,
+        "channel_groups": 2,
+        "passes": 64,
+        "cycles_per_group": 82,
+        "groups": 2,
+        "cycles": 152,
+        "partial_column_valid_pixels": 1,
+        "weight_reads": 640,
+        "PE_utilization": 0.06578947368421052,
+        "idle_PE_cycles": 9088,
+        "psum_operations": 0,
+        "psum_behavior": "local accumulator (acc += product)",
+        "timing_status": "RTL-verified (general 1-pixel FC schedule, bit-exact)"
+      },
+      "WS": {
+        "reduction_taps": 64,
+        "ic_tiling": "folded into 8 tile(s) of 8 taps",
+        "oc_tiling": "10 serialized sweeps (1 neuron/sweep)",
+        "spatial_groups": 1,
+        "tiles": 8,
+        "sweeps": 10,
+        "cycles_per_group": 66,
+        "groups": 10,
+        "cycles": 660,
+        "partial_column_valid_pixels": 1,
+        "weight_reads": 640,
+        "PE_utilization": 0.015151515151515152,
+        "idle_PE_cycles": 41600,
+        "psum_operations": 640,
+        "psum_behavior": "vertical cascade + bottom-to-top tile feedback",
+        "timing_status": "analytically derived (conv-WS anchor, FC_SCHEDULE_VALIDATION \u00a73)"
+      },
+      "winner": "OS",
+      "os_over_ws": 0.23030303030303031,
+      "os_faster_by": 4.342105263157895
+    }
+  },
+  "totals": {
+    "MACs": 4493440,
+    "OS_cycles": 279664,
+    "WS_cycles": 893460,
+    "OS_PE_utilization": 0.25105126151381657,
+    "WS_PE_utilization": 0.07858214133816847,
+    "OS_over_WS": 0.31301233407203455,
+    "WS_over_OS": 3.194762286171978,
+    "refined_OS_cycles": 225584,
+    "refined_OS_over_WS": 0.2524836030712063,
+    "refinement_note": "Uniform per-group cost (frozen baseline) overcounts OS partial column groups; FC_SCHEDULE_VALIDATION \u00a76 per-group correction 1+IC*K*(P+K)+2*rows lowers OS only (WS unchanged) -> OS lead widens."
+  },
+  "per_layer_classification": {
+    "conv1": {
+      "class": "OS clearly preferred",
+      "OS": 94976,
+      "WS": 322560,
+      "winner": "OS"
+    },
+    "conv2": {
+      "class": "OS clearly preferred",
+      "OS": 167760,
+      "WS": 518400,
+      "winner": "OS"
+    },
+    "conv3": {
+      "class": "OS clearly preferred",
+      "OS": 16776,
+      "WS": 51840,
+      "winner": "OS"
+    },
+    "fc": {
+      "class": "OS clearly preferred",
+      "OS": 152,
+      "WS": 660,
+      "winner": "OS"
+    }
+  },
+  "reconfiguration": {
+    "switch_overhead_cycles": 8,
+    "selected_modes": {
+      "conv1": "OS",
+      "conv2": "OS",
+      "conv3": "OS",
+      "fc": "OS"
+    },
+    "num_switches": 0,
+    "total_overhead": 0,
+    "oracle_cycles": 279664,
+    "reconfigurable_cycles": 279664,
+    "fixed_OS_cycles": 279664,
+    "fixed_WS_cycles": 893460,
+    "speedup_vs_fixed_OS": 1.0,
+    "speedup_vs_fixed_WS": 3.194762286171978,
+    "reconfigurable_beneficial_vs_OS": false,
+    "no_crossover": true
+  },
+  "lenet_comparison": {
+    "source": "data/benchmark/mapping_results.json",
+    "OS_cycles": 43021,
+    "WS_cycles": 140412,
+    "OS_over_WS": 0.3063911916360425,
+    "per_layer": {
+      "conv1": {
+        "OS": 9184,
+        "WS": 28224
+      },
+      "conv3": {
+        "OS": 16280,
+        "WS": 51840
+      },
+      "conv5": {
+        "OS": 15855,
+        "WS": 49200
+      },
+      "fc1": {
+        "OS": 1510,
+        "WS": 10248
+      },
+      "fc2": {
+        "OS": 192,
+        "WS": 900
+      }
+    }
+  }
+}

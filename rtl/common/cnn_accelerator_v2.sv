@@ -41,6 +41,9 @@ module cnn_accelerator_v2 (
     input  logic               dataflow_mode,   // requested mode: 0=OS, 1=WS
     input  logic               mode_commit,     // pulse: commit mode (flush+switch)
     input  logic               start,           // pulse: run one full frame
+    input  logic               sparsity_disable,// 1 = force WS dense (disable the coarse
+                                                //     zero-group skip) so the no-skip cycle
+                                                //     bound is MEASURED, not analytical
     output logic               busy,
     output logic               done,            // pulse on last result emitted
     output logic               mode_active,     // latched active mode (0=OS,1=WS)
@@ -386,9 +389,9 @@ module cnn_accelerator_v2 (
         if (rst)
             ws_skip <= 1'b0;
         else if (phase == PH_IDLE && start)
-            ws_skip <= mode_active_r && gaz(0, 7);        // first group (y=0, base=7)
+            ws_skip <= mode_active_r && !sparsity_disable && gaz(0, 7);        // first group (y=0, base=7)
         else if (phase == PH_COMPUTE && s == s_max)
-            ws_skip <= mode_active_r && gaz(y_nxt, base_nxt);   // next group
+            ws_skip <= mode_active_r && !sparsity_disable && gaz(y_nxt, base_nxt);   // next group
     end
 
     assign ws_group_macs = (base == 6'd31) ? 8'd100 : 8'd200;   // 25 taps x valid cols

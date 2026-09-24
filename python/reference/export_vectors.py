@@ -7,9 +7,12 @@ Produces, under data/vectors/:
   * input_img.hex        — the primary test image (784 int8 values), row-major.
   * golden_canonical.txt — the primary image's integer golden, decimal int32,
                            ch/y/x order (6272 lines).
+  * golden_canonical.hex — the SAME golden as 8-digit int32 hex (6272 lines),
+                           for the RTL testbenches' ``$readmemh`` (no ``$readmemd``).
   * multi/               — a small deterministic regression set (10 images).
   * quant_params.npz     — S_a, S_w, q_b, q_w, zero-points (machine-readable).
   * manifest.json        — full reproducibility metadata.
+  * SHA256SUMS           — SHA-256 of every generated artifact above.
 
 Hex format is ``$readmemh``-compatible: 2-digit lowercase two's-complement hex,
 one value per line (there is no ``$readmemd``).  Negative int8 is emitted as its
@@ -22,6 +25,7 @@ this canonical golden to the controller's emission order.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -62,6 +66,30 @@ def write_golden(path: Path, golden: np.ndarray) -> None:
     with open(path, "w") as f:
         for v in flat:
             f.write(f"{int(v)}\n")
+
+
+def write_golden_hex(path: Path, golden: np.ndarray) -> None:
+    """int32 golden -> 8-digit two's-complement hex (``$readmemh``-compatible)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    flat = flatten_golden_ch_y_x(golden)
+    with open(path, "w") as f:
+        for v in flat:
+            f.write(f"{int(v) & 0xffffffff:08x}\n")
+
+
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def write_sha256sums(paths: list[Path]) -> Path:
+    """Write a ``sha256sum``-compatible manifest (relative to data/vectors/)."""
+    out = VECTORS_DIR / "SHA256SUMS"
+    lines = []
+    for p in sorted(paths):
+        if p.is_file():
+            lines.append(f"{_sha256(p)}  {p.relative_to(VECTORS_DIR)}")
+    out.write_text("\n".join(lines) + "\n")
+    return out
 
 
 def _git_sha() -> str:
@@ -165,6 +193,7 @@ def export(params: dict, weights: dict, images_int8: list[np.ndarray],
     # Primary vector (image 0) under the canonical names.
     write_hex(VECTORS_DIR / "input_img.hex", images_int8[0].ravel())
     write_golden(VECTORS_DIR / "golden_canonical.txt", goldens[0])
+    write_golden_hex(VECTORS_DIR / "golden_canonical.hex", goldens[0])
 
     # Small regression set under multi/.
     for img, gold, idx in zip(images_int8, goldens, test_indices):
@@ -187,4 +216,16 @@ def export(params: dict, weights: dict, images_int8: list[np.ndarray],
     manifest_path = VECTORS_DIR / "manifest.json"
     with open(manifest_path, "w") as f:
         json.dump(manifest, f, indent=2)
+
+    # SHA-256 checksums of every generated artifact (reproducibility).
+    write_sha256sums([
+        VECTORS_DIR / "weights.hex",
+        VECTORS_DIR / "input_img.hex",
+        VECTORS_DIR / "golden_canonical.txt",
+        VECTORS_DIR / "golden_canonical.hex",
+        VECTORS_DIR / "quant_params.npz",
+        manifest_path,
+    ] + [VECTORS_DIR / "multi" / f"input_img_{i:05d}.hex" for i in test_indices]
+      + [VECTORS_DIR / "multi" / f"golden_{i:05d}.txt" for i in test_indices])
+
     return manifest_path

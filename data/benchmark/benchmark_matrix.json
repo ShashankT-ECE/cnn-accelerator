@@ -19,7 +19,7 @@
     "mode": "WS",
     "sparse": false,
     "cycles": 38528,
-    "cycles_provenance": "[ANALYTICAL] no-skip bound",
+    "cycles_provenance": "[SIMULATION] sparsity_disable=1 (no-skip bound)",
     "latency_us": 192.64,
     "useful_macs": 156800,
     "zero_activation_macs": 133960,

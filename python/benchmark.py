@@ -202,7 +202,8 @@ def benchmark_matrix(img: np.ndarray, n_skip: int, skipped_macs: int) -> list[di
 
     rows = [
         row("os_dense", "OS", False, os_dense, "[SIMULATION]"),
-        row("ws_dense", "WS", False, ws_dense, "[ANALYTICAL] no-skip bound"),
+        row("ws_dense", "WS", False, ws_dense,
+            "[SIMULATION] sparsity_disable=1 (no-skip bound)"),
         row("os_sparse", "OS", True, os_dense, "[SIMULATION]",
             {"sparsity_applies": False,
              "note": "coarse zero-group skip is WS-only in this design; OS is NOT accelerated"}),

@@ -1,0 +1,69 @@
+{
+  "layers": {
+    "conv1": {
+      "tensor": "q_input",
+      "kind": "structural",
+      "output_channels": 6,
+      "zero_count": 8732613,
+      "total_elements": 10240000,
+      "zero_pct": 85.279423828125,
+      "nonzero_pct": 14.720576171874999,
+      "total_macs_per_image": 117600,
+      "skippable_macs_per_image": 95003.202,
+      "skippable_pct": 80.78503571428571
+    },
+    "conv3": {
+      "tensor": "pool1",
+      "kind": "relu",
+      "output_channels": 16,
+      "zero_count": 7765910,
+      "total_elements": 11760000,
+      "zero_pct": 66.03664965986394,
+      "nonzero_pct": 33.96335034013605,
+      "total_macs_per_image": 240000,
+      "skippable_macs_per_image": 118350.8208,
+      "skippable_pct": 49.312842
+    },
+    "conv5": {
+      "tensor": "pool2",
+      "kind": "relu",
+      "output_channels": 120,
+      "zero_count": 2186396,
+      "total_elements": 4000000,
+      "zero_pct": 54.65989999999999,
+      "nonzero_pct": 45.3401,
+      "total_macs_per_image": 48000,
+      "skippable_macs_per_image": 26236.752,
+      "skippable_pct": 54.65989999999999
+    },
+    "fc1": {
+      "tensor": "c5",
+      "kind": "relu",
+      "output_channels": 84,
+      "zero_count": 718248,
+      "total_elements": 1200000,
+      "zero_pct": 59.854,
+      "nonzero_pct": 40.146,
+      "total_macs_per_image": 10080,
+      "skippable_macs_per_image": 6033.2832,
+      "skippable_pct": 59.854
+    },
+    "fc2": {
+      "tensor": "f6",
+      "kind": "relu",
+      "output_channels": 10,
+      "zero_count": 456667,
+      "total_elements": 840000,
+      "zero_pct": 54.36511904761905,
+      "nonzero_pct": 45.63488095238095,
+      "total_macs_per_image": 840,
+      "skippable_macs_per_image": 456.667,
+      "skippable_pct": 54.36511904761905
+    }
+  },
+  "totals": {
+    "total_macs_per_image": 416520,
+    "skippable_macs_per_image": 246080.725,
+    "theoretical_mac_reduction_pct": 59.08017021991741
+  }
+}

@@ -1,0 +1,268 @@
+{
+  "array": {
+    "PEs": 64
+  },
+  "unavailable": [
+    "activation_reads (line-buffer reuse is controller-dependent)",
+    "byte-level data movement / bandwidth (no clock x bus-width pinned)"
+  ],
+  "layers": {
+    "conv1": {
+      "type": "conv",
+      "OS": {
+        "cycles": 9184,
+        "MACs": 117600,
+        "active_PE_operations": 117600,
+        "PE_utilization": 0.20007621951219512,
+        "idle_PE_cycles": 470176,
+        "MAC_utilization": 0.20007621951219512,
+        "weight_values": 150,
+        "weight_reads": 16800,
+        "input_tensor_size": 1024,
+        "activation_reads": null,
+        "psum_operations": 0,
+        "psum_movement": "none (local accumulator)"
+      },
+      "WS": {
+        "cycles": 28224,
+        "MACs": 117600,
+        "active_PE_operations": 117600,
+        "PE_utilization": 0.06510416666666667,
+        "idle_PE_cycles": 1688736,
+        "MAC_utilization": 0.06510416666666667,
+        "weight_values": 150,
+        "weight_reads": 16800,
+        "input_tensor_size": 1024,
+        "activation_reads": null,
+        "psum_operations": 117600,
+        "psum_movement": "vertical cascade + bottom-to-top feedback"
+      },
+      "selected_mode": "OS",
+      "selected": {
+        "cycles": 9184,
+        "MACs": 117600,
+        "active_PE_operations": 117600,
+        "PE_utilization": 0.20007621951219512,
+        "idle_PE_cycles": 470176,
+        "MAC_utilization": 0.20007621951219512,
+        "weight_values": 150,
+        "weight_reads": 16800,
+        "input_tensor_size": 1024,
+        "activation_reads": null,
+        "psum_operations": 0,
+        "psum_movement": "none (local accumulator)"
+      }
+    },
+    "conv3": {
+      "type": "conv",
+      "OS": {
+        "cycles": 16280,
+        "MACs": 240000,
+        "active_PE_operations": 240000,
+        "PE_utilization": 0.23034398034398035,
+        "idle_PE_cycles": 801920,
+        "MAC_utilization": 0.23034398034398035,
+        "weight_values": 2400,
+        "weight_reads": 48000,
+        "input_tensor_size": 1176,
+        "activation_reads": null,
+        "psum_operations": 0,
+        "psum_movement": "none (local accumulator)"
+      },
+      "WS": {
+        "cycles": 51840,
+        "MACs": 240000,
+        "active_PE_operations": 240000,
+        "PE_utilization": 0.07233796296296297,
+        "idle_PE_cycles": 3077760,
+        "MAC_utilization": 0.07233796296296297,
+        "weight_values": 2400,
+        "weight_reads": 48000,
+        "input_tensor_size": 1176,
+        "activation_reads": null,
+        "psum_operations": 240000,
+        "psum_movement": "vertical cascade + bottom-to-top feedback"
+      },
+      "selected_mode": "OS",
+      "selected": {
+        "cycles": 16280,
+        "MACs": 240000,
+        "active_PE_operations": 240000,
+        "PE_utilization": 0.23034398034398035,
+        "idle_PE_cycles": 801920,
+        "MAC_utilization": 0.23034398034398035,
+        "weight_values": 2400,
+        "weight_reads": 48000,
+        "input_tensor_size": 1176,
+        "activation_reads": null,
+        "psum_operations": 0,
+        "psum_movement": "none (local accumulator)"
+      }
+    },
+    "conv5": {
+      "type": "conv",
+      "OS": {
+        "cycles": 15855,
+        "MACs": 48000,
+        "active_PE_operations": 48000,
+        "PE_utilization": 0.04730368968779565,
+        "idle_PE_cycles": 966720,
+        "MAC_utilization": 0.04730368968779565,
+        "weight_values": 48000,
+        "weight_reads": 48000,
+        "input_tensor_size": 400,
+        "activation_reads": null,
+        "psum_operations": 0,
+        "psum_movement": "none (local accumulator)"
+      },
+      "WS": {
+        "cycles": 49200,
+        "MACs": 48000,
+        "active_PE_operations": 48000,
+        "PE_utilization": 0.01524390243902439,
+        "idle_PE_cycles": 3100800,
+        "MAC_utilization": 0.01524390243902439,
+        "weight_values": 48000,
+        "weight_reads": 48000,
+        "input_tensor_size": 400,
+        "activation_reads": null,
+        "psum_operations": 48000,
+        "psum_movement": "vertical cascade + bottom-to-top feedback"
+      },
+      "selected_mode": "OS",
+      "selected": {
+        "cycles": 15855,
+        "MACs": 48000,
+        "active_PE_operations": 48000,
+        "PE_utilization": 0.04730368968779565,
+        "idle_PE_cycles": 966720,
+        "MAC_utilization": 0.04730368968779565,
+        "weight_values": 48000,
+        "weight_reads": 48000,
+        "input_tensor_size": 400,
+        "activation_reads": null,
+        "psum_operations": 0,
+        "psum_movement": "none (local accumulator)"
+      }
+    },
+    "fc1": {
+      "type": "fc",
+      "OS": {
+        "cycles": 1510,
+        "MACs": 10080,
+        "active_PE_operations": 10080,
+        "PE_utilization": 0.10430463576158941,
+        "idle_PE_cycles": 86560,
+        "MAC_utilization": 0.10430463576158941,
+        "weight_values": 10080,
+        "weight_reads": 10080,
+        "input_tensor_size": 120,
+        "activation_reads": null,
+        "psum_operations": 0,
+        "psum_movement": "none (local accumulator)"
+      },
+      "WS": {
+        "cycles": 10248,
+        "MACs": 10080,
+        "active_PE_operations": 10080,
+        "PE_utilization": 0.015368852459016393,
+        "idle_PE_cycles": 645792,
+        "MAC_utilization": 0.015368852459016393,
+        "weight_values": 10080,
+        "weight_reads": 10080,
+        "input_tensor_size": 120,
+        "activation_reads": null,
+        "psum_operations": 10080,
+        "psum_movement": "vertical cascade + bottom-to-top feedback"
+      },
+      "selected_mode": "OS",
+      "selected": {
+        "cycles": 1510,
+        "MACs": 10080,
+        "active_PE_operations": 10080,
+        "PE_utilization": 0.10430463576158941,
+        "idle_PE_cycles": 86560,
+        "MAC_utilization": 0.10430463576158941,
+        "weight_values": 10080,
+        "weight_reads": 10080,
+        "input_tensor_size": 120,
+        "activation_reads": null,
+        "psum_operations": 0,
+        "psum_movement": "none (local accumulator)"
+      }
+    },
+    "fc2": {
+      "type": "fc",
+      "OS": {
+        "cycles": 192,
+        "MACs": 840,
+        "active_PE_operations": 840,
+        "PE_utilization": 0.068359375,
+        "idle_PE_cycles": 11448,
+        "MAC_utilization": 0.068359375,
+        "weight_values": 840,
+        "weight_reads": 840,
+        "input_tensor_size": 84,
+        "activation_reads": null,
+        "psum_operations": 0,
+        "psum_movement": "none (local accumulator)"
+      },
+      "WS": {
+        "cycles": 900,
+        "MACs": 840,
+        "active_PE_operations": 840,
+        "PE_utilization": 0.014583333333333334,
+        "idle_PE_cycles": 56760,
+        "MAC_utilization": 0.014583333333333334,
+        "weight_values": 840,
+        "weight_reads": 840,
+        "input_tensor_size": 84,
+        "activation_reads": null,
+        "psum_operations": 840,
+        "psum_movement": "vertical cascade + bottom-to-top feedback"
+      },
+      "selected_mode": "OS",
+      "selected": {
+        "cycles": 192,
+        "MACs": 840,
+        "active_PE_operations": 840,
+        "PE_utilization": 0.068359375,
+        "idle_PE_cycles": 11448,
+        "MAC_utilization": 0.068359375,
+        "weight_values": 840,
+        "weight_reads": 840,
+        "input_tensor_size": 84,
+        "activation_reads": null,
+        "psum_operations": 0,
+        "psum_movement": "none (local accumulator)"
+      }
+    }
+  },
+  "totals": {
+    "OS": {
+      "cycles": 43021,
+      "MACs": 416520,
+      "active_PE_operations": 416520,
+      "idle_PE_cycles": 2336824,
+      "weight_reads": 123720,
+      "psum_operations": 0,
+      "PE_utilization": 0.1512778642988308
+    },
+    "WS": {
+      "cycles": 140412,
+      "MACs": 416520,
+      "active_PE_operations": 416520,
+      "idle_PE_cycles": 8569848,
+      "weight_reads": 123720,
+      "psum_operations": 416520,
+      "PE_utilization": 0.0463502051106743
+    }
+  },
+  "reconfiguration": {
+    "switch_overhead_cycles": 8,
+    "num_switches": 0,
+    "total_overhead": 0,
+    "reconfigurable_cycles": 43021,
+    "selected_cycles_no_overhead": 43021
+  }
+}

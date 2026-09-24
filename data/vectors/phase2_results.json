@@ -32,7 +32,7 @@
       "latency_us": 192.64,
       "sustained_mac_per_cycle": 4.07,
       "sustained_GOPS": 1.63,
-      "provenance": "[ANALYTICAL] no-skip bound (896 groups x 43): the coarse zero-skip is always-on in WS mode, so this is not measured on a sparse input"
+      "provenance": "[SIMULATION] sparsity_disable=1 (896 groups x 43, measured bit-exact via the sparsity_disable control)"
     },
     {
       "id": "ws_sparse",

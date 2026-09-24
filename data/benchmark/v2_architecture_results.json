@@ -1,0 +1,237 @@
+{
+  "datapath": "OS-only (rows = output channels, cols = output pixels)",
+  "array": {
+    "rows": 8,
+    "cols": 8,
+    "PEs": 64
+  },
+  "schedule": "1 + IC*K*(P+K) + 2*rows  (corrected FC_SCHEDULE_VALIDATION \u00a76)",
+  "weight_bram_stall_cycles": 0,
+  "workloads": {
+    "lenet5": {
+      "layers": {
+        "conv1": {
+          "type": "conv",
+          "IC": 1,
+          "OC": 6,
+          "K": 5,
+          "H_out": 28,
+          "W_out": 28,
+          "MACs": 117600,
+          "cycles": 8176,
+          "channel_groups": 1,
+          "groups": 112,
+          "PE_utilization": 0.2247431506849315,
+          "idle_PE_cycles": 405664,
+          "weight_bram": {
+            "weight_values": 150,
+            "weight_bytes_total": 150,
+            "bram_reads_per_layer": 2800,
+            "bram_read_width_bits": 64,
+            "bram_read_latency_cycles": 1,
+            "latency_hidden_by_lookahead": true
+          },
+          "timing_status": "RTL-verified anchor (82 cyc) for full group; partial groups analytical"
+        },
+        "conv3": {
+          "type": "conv",
+          "IC": 6,
+          "OC": 16,
+          "K": 5,
+          "H_out": 10,
+          "W_out": 10,
+          "MACs": 240000,
+          "cycles": 12680,
+          "channel_groups": 2,
+          "groups": 40,
+          "PE_utilization": 0.29574132492113564,
+          "idle_PE_cycles": 571520,
+          "weight_bram": {
+            "weight_values": 2400,
+            "weight_bytes_total": 2400,
+            "bram_reads_per_layer": 6000,
+            "bram_read_width_bits": 64,
+            "bram_read_latency_cycles": 1,
+            "latency_hidden_by_lookahead": true
+          },
+          "timing_status": "analytically derived (IC>1 and/or OC>8 generalization of the 82-cyc anchor)"
+        },
+        "conv5": {
+          "type": "conv",
+          "IC": 16,
+          "OC": 120,
+          "K": 5,
+          "H_out": 1,
+          "W_out": 1,
+          "MACs": 48000,
+          "cycles": 7455,
+          "channel_groups": 15,
+          "groups": 15,
+          "PE_utilization": 0.1006036217303823,
+          "idle_PE_cycles": 429120,
+          "weight_bram": {
+            "weight_values": 48000,
+            "weight_bytes_total": 48000,
+            "bram_reads_per_layer": 6000,
+            "bram_read_width_bits": 64,
+            "bram_read_latency_cycles": 1,
+            "latency_hidden_by_lookahead": true
+          },
+          "timing_status": "analytically derived (IC>1 and/or OC>8 generalization of the 82-cyc anchor)"
+        },
+        "fc1": {
+          "type": "fc",
+          "IC": 120,
+          "OC": 84,
+          "K": 1,
+          "H_out": 1,
+          "W_out": 1,
+          "MACs": 10080,
+          "cycles": 1510,
+          "channel_groups": 11,
+          "groups": 11,
+          "PE_utilization": 0.10430463576158941,
+          "idle_PE_cycles": 86560,
+          "weight_bram": {
+            "weight_values": 10080,
+            "weight_bytes_total": 10080,
+            "bram_reads_per_layer": 1320,
+            "bram_read_width_bits": 64,
+            "bram_read_latency_cycles": 1,
+            "latency_hidden_by_lookahead": true
+          },
+          "timing_status": "RTL-verified (bit-exact 1-pixel FC schedule)"
+        },
+        "fc2": {
+          "type": "fc",
+          "IC": 84,
+          "OC": 10,
+          "K": 1,
+          "H_out": 1,
+          "W_out": 1,
+          "MACs": 840,
+          "cycles": 192,
+          "channel_groups": 2,
+          "groups": 2,
+          "PE_utilization": 0.068359375,
+          "idle_PE_cycles": 11448,
+          "weight_bram": {
+            "weight_values": 840,
+            "weight_bytes_total": 840,
+            "bram_reads_per_layer": 168,
+            "bram_read_width_bits": 64,
+            "bram_read_latency_cycles": 1,
+            "latency_hidden_by_lookahead": true
+          },
+          "timing_status": "RTL-verified (bit-exact 1-pixel FC schedule)"
+        }
+      },
+      "total": {
+        "MACs": 416520,
+        "OS_cycles": 30013,
+        "PE_utilization": 0.21684353446839702
+      }
+    },
+    "cifar10": {
+      "layers": {
+        "conv1": {
+          "type": "conv",
+          "IC": 3,
+          "OC": 32,
+          "K": 5,
+          "H_out": 28,
+          "W_out": 28,
+          "MACs": 1881600,
+          "cycles": 88256,
+          "channel_groups": 4,
+          "groups": 448,
+          "PE_utilization": 0.3331218274111675,
+          "idle_PE_cycles": 3766784,
+          "weight_bram": {
+            "weight_values": 2400,
+            "weight_bytes_total": 2400,
+            "bram_reads_per_layer": 33600,
+            "bram_read_width_bits": 64,
+            "bram_read_latency_cycles": 1,
+            "latency_hidden_by_lookahead": true
+          },
+          "timing_status": "analytically derived (IC>1 and/or OC>8 generalization of the 82-cyc anchor)"
+        },
+        "conv2": {
+          "type": "conv",
+          "IC": 32,
+          "OC": 32,
+          "K": 5,
+          "H_out": 10,
+          "W_out": 10,
+          "MACs": 2560000,
+          "cycles": 129360,
+          "channel_groups": 4,
+          "groups": 80,
+          "PE_utilization": 0.30921459492888065,
+          "idle_PE_cycles": 5719040,
+          "weight_bram": {
+            "weight_values": 25600,
+            "weight_bytes_total": 25600,
+            "bram_reads_per_layer": 64000,
+            "bram_read_width_bits": 64,
+            "bram_read_latency_cycles": 1,
+            "latency_hidden_by_lookahead": true
+          },
+          "timing_status": "analytically derived (IC>1 and/or OC>8 generalization of the 82-cyc anchor)"
+        },
+        "conv3": {
+          "type": "conv",
+          "IC": 32,
+          "OC": 64,
+          "K": 5,
+          "H_out": 1,
+          "W_out": 1,
+          "MACs": 51200,
+          "cycles": 7816,
+          "channel_groups": 8,
+          "groups": 8,
+          "PE_utilization": 0.1023541453428864,
+          "idle_PE_cycles": 449024,
+          "weight_bram": {
+            "weight_values": 51200,
+            "weight_bytes_total": 51200,
+            "bram_reads_per_layer": 6400,
+            "bram_read_width_bits": 64,
+            "bram_read_latency_cycles": 1,
+            "latency_hidden_by_lookahead": true
+          },
+          "timing_status": "analytically derived (IC>1 and/or OC>8 generalization of the 82-cyc anchor)"
+        },
+        "fc": {
+          "type": "fc",
+          "IC": 64,
+          "OC": 10,
+          "K": 1,
+          "H_out": 1,
+          "W_out": 1,
+          "MACs": 640,
+          "cycles": 152,
+          "channel_groups": 2,
+          "groups": 2,
+          "PE_utilization": 0.06578947368421052,
+          "idle_PE_cycles": 9088,
+          "weight_bram": {
+            "weight_values": 640,
+            "weight_bytes_total": 640,
+            "bram_reads_per_layer": 128,
+            "bram_read_width_bits": 64,
+            "bram_read_latency_cycles": 1,
+            "latency_hidden_by_lookahead": true
+          },
+          "timing_status": "RTL-verified (bit-exact 1-pixel FC schedule)"
+        }
+      },
+      "total": {
+        "MACs": 4493440,
+        "OS_cycles": 225584,
+        "PE_utilization": 0.31123661252571105
+      }
+    }
+  }
+}

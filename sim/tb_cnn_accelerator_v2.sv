@@ -39,6 +39,7 @@ module tb_cnn_accelerator_v2;
     logic               dataflow_mode;
     logic               mode_commit;
     logic               start;
+    logic               sparsity_disable;
     logic               busy;
     logic               done;
     logic               mode_active;
@@ -70,6 +71,7 @@ module tb_cnn_accelerator_v2;
         .dataflow_mode (dataflow_mode),
         .mode_commit   (mode_commit),
         .start         (start),
+        .sparsity_disable(sparsity_disable),
         .busy          (busy),
         .done          (done),
         .mode_active   (mode_active),
@@ -303,7 +305,7 @@ module tb_cnn_accelerator_v2;
 
         // ---- reset ----
         rst = 1'b1;
-        dataflow_mode = 1'b0; mode_commit = 1'b0; start = 1'b0;
+        dataflow_mode = 1'b0; mode_commit = 1'b0; start = 1'b0; sparsity_disable = 1'b0;
         img_wr_en = 1'b0; wgt_wr_en = 1'b0;
         img_wr_addr = 0; img_wr_data = 0; wgt_wr_addr = 0; wgt_wr_data = 0;
         repeat (3) @(posedge clk);
@@ -357,6 +359,26 @@ module tb_cnn_accelerator_v2;
         check("T2 WS: executed+skipped == total", executed_macs + skipped_macs, 156800);
         $display("  WS cycles=%0d skipped=%0d executed=%0d",
                  cycle_count, skipped_macs, executed_macs);
+
+        //==================================================================
+        // T2b — WS dense (sparsity DISABLED) vs golden — MEASURES the no-skip
+        //       cycle bound (38,528 = 896 groups x 43 cycles) instead of
+        //       asserting it analytically.
+        //==================================================================
+        $display("[---] T2b: WS dense (sparsity_disable=1) vs golden");
+        sparsity_disable = 1'b1;
+        write_image();
+        write_weights();
+        set_mode(1'b1);
+        run_frame();
+        check("T2b WS-dense: result words == 896", frame_result_words, 896);
+        check("T2b WS-dense: valid pixels == 6272", frame_pixels, 6272);
+        check("T2b WS-dense: cycle_count == 38528", cycle_count, 38528);
+        check("T2b WS-dense: skipped_macs == expected", skipped_macs, expected_skipped());
+        check("T2b WS-dense: executed+skipped == total", executed_macs + skipped_macs, 156800);
+        $display("  WS-dense cycles=%0d skipped=%0d executed=%0d",
+                 cycle_count, skipped_macs, executed_macs);
+        sparsity_disable = 1'b0;
 
         //==================================================================
         // T3 — OS -> WS runtime transition (no reset)
