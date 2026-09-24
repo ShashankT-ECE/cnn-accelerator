@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 import csv
+import math
 from fractions import Fraction
 
 import numpy as np
 import pytest
 
 import requant_check as rc
+from net_config import NET_CONFIGS
 
 LENET_NPZ = rc.DEFAULT_NPZ["lenet5"]
 CIFAR_NPZ = rc.DEFAULT_NPZ["cifar10"]
@@ -81,13 +83,70 @@ def _check_ms(M, B):
 @pytest.mark.parametrize("B", rc.BITS)
 def test_select_m_s_invariants(B):
     Ms = [float(M) for L in rc.load_layers("lenet5", LENET_NPZ) for M in L["M"]]
-    if CIFAR_NPZ.exists():
-        Ms += [float(M) for L in rc.load_layers("cifar10", CIFAR_NPZ) for M in L["M"]]
+    for key in ("cifar10", "cifar10_r1"):
+        if NET_CONFIGS[key]["quant_params"].exists():
+            Ms += [float(M) for L in rc.load_layers("cifar10", NET_CONFIGS[key]["quant_params"])
+                   for M in L["M"]]
     rng = np.random.default_rng(3)
     Ms += list(np.exp(rng.uniform(np.log(4e-5), np.log(0.9), 2000)))
     Ms += [0.5, 0.25, 2.0 ** -14, np.nextafter(0.5, 0), np.nextafter(0.5, 1)]
+    oor = []
     for M in Ms:
-        _check_ms(M, B)
+        try:
+            _check_ms(M, B)
+        except rc.ShiftOutOfRange as e:             # OC-2: must be a real range violation
+            assert e.B == B and not rc.S_MIN <= e.s <= rc.S_MAX
+            assert e.s == B - math.frexp(M)[1] or e.s == B - math.frexp(M)[1] - 1
+            oor.append(M)
+    # Only CIFAR r2 at B = 48 needs s > 63 (DECISIONS OC-2); B = 32 / 40 are always in range.
+    assert (len(oor) > 0) == (B == 48 and NET_CONFIGS["cifar10"]["quant_params"].exists())
+
+
+def test_out_of_range_shift_recorded_not_fatal():
+    """OC-2: an s outside [1, 63] marks that (channel, B) infeasible; other B are still checked."""
+    M = 8.2e-6                                      # ~ CIFAR r2 conv1 min M: s = 64 at B = 48
+    with pytest.raises(rc.ShiftOutOfRange):
+        rc.select_m_s(M, 48)
+    res = {r["B"]: r for r in rc.check_channel(75, 0, M, bits=(32, 48), seed=0, n_sat=2_000)}
+    assert res[32]["s_in_range"] is True and res[32]["mismatches"] == 0 and res[32]["s"] == 48
+    r = res[48]
+    assert r["s_in_range"] is False and r["s"] == 64 and r["m"] == "" and r["mismatches"] == ""
+    assert r["values_checked_exact"] == r["values_checked_saturated"] == 0
+
+
+def test_adopted_shifts_in_range():
+    """Every adopted (selected-B) shift s is in [1, 63] for every requant channel of every
+    adopted net, in hw_requant.npz and in the packed QPARAM image (OC-2)."""
+    import gos_pack as gp
+    from net_config import NETS
+    for net in NETS:
+        hw = np.load(NET_CONFIGS[net]["hw_requant"])
+        B = int(hw["B"])
+        assert B == gp.M_BITS
+        words, bases = gp.pack_qparam(net)
+        for L, base in zip(NET_CONFIGS[net]["layers"], bases):
+            _, m_pk, s_pk = gp.unpack_qparam(words, base, L["OC"])
+            if L["final"]:
+                assert not np.any(s_pk) and not np.any(m_pk)          # unused (out_raw)
+                continue
+            s = hw[f"{L['name']}_s"]
+            assert s.shape == (L["OC"],)
+            assert np.all((s >= rc.S_MIN) & (s <= rc.S_MAX)), (net, L["name"], s.min(), s.max())
+            assert np.array_equal(s_pk.astype(np.int64), s.astype(np.int64)), (net, L["name"])
+            assert np.array_equal(m_pk, hw[f"{L['name']}_m"].astype(np.uint64))
+            m = hw[f"{L['name']}_m"].astype(object)
+            assert all((1 << (B - 1)) <= int(x) < (1 << B) for x in m)
+
+
+@pytest.mark.slow
+def test_full_exhaustive_cifar10_decision(tmp_path):
+    """CIFAR r2: B = 48 infeasible (s = 64), B = 32 and 40 pass; selected B = 32 (OC-2)."""
+    res = rc.run(["cifar10"], rc.DEFAULT_NPZ, out_csv=tmp_path / "r.csv", save=False,
+                 verbose=False)
+    assert res["passing"] == [32, 40] and res["selected"] == 32
+    assert res["summary"][("cifar10", 48)]["s_oor"] > 0
+    assert res["summary"][("cifar10", 32)]["s_oor"] == 0
+    assert res["summary"][("cifar10", 32)]["mism"] == 0
 
 
 @pytest.mark.parametrize("B", rc.BITS)
@@ -209,7 +268,7 @@ def test_full_exhaustive_lenet(tmp_path):
         assert 1 <= a["smin"] <= a["smax"] <= 63
     # consistency of decision rule with the per-row results
     for B in rc.BITS:
-        ok = all(int(r["mismatches"]) == 0 for r in res["rows"] if r["B"] == B)
+        ok = all(r["s_in_range"] and int(r["mismatches"]) == 0 for r in res["rows"] if r["B"] == B)
         assert ok == (B in res["passing"])
 
 
@@ -217,28 +276,35 @@ def test_candidate_delta_order():
     assert rc.candidate_deltas(3) == [0, 1, -1, 2, -2, 3, -3]
 
 
-def _full_region_equal(net, layer, c, m, s):
-    L = next(x for x in rc.load_layers(net, rc.DEFAULT_NPZ[net]) if x["layer"] == layer)
+def _full_region_equal(net, layer, c, m, s, npz=None):
+    npz = rc.DEFAULT_NPZ[net] if npz is None else npz
+    L = next(x for x in rc.load_layers(net, npz) if x["layer"] == layer)
     M, qb = float(L["M"][c]), int(L["q_b"][c])
     _, _, lo, hi = rc.regions(L["K"], qb, M)
     v = np.arange(lo, hi + 1, dtype=np.int64)
     return np.array_equal(rc.hw_requant(v, m, s), rc.requantize(v, M))
 
 
-@pytest.mark.parametrize("net,layer,c", [("lenet5", "conv5", 82), ("cifar10", "conv2", 0)])
-def test_adjusted_channels_at_B32(net, layer, c):
+# (NET_CONFIGS key, layer, channel): the only adjusted channel per parameter set at B=32
+# (DECISIONS D1 outcome; cifar10 r2 per requant_equivalence.csv, Step 2.1c).
+@pytest.mark.parametrize("key,layer,c", [("lenet5", "conv5", 82), ("cifar10", "conv3", 57),
+                                         ("cifar10_r1", "conv2", 0)])
+def test_adjusted_channels_at_B32(key, layer, c):
     """OC-1: at B=32 the RNE multiplier fails these channels; the searched m (±1 LSB) is exact."""
-    if net == "cifar10" and not CIFAR_NPZ.exists():
-        pytest.skip("CIFAR frozen params missing")
-    L = next(x for x in rc.load_layers(net, rc.DEFAULT_NPZ[net]) if x["layer"] == layer)
+    net = "lenet5" if key == "lenet5" else "cifar10"
+    npz = NET_CONFIGS[key]["quant_params"]
+    if not npz.exists():
+        pytest.skip(f"{key} frozen params missing")
+    L = next(x for x in rc.load_layers(net, npz) if x["layer"] == layer)
     m_rne, s = rc.select_m_s(float(L["M"][c]), 32)
-    assert not _full_region_equal(net, layer, c, m_rne, s)
+    assert not _full_region_equal(net, layer, c, m_rne, s, npz)
     res = rc.check_channel(L["K"], int(L["q_b"][c]), float(L["M"][c]), bits=(32,),
                            seed=0, n_sat=20_000)[0]
     assert res["mismatches_rne"] > 0 and res["mismatches"] == 0
     assert abs(res["delta_from_rne"]) == 1 and res["m"] == m_rne + res["delta_from_rne"]
-    assert _full_region_equal(net, layer, c, res["m"], s)
-    if rc.HW_NPZ[net].exists():
-        d = np.load(rc.HW_NPZ[net])
+    assert _full_region_equal(net, layer, c, res["m"], s, npz)
+    hw_npz = NET_CONFIGS[key]["hw_requant"]           # the parameter set's own (m, s)
+    if hw_npz.exists():
+        d = np.load(hw_npz)
         assert int(d["B"]) == 32
         assert int(d[f"{layer}_m"][c]) == res["m"] and int(d[f"{layer}_s"][c]) == s

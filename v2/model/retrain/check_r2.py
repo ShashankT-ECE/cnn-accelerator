@@ -1,26 +1,23 @@
 #!/usr/bin/env python3
-"""V2 Step 2.1b: evaluate the retrained CIFAR-10 r2 reference. Label: model.
+"""V2 Step 2.1b/2.1c: CIFAR-10 r2 acceptance record (r1 vs r2). Label: model.
 
-Run from the repository root (after train_cifar10_r2.py and
-``freeze_cifar10_int8.py --ckpt v2/model/retrain/cifar10_fp32_r2.pt --out v2/model/frozen/cifar10_int8_r2``):
+Run by v2/scripts/regen_results.sh after reference_accuracy.py, requant_check.py
+and final_layer.py (it reads their CSVs):
 
-    PYTHONDONTWRITEBYTECODE=1 .venv/bin/python v2/model/retrain/check_r2.py
+    cd v2/model && PYTHONDONTWRITEBYTECODE=1 ../../.venv/bin/python retrain/check_r2.py
 
-1. Accuracy (legacy code only): FP32 = legacy ``cifar10.train.load_checkpoint`` +
-   ``train.evaluate`` on the legacy val/test loaders; INT8 = legacy
-   ``calibrate(load_weights(ckpt), train[0:1024])`` + ``Int8Cifar10Net.forward``
-   argmax, and the frozen r2 npz must give the identical count. Both the current
-   reference (r1, data/checkpoint/cifar10_fp32.pt) and r2 are evaluated on val
-   (train[45000:50000]) and test (10k); r1 test must equal reference_accuracy.csv.
+1. Accuracy (legacy code only) of r1 (NET_CONFIGS["cifar10_r1"]) and r2
+   (NET_CONFIGS["cifar10"], reference of record since Step 2.1c) on val
+   (train[45000:50000], the selection set) and test (10k): FP32 = legacy
+   ``cifar10.train.load_checkpoint`` + ``train.evaluate`` on the legacy loaders;
+   INT8 = legacy ``calibrate(load_weights(ckpt), train[0:1024])`` +
+   ``Int8Cifar10Net.forward`` argmax, and the frozen npz must give the identical
+   count. Test counts must equal reference_accuracy.csv.
    -> v2/results/cifar10_r2_accuracy.csv
-2. Step 2.1 requant equivalence (requant_check.run, feasible-m search) on the r2
-   npz at B=32 -> v2/results/requant_equivalence_r2.csv; if 0 mismatches the
-   per-channel (m, s) are written to frozen/cifar10_int8_r2/hw_requant.npz.
-3. Step 2.1 final-layer test (final_layer.check_net on the r2 checkpoint)
-   -> v2/results/final_layer_check_r2.csv
-4. Acceptance rule -> v2/results/cifar10_r2_summary.csv: recommend "accept" only
-   if INT8 test accuracy improves by >= 2.0 pp AND requant B=32 has 0 mismatches.
-   Nothing is switched: the reference of record stays cifar10_int8/.
+2. Acceptance rule (DECISIONS D9) -> v2/results/cifar10_r2_summary.csv:
+   "accept" only if INT8 test accuracy improves by >= 2.0 pp AND the requant
+   check has 0 mismatches at B=32 (cifar10 rows of requant_equivalence.csv), with
+   the final-layer check (final_layer_check.csv) recorded alongside.
 """
 from __future__ import annotations
 
@@ -35,28 +32,27 @@ import numpy as np
 MODEL_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(MODEL_DIR))
 import common  # noqa: E402  (puts legacy python/ on sys.path)
-from common import FROZEN_DIR, REPO_ROOT, RESULTS_DIR  # noqa: E402
+from common import REPO_ROOT, RESULTS_DIR  # noqa: E402
 
-import final_layer  # noqa: E402
 import freeze_cifar10_int8 as fz  # noqa: E402
-import requant_check  # noqa: E402
+from net_config import NET_CONFIGS  # noqa: E402
 
-R1_CKPT = fz.CKPT_REL
-R2_CKPT = "v2/model/retrain/cifar10_fp32_r2.pt"
+KEYS = {"r1": "cifar10_r1", "r2": "cifar10"}
 R2_META = REPO_ROOT / "v2/model/retrain/cifar10_fp32_r2_meta.json"
-R2_DIR = FROZEN_DIR / "cifar10_int8_r2"
-R2_NPZ = R2_DIR / fz.NPZ_NAME
-R2_HW_NPZ = R2_DIR / "hw_requant.npz"
 B_CHECK = 32
 MIN_GAIN_PP = 2.0
 SPLITS = {"val": (True, range(45000, 50000)), "test": (False, range(10000))}
 
 ACC_CSV = RESULTS_DIR / "cifar10_r2_accuracy.csv"
-ACC_FIELDS = ["model", "checkpoint", "split", "precision", "correct", "total", "accuracy_pct"]
-REQ_CSV = RESULTS_DIR / "requant_equivalence_r2.csv"
-FL_CSV = RESULTS_DIR / "final_layer_check_r2.csv"
+ACC_FIELDS = ["model", "reference_version", "checkpoint", "split", "precision", "correct",
+              "total", "accuracy_pct"]
 SUM_CSV = RESULTS_DIR / "cifar10_r2_summary.csv"
 SUM_FIELDS = ["quantity", "r1", "r2", "delta", "note"]
+
+
+def _csv(name) -> list[dict]:
+    with open(RESULTS_DIR / name) as f:
+        return list(csv.DictReader(f))
 
 
 # ---------------------------------------------------------------- 1. accuracy
@@ -98,8 +94,11 @@ def int8_counts(ckpt_rel: str, frozen_npz: Path) -> dict:
 
 def accuracy() -> dict:
     rows, acc = [], {}
-    for name, ckpt, npz in (("r1", R1_CKPT, fz.OUT_DIR / fz.NPZ_NAME), ("r2", R2_CKPT, R2_NPZ)):
-        for prec, fn in (("FP32", lambda: fp32_counts(ckpt)), ("INT8", lambda: int8_counts(ckpt, npz))):
+    for name, key in KEYS.items():
+        cfg = NET_CONFIGS[key]
+        ckpt = cfg["checkpoint"]
+        for prec, fn in (("FP32", lambda: fp32_counts(ckpt)),
+                         ("INT8", lambda: int8_counts(ckpt, cfg["quant_params"]))):
             t0 = time.perf_counter()
             res = fn()
             dt = round(time.perf_counter() - t0, 3)
@@ -107,64 +106,59 @@ def accuracy() -> dict:
                 acc[(name, split, prec)] = (c, n)
                 r = common.base_meta(net="cifar10", layer="all", source="model",
                                      duration_s=dt, num_inferences=n)
-                r.update(model=name, checkpoint=ckpt, split=split, precision=prec, correct=c,
-                         total=n, accuracy_pct=f"{100.0 * c / n:.2f}")
+                r.update(model=name, reference_version=cfg["reference_version"], checkpoint=ckpt,
+                         split=split, precision=prec, correct=c, total=n,
+                         accuracy_pct=f"{100.0 * c / n:.2f}")
                 rows.append(r)
                 print(f"  {name} {split:4s} {prec} {c}/{n} = {r['accuracy_pct']}%", flush=True)
     common.write_results_csv(ACC_CSV, rows, ACC_FIELDS)
-    # r1 test must reproduce the accuracies of record.
-    with open(RESULTS_DIR / "reference_accuracy.csv") as f:
-        rec = {row["precision"]: int(row["correct"]) for row in csv.DictReader(f)
-               if row["net"] == "cifar10"}
-    for prec in ("FP32", "INT8"):
-        assert acc[("r1", "test", prec)][0] == rec[prec], (prec, acc[("r1", "test", prec)], rec)
-    print(f"wrote {ACC_CSV}; r1 test reproduces reference_accuracy.csv")
+    # Test counts must equal the accuracies of record (both versions).
+    rec = {(r["reference_version"], r["precision"]): int(r["correct"])
+           for r in _csv("reference_accuracy.csv") if r["net"] == "cifar10"}
+    for name, key in KEYS.items():
+        ver = NET_CONFIGS[key]["reference_version"]
+        for prec in ("FP32", "INT8"):
+            assert acc[(name, "test", prec)][0] == rec[(ver, prec)], (name, prec, rec)
+    print(f"wrote {ACC_CSV}; test counts equal reference_accuracy.csv")
     return acc
 
 
-# ---------------------------------------------------------------- 2. requant
-def requant() -> dict:
-    res = requant_check.run(["cifar10"], {"cifar10": R2_NPZ}, bits=(B_CHECK,),
-                            out_csv=REQ_CSV, save=False)
-    agg = res["summary"][("cifar10", B_CHECK)]
-    if agg["mism"] == 0:
-        sel = {}
-        for L in requant_check.load_layers("cifar10", R2_NPZ):
-            by = {r["channel"]: r for r in res["rows"] if r["layer"] == L["layer"]}
-            ms = [(by[c]["m"], by[c]["s"]) for c in range(L["M"].size)]
-            assert all(by[c]["mismatches"] == 0 for c in by)
-            sel[f"{L['layer']}_m"] = np.array([m for m, _ in ms], dtype=np.uint64)
-            sel[f"{L['layer']}_s"] = np.array([s for _, s in ms], dtype=np.uint8)
-            assert all(int(x) == m for x, (m, _) in zip(sel[f"{L['layer']}_m"], ms))
-        sel["B"] = np.array(B_CHECK, dtype=np.int64)
-        np.savez(R2_HW_NPZ, **sel)
-        print(f"wrote {R2_HW_NPZ.relative_to(REPO_ROOT)} sha256={common.sha256_file(R2_HW_NPZ)}")
-    return agg
+# ---------------------------------------------------------------- 2. checks (from CSVs)
+def requant_b32() -> dict:
+    rows = [r for r in _csv("requant_equivalence.csv")
+            if r["net"] == "cifar10" and int(r["B"]) == B_CHECK]
+    assert len(rows) == sum(L["OC"] for L in NET_CONFIGS["cifar10"]["layers"] if not L["final"])
+    # Guard against a stale CSV (e.g. r1 rows): the per-channel (m, s) must equal r2's hw_requant.
+    with np.load(NET_CONFIGS["cifar10"]["hw_requant"]) as hw:
+        assert int(hw["B"]) == B_CHECK
+        for r in rows:
+            c = int(r["channel"])
+            assert (int(r["m"]), int(r["s"])) == (int(hw[f"{r['layer']}_m"][c]),
+                                                  int(hw[f"{r['layer']}_s"][c])), r["layer"]
+    s = [int(r["s"]) for r in rows]
+    return {"mism": sum(int(r["mismatches"]) for r in rows),
+            "mism_rne": sum(int(r["mismatches_rne"]) for r in rows),
+            "values": sum(int(r["values_checked_exact"]) + int(r["values_checked_saturated"])
+                          for r in rows),
+            "adjusted": [f"{r['layer']} ch{r['channel']} d={r['delta_from_rne']}" for r in rows
+                         if r["delta_from_rne"] not in ("", "0")],
+            "smin": min(s), "smax": max(s)}
 
 
-# ---------------------------------------------------------------- 3. final layer
-def final() -> dict:
-    t0 = time.time()
-    # Guard: the final-layer check must run on r2 (params equal the frozen r2 npz).
-    P = final_layer.calibrated_params("cifar10", R2_CKPT)["fc"]
-    with np.load(R2_NPZ) as z:
-        assert np.array_equal(P["q_w"], z["fc_q_w"]) and np.array_equal(P["q_b"], z["fc_q_b"])
-    r = final_layer.check_net("cifar10", ckpt=R2_CKPT)
-    meta = common.base_meta(net="cifar10", layer=r["layer"], source="model",
-                            duration_s=round(time.time() - t0, 2), num_inferences=r["images"])
-    common.write_results_csv(FL_CSV, [{**meta, **{k: r[k] for k in final_layer.CSV_FIELDS}}],
-                             final_layer.CSV_FIELDS)
-    print(r, f"\nwrote {FL_CSV}")
-    return r
+def final_check() -> dict:
+    rows = [r for r in _csv("final_layer_check.csv") if r["net"] == "cifar10"]
+    assert len(rows) == 1
+    return rows[0]
 
 
-# ---------------------------------------------------------------- 4. summary
+# ---------------------------------------------------------------- summary
 def main() -> int:
     acc = accuracy()
-    req = requant()
-    fl = final()
+    req = requant_b32()
+    fl = final_check()
     meta = json.loads(R2_META.read_text())
     r1_meta = json.loads((REPO_ROOT / "data/checkpoint/cifar10_fp32_meta.json").read_text())
+    assert meta["checkpoint"]["sha256"] == common.sha256_file(REPO_ROOT / NET_CONFIGS["cifar10"]["checkpoint"])
 
     def pct(k):
         c, n = acc[k]
@@ -184,19 +178,21 @@ def main() -> int:
     add("epochs_run", r1_meta["training"]["epochs"], meta["training"]["epochs_run"])
     add("selected_epoch", r1_meta["training"]["epochs"], meta["selected_epoch"],
         "r1: last epoch (legacy, no selection); r2: argmax val FP32")
-    add("train_time_s", "", meta["train_time_s"], f"CPU, {meta['torch_threads']} threads")
-    fl_ok = fl["argmax_match"] == fl["images"] == fl["logits_bitexact"] and fl["int32_fits"]
+    add("train_time_s", "", meta["train_time_s"],
+        f"CPU, {meta['torch_threads']} threads (training artifact, r2 meta json)")
+    fl_ok = (fl["argmax_match"] == fl["images"] == fl["logits_bitexact"]
+             and fl["int32_fits"] == "True")
     add(f"requant_B{B_CHECK}_mismatches", "", req["mism"],
-        f"values={req['exact'] + req['sat']}, mism_rne={req['mism_rne']}, "
-        f"adjusted_ch={req['adjusted']}, max|d|={req['max_abs_delta']}, s={req['smin']}-{req['smax']}")
+        f"values={req['values']}, mism_rne={req['mism_rne']}, adjusted={req['adjusted']}, "
+        f"s={req['smin']}-{req['smax']} (requant_equivalence.csv)")
     add("final_layer_bitexact", "", f"{fl['logits_bitexact']}/{fl['images']}",
         f"argmax {fl['argmax_match']}/{fl['images']}, max|v|={fl['max_abs_v']}, "
-        f"int32_fits={fl['int32_fits']}")
+        f"int32_fits={fl['int32_fits']} (final_layer_check.csv)")
     gain = pct(("r2", "test", "INT8")) - pct(("r1", "test", "INT8"))
     ok = gain >= MIN_GAIN_PP and req["mism"] == 0
     add("recommendation", "", "accept" if ok else "reject",
         f"rule: INT8 test gain >= {MIN_GAIN_PP} pp ({gain:+.2f}) AND requant B={B_CHECK} "
-        f"0 mismatches ({req['mism']}); final layer ok={fl_ok}; not adopted")
+        f"0 mismatches ({req['mism']}); final layer ok={fl_ok}; adopted in Step 2.1c (D3/D9)")
     common.write_results_csv(SUM_CSV, rows, SUM_FIELDS)
     for r in rows:
         print(f"  {r['quantity']:28s} r1={r['r1']!s:>8s} r2={r['r2']!s:>8s} {r['delta']:>7s} {r['note']}")

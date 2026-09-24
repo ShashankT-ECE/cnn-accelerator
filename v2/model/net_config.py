@@ -1,8 +1,12 @@
 """Network parameter configuration for v2/model (single switch point).
 
 Every V2 script loads network parameters through ``NET_CONFIGS``. Switching a
-net to a new parameter set (e.g. a retrained ``cifar10_int8_r2``) is a one-line
-change of its ``param_dir`` below.
+net to a new parameter set is a one-line change of its ``param_dir`` below.
+
+Step 2.1c (DECISIONS D3/D9): ``cifar10`` is the retrained r2 set
+(``frozen/cifar10_int8_r2``). The original set is kept as ``cifar10_r1`` for the
+record only: it is not in ``NETS`` (the nets the hardware runs, vectors, cycle
+model), and is used only by the accuracy-of-record and r1 provenance checks.
 
 Each param_dir holds (or, for LeNet-5, points to) ``quant_params.npz`` (legacy
 key convention: ``{layer}_q_w`` int8, ``{layer}_q_b`` int32, ``{layer}_S_*`` /
@@ -17,7 +21,8 @@ from common import FROZEN_DIR, REPO_ROOT
 
 # ---- the switch: one line per net -------------------------------------------
 LENET5_PARAM_DIR = FROZEN_DIR / "lenet5_int8"        # POINTER.md -> data/lenet5_int8/
-CIFAR10_PARAM_DIR = FROZEN_DIR / "cifar10_int8"      # later: FROZEN_DIR / "cifar10_int8_r2"
+CIFAR10_PARAM_DIR = FROZEN_DIR / "cifar10_int8_r2"   # D3 (Step 2.1c): r2 adopted
+CIFAR10_R1_PARAM_DIR = FROZEN_DIR / "cifar10_int8"   # r1, history only (not in NETS)
 # ------------------------------------------------------------------------------
 
 
@@ -59,6 +64,8 @@ NET_CONFIGS = {
         "hw_requant": LENET5_PARAM_DIR / "hw_requant.npz",
         "layers": LENET5_LAYERS,
         "dataset": "mnist",
+        "checkpoint": "data/checkpoint/lenet5_fp32.pt",
+        "reference_version": "lenet5_v1",
     },
     "cifar10": {
         "param_dir": CIFAR10_PARAM_DIR,
@@ -66,9 +73,23 @@ NET_CONFIGS = {
         "hw_requant": CIFAR10_PARAM_DIR / "hw_requant.npz",
         "layers": CIFAR10_LAYERS,
         "dataset": "cifar10",
+        "checkpoint": "v2/model/retrain/cifar10_fp32_r2.pt",
+        "reference_version": "cifar10_r2",
+    },
+    "cifar10_r1": {
+        "param_dir": CIFAR10_R1_PARAM_DIR,
+        "quant_params": CIFAR10_R1_PARAM_DIR / "quant_params.npz",
+        "hw_requant": CIFAR10_R1_PARAM_DIR / "hw_requant.npz",
+        "layers": CIFAR10_LAYERS,
+        "dataset": "cifar10",
+        "checkpoint": "data/checkpoint/cifar10_fp32.pt",
+        "reference_version": "cifar10_r1",
     },
 }
-NETS = tuple(NET_CONFIGS)
+# Nets the accelerator runs (vectors, cycle model, golden). cifar10_r1 is record-only.
+NETS = ("lenet5", "cifar10")
+RECORD_ONLY = ("cifar10_r1",)
+assert set(NETS) | set(RECORD_ONLY) == set(NET_CONFIGS)
 
 
 def layer_by_name(net: str, name: str) -> dict:

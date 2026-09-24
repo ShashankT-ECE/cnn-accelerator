@@ -33,6 +33,7 @@ from functools import lru_cache
 import numpy as np
 
 from common import REPO_ROOT, RESULTS_DIR, base_meta, write_results_csv
+from net_config import NET_CONFIGS
 
 CALIB_N = 1024          # train[0:1024], as eval_*_int8.py
 TEST_N = 10000
@@ -85,15 +86,16 @@ def _legacy(net: str, ckpt=None):
     if net == "lenet5":
         from lenet5.int8_model import Int8LeNet5 as Model, calibrate, load_weights
         from lenet5.preprocess import make_transform
-        ds_cls, default = datasets.MNIST, REPO_ROOT / "data/checkpoint/lenet5_fp32.pt"
+        ds_cls = datasets.MNIST
     elif net == "cifar10":
         from cifar10.int8_model import Int8Cifar10Net as Model, calibrate, load_weights
         from cifar10.preprocess import make_transform
-        ds_cls, default = datasets.CIFAR10, REPO_ROOT / "data/checkpoint/cifar10_fp32.pt"
+        ds_cls = datasets.CIFAR10
     else:
         raise ValueError(net)
-    # Step 2.1b: ckpt (repo-relative) overrides the checkpoint of the same net.
-    ckpt = default if ckpt is None else REPO_ROOT / ckpt
+    # Step 2.1c: default = the NET_CONFIGS reference checkpoint (cifar10 = r2, D3);
+    # Step 2.1b: ckpt (repo-relative) overrides it with another checkpoint of the same net.
+    ckpt = REPO_ROOT / (NET_CONFIGS[net]["checkpoint"] if ckpt is None else ckpt)
     return Model, calibrate, load_weights, make_transform, ds_cls, ckpt
 
 

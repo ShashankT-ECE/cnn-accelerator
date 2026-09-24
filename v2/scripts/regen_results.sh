@@ -16,7 +16,8 @@ if [[ -n "$(git status --porcelain)" ]]; then
 fi
 echo "regen_results.sh: clean tree at $(git rev-parse --short HEAD)"
 
-HW_NPZ=(v2/model/frozen/lenet5_int8/hw_requant.npz v2/model/frozen/cifar10_int8/hw_requant.npz)
+# NET_CONFIGS hw_requant files (cifar10 = r2 since Step 2.1c); must not change on regeneration.
+HW_NPZ=(v2/model/frozen/lenet5_int8/hw_requant.npz v2/model/frozen/cifar10_int8_r2/hw_requant.npz)
 before="$(sha256sum "${HW_NPZ[@]}")"
 
 cd v2/model
@@ -25,6 +26,7 @@ cd v2/model
 "$PY" final_layer.py
 "$PY" gos_cycle_model.py
 "$PY" golden_crosscheck.py
+"$PY" retrain/check_r2.py          # r1 vs r2 acceptance record (reads the CSVs above)
 cd "$REPO_ROOT"
 
 after="$(sha256sum "${HW_NPZ[@]}")"
@@ -34,14 +36,28 @@ if [[ "$before" != "$after" ]]; then
     exit 2
 fi
 
-# Every row must be clean and from HEAD.
+# Every row of every results CSV must be clean and from HEAD. Sole exemption:
+# cifar10_retrain_log.csv is a training artifact tied to the r2 checkpoint SHA256
+# (DECISIONS D9), not regenerable without retraining; it is checked for that tie.
 "$PY" - <<'PYEOF'
-import csv, glob, subprocess
+import csv, glob, hashlib, json, subprocess
 head = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
-for path in ("v2/results/reference_accuracy.csv", "v2/results/requant_equivalence.csv",
-             "v2/results/final_layer_check.csv", "v2/results/cycle_model.csv",
-             "v2/results/golden_crosscheck.csv"):
+TRAINING_ARTIFACTS = {"v2/results/cifar10_retrain_log.csv"}
+REGEN = {"reference_accuracy", "requant_equivalence", "final_layer_check", "cycle_model",
+         "golden_crosscheck", "cifar10_r2_accuracy", "cifar10_r2_summary"}
+paths = sorted(glob.glob("v2/results/*.csv"))
+found = {p.split("/")[-1][:-4] for p in paths if p not in TRAINING_ARTIFACTS}
+assert found == REGEN, f"results CSVs not produced by this script: {sorted(found - REGEN)}; missing {sorted(REGEN - found)}"
+for path in paths:
     rows = list(csv.DictReader(open(path)))
+    if path in TRAINING_ARTIFACTS:
+        meta = json.load(open("v2/model/retrain/cifar10_fp32_r2_meta.json"))
+        sha = hashlib.sha256(open(meta["checkpoint"]["path"], "rb").read()).hexdigest()
+        assert meta["log_csv"] == path and sha == meta["checkpoint"]["sha256"]
+        assert len(rows) == meta["training"]["epochs_run"]
+        assert [r["epoch"] for r in rows if r["selected"] == "1"] == [str(meta["selected_epoch"])]
+        print(f"  {path}: {len(rows)} rows, training artifact of checkpoint {sha[:12]} (exempt)")
+        continue
     bad = [r for r in rows if r["git_dirty"] != "False" or r["git_commit"] != head]
     assert rows and not bad, f"{path}: {len(bad)} rows not clean/HEAD"
     print(f"  {path}: {len(rows)} rows, clean @ {head[:7]}")

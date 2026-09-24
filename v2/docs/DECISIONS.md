@@ -6,8 +6,9 @@ Hardware integer (m, s, RNE shift) proven equivalent to the float64 reference by
 ## D2 — Final layer (2026-09-24)
 Raw INT32 logits exported; PS runs the reference float32 dequant + argmax.
 
-## D3 — Reference freeze and accuracies of record (2026-09-24)
-CIFAR INT8 reference to be frozen in Step 2. Accuracies of record: LeNet INT8 98.79% (9879/10000), CIFAR INT8 65.76% on 10,000 (from the recon runs; re-confirmed in Step 2). FP32: 98.78% / 65.87%.
+## D3 — Reference freeze and accuracies of record (2026-09-24; CIFAR updated in Step 2.1c)
+**CIFAR-10 reference = r2** (Step 2.1c, see "D3 update" and D9): retrained checkpoint `v2/model/retrain/cifar10_fp32_r2.pt` (sha256 0e69ed90b744f8c9bf1557c4ad9d49439957ff544f58020aae93e0f8f5eb819f, commit 0c14bd0), frozen INT8 set `v2/model/frozen/cifar10_int8_r2/` (`NET_CONFIGS["cifar10"]`). Accuracies of record (model, 10,000-image test sets): LeNet-5 FP32 98.78% (9878), INT8 98.79% (9879); **CIFAR-10 r2 FP32 78.56% (7856), INT8 78.52% (7852)**.
+History (superseded, kept for the record as `NET_CONFIGS["cifar10_r1"]`): CIFAR r1 INT8 reference frozen in Step 2.1 from `data/checkpoint/cifar10_fp32.pt`; FP32 65.87% (6587), INT8 65.76% (6576) (from the recon runs; re-confirmed in Step 2.1).
 
 ## D4 — Git (2026-09-24)
 v1-snapshot branch + v1-baseline tag preserve the pre-V2 state; V2 on v2-dev; main untouched.
@@ -36,7 +37,13 @@ Selected **B = 32** (smallest passing B; 32, 40 and 48 all pass with the search 
 ## D3 outcome — CIFAR-10 INT8 frozen; accuracies of record (2026-09-24, Step 2.1)
 - Frozen: `v2/model/frozen/cifar10_int8/quant_params.npz` (sha256 d2401ff8…801397), `manifest.json` (sha256 48acd07d…25db0), `SHA256SUMS`. Source commit v1-baseline a824e98; calibration CIFAR-10 train[0:1024], no RNG; export deterministic (byte-identical across runs/processes).
 - LeNet-5: pointer only (`v2/model/frozen/lenet5_int8/POINTER.md` → `data/lenet5_int8/quant_params.npz`, sha256 verified).
-- Accuracies of record (model, full 10,000-image test sets, `v2/results/reference_accuracy.csv`): LeNet-5 FP32 98.78% (9878), INT8 98.79% (9879); CIFAR-10 FP32 65.87% (6587), INT8 65.76% (6576). Confirmed equal to D3 values.
+- Accuracies of record (model, full 10,000-image test sets, `v2/results/reference_accuracy.csv`): LeNet-5 FP32 98.78% (9878), INT8 98.79% (9879); CIFAR-10 FP32 65.87% (6587), INT8 65.76% (6576). Confirmed equal to D3 values. *(Superseded for CIFAR-10 by the D3 update below; this set is now r1.)*
+
+## D3 update — CIFAR-10 reference switched to r2 (2026-09-24, Step 2.1c)
+- `net_config.NET_CONFIGS["cifar10"]` → `v2/model/frozen/cifar10_int8_r2/` (`quant_params.npz` sha256 7869babf…4ace12, `manifest.json` d25e9165…f9f7f0, `hw_requant.npz` 0cfc1802…219f49 at B = 32). All V2 scripts (golden, pack, vectors, cycle model, requant check, final layer, accuracy) take CIFAR parameters from there. The r1 set stays in `frozen/cifar10_int8/` as `NET_CONFIGS["cifar10_r1"]` (record-only, not in `NETS`).
+- `v2/results/reference_accuracy.csv` has a `reference_version` column: `lenet5_v1`, `cifar10_r1`, `cifar10_r2`.
+- r2 numeric checks (model): requant equivalence at B = 32 with the feasible-m search: 0 mismatches over 195,138,270 values; one adjusted channel (conv3 ch57, d = −1); s range 40–48, which fits the 6-bit s field (s < 64, FORMATS.md QPARAM; `gos_golden` asserts 1 ≤ s ≤ 63). Final layer: float32 logits from raw INT32 bit-identical and argmax identical on 10,000/10,000; max |v| 36,603 (int32 fits); raw-INT32 argmax would differ on 1,276 images, so the PS float32 dequant stays required. Sources: cifar10 rows of `requant_equivalence.csv`, `final_layer_check.csv`.
+- ARCH_SPEC unchanged: layer shapes are identical, so cycle counts and memory sizes (WGT/ACT/QPARAM depth asserts in `gos_pack`) are unaffected.
 
 ## D8 — Step 2.2 format and dataflow resolutions (2026-09-24)
 Approved at the Step 2.2 plan (user) unless marked "(Step 2.2 impl)" — those were resolved during implementation, reported to the user, and are open to override.
@@ -57,7 +64,21 @@ Approved at the Step 2.2 plan (user) unless marked "(Step 2.2 impl)" — those w
 14. (Step 2.2 impl, vectors) ARCH_SPEC does not fix where ReLU sits in the requant lane: requant vectors carry both the pre-ReLU and post-ReLU q. Max-pool compares signed int8 (after ReLU all values are 0..127; unit pool vectors also cover full signed int8). Placement of the 4 pooled bytes inside the 64-bit write word is left to the RTL; vectors give the 4 bytes + byte enable.
 15. (Step 2.2 impl, vectors) Address-stream records carry the full read-address counter in 16 bits; the ACT port uses bits 11:0. Unit PE/array vectors include K < 8 (the per-layer checker's K ≥ 8 rule does not apply to the PE/array units).
 
+## D9 — CIFAR-10 retrain r2 (2026-09-24, Steps 2.1b/2.1c)
+(Requested as "D8"; D8 was already taken by the Step 2.2 resolutions.)
+- **Same architecture:** legacy `cifar10.model.Cifar10Net` unchanged (32x32x3 → conv5x5 3→32 VALID, ReLU, pool 2x2/2 → conv5x5 32→32, ReLU, pool → conv5x5 32→64, ReLU → FC 64→10); no BatchNorm, no added layers. Legacy preprocessing (ToTensor [0,1], no mean/std), legacy per-tensor INT8 input scale, legacy `calibrate` on train[0:1024].
+- **Protocol:** train = train[0:45000]; val = train[45000:50000] used only for selection; test (10k) evaluated once, at the end, on the chosen checkpoint — never used for any selection. Augmentation: random crop 32 with zero padding 4 + horizontal flip. SGD momentum 0.9, Nesterov, weight decay 5e-4, cosine LR from 0.05 (per epoch, eta_min 0), batch 128, 60 epochs; epoch chosen = argmax FP32 val accuracy → **epoch 59** (val FP32 78.54%). Fixed seeds (python, numpy, torch, data generator; `torch.use_deterministic_algorithms`). Script `v2/model/retrain/train_cifar10_r2.py`; training 1,835 s on CPU (16 threads).
+- **Acceptance rule (set before evaluation):** accept only if INT8 test accuracy improves by ≥ 2.0 pp AND the requant check passes at B = 32. **Result: accept** — INT8 test 65.76% → 78.52% (+12.76 pp), FP32 test 65.87% → 78.56%; val FP32 67.18% → 78.54%, INT8 67.42% → 78.30%; requant B = 32: 0 mismatches. Adopted by the user in Step 2.1c. Record: `v2/results/cifar10_r2_accuracy.csv`, `cifar10_r2_summary.csv` (regenerated by `retrain/check_r2.py`).
+- **Training log provenance:** `v2/results/cifar10_retrain_log.csv` is a training artifact tied to the r2 checkpoint SHA256 (0e69ed90…eb819f, `cifar10_fp32_r2_meta.json`). It is not regenerable without retraining, so it keeps its training-time metadata (git_dirty=True at bd28a72, the training code being uncommitted then) and is the only results CSV exempt from the clean-tree rule; `regen_results.sh` checks it against the checkpoint SHA256 and the selected epoch instead.
+- **Every paper accuracy comes from evaluating the frozen checkpoint** (`reference_accuracy.py` / `check_r2.py` on the committed checkpoint and frozen npz), never from the training log.
+
 ## Open conflicts
+
+### OC-2 — RESOLVED (option 1, user decision 2026-09-24) — CIFAR r2: B = 48 is infeasible with the 6-bit s field (2026-09-24, Step 2.1c)
+- Evidence (model, `requant_check.py`): r2 conv1 ch7 has M = 8.1999e-06 (r1 min M over all CIFAR layers 1.5060e-04; LeNet 2.0568e-04). s = B − E(M) gives s_max = 48 / 56 / **64** at B = 32 / 40 / 48; s = 64 does not fit s[5:0] (ARCH_SPEC QPARAM, FORMATS.md "s < 64"), so `select_m_s` hits its guard: `STOP: s=64 outside [1, 63] for M=8.199850688629206e-06, B=48 (spec contradiction)`. `requant_check.py --nets lenet5 cifar10` (default B ∈ {32, 40, 48}, as run by `regen_results.sh`) therefore aborts before writing any CSV.
+- Not affected: the selected B = 32 (D1 outcome) — r2 at B = 32: 0 mismatches over 195,138,270 values, s 40–48; B = 40 also passes (0 mismatches, s 48–56). LeNet-5 and CIFAR r1 at B = 48 stay within s ≤ 60.
+- **Resolution (option 1):** `requant_check.py` keeps B ∈ {32, 40, 48}. `select_m_s` raises `ShiftOutOfRange` instead of stopping; `check_channel` records that (channel, B) as infeasible (`s_in_range = False`, required s in `s`, no m, nothing checked), and a B passes only if every channel is in range with 0 mismatches. Result: passing B = [32, 40] (lenet5 + cifar10 r2); cifar10 B = 48 has 2 out-of-range channels (s = 64); **selected B = 32 unchanged**, both `hw_requant.npz` byte-identical on regeneration.
+- Guards so an out-of-range s can never reach the packed QPARAM: `gos_pack.load_params` asserts 1 ≤ s ≤ 63 on every requant layer (and s < 64 as before); test `test_adopted_shifts_in_range` asserts, for every net in `NETS`, that every adopted (selected-B) s is in [1, 63] in `hw_requant.npz` and round-trips identically through `pack_qparam`/`unpack_qparam`; `test_out_of_range_shift_recorded_not_fatal` and the slow `test_full_exhaustive_cifar10_decision` pin the recording and the decision.
 
 ### OC-1 — RESOLVED (option 2, user decision 2026-09-24; see D1 outcome) — D1 requant: no B in {32, 40, 48} is bit-exact with m = RNE(M·2^s) (2026-09-24, Step 2.1)
 Source: `v2/model/requant_check.py` → `v2/results/requant_equivalence.csv` (model). Exhaustive exact region + saturated boundaries + 1M seeded samples per channel.

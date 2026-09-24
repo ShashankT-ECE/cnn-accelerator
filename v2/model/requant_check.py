@@ -19,6 +19,12 @@ For each B in {32, 40, 48} and each channel, s is chosen so that
 m_rne = RNE(Fraction(M) * 2^s) (exact rational arithmetic on the float64 M) lies
 in [2^(B-1), 2^B). Reachable v: |acc| <= K*16384 -> v in [-K*16384+qb, K*16384+qb].
 
+Shift range (DECISIONS OC-2, Step 2.1c): s must fit the 6-bit QPARAM field,
+s in [1, 63]. If the required s is outside it, that (channel, B) is recorded as
+infeasible (s_in_range = False, required s in ``s``, no m, nothing checked) and B
+fails the decision rule; the other B are still checked. (CIFAR r2 conv1 has
+M ~ 8.2e-6, which needs s = 64 at B = 48.)
+
 m selection (DECISIONS.md OC-1): m_rne alone is not bit-exact on a few near-tie
 channels, so candidates m_rne + d are tried in the order d = 0, +1, -1, +2, -2,
 ... up to |d| <= MAX_DELTA (staying in [2^(B-1), 2^B), s fixed). The first
@@ -64,6 +70,15 @@ SAT_SEED = 20260924
 LIMB_K = 32
 MAX_DELTA = 16                    # feasible-m search window around m_rne (LSB)
 TWO62 = 1 << 62
+S_MIN, S_MAX = 1, 63              # 6-bit QPARAM s field (ARCH_SPEC, FORMATS.md)
+
+
+class ShiftOutOfRange(ValueError):
+    """The s required for (M, B) does not fit the 6-bit s field."""
+
+    def __init__(self, M: float, B: int, s: int):
+        super().__init__(f"s={s} outside [{S_MIN}, {S_MAX}] for M={M!r}, B={B}")
+        self.M, self.B, self.s = M, B, s
 
 # (layer, expected K) for the requantized layers; the final layer is excluded.
 NET_LAYERS = {
@@ -76,7 +91,7 @@ CSV_PATH = RESULTS_DIR / "requant_equivalence.csv"
 CSV_FIELDS = ["net", "layer", "channel", "B", "s", "m", "values_checked_exact",
               "values_checked_saturated", "mismatches", "first_mismatch_v",
               "m_rne", "delta_from_rne", "mismatches_rne", "candidates_tried",
-              "sat_seed", "ref_float_vs_exact_diffs"]
+              "sat_seed", "ref_float_vs_exact_diffs", "s_in_range"]
 
 
 # --------------------------------------------------------------------------- #
@@ -157,8 +172,8 @@ def select_m_s(M: float, B: int) -> tuple[int, int]:
         s -= 1
         m = round(Mf * (1 << s))
     assert (1 << (B - 1)) <= m < (1 << B), (M, B, s, m)
-    if not 1 <= s <= 63:
-        raise SystemExit(f"STOP: s={s} outside [1, 63] for M={M!r}, B={B} (spec contradiction)")
+    if not S_MIN <= s <= S_MAX:
+        raise ShiftOutOfRange(float(M), B, int(s))
     return int(m), int(s)
 
 
@@ -266,7 +281,16 @@ def check_channel(K: int, qb: int, M: float, bits=BITS, seed=None, n_sat=N_SAT_S
 
     results = []
     for B in bits:
-        m_rne, s = select_m_s(M, B)
+        try:
+            m_rne, s = select_m_s(M, B)
+        except ShiftOutOfRange as e:           # infeasible at this B (OC-2): record, go on
+            results.append({
+                "B": B, "s": e.s, "m": "", "values_checked_exact": 0,
+                "values_checked_saturated": 0, "mismatches": "", "first_mismatch_v": "",
+                "m_rne": "", "delta_from_rne": "", "mismatches_rne": "",
+                "candidates_tried": 0, "ref_float_vs_exact_diffs": diag, "s_in_range": False,
+            })
+            continue
         mism_rne, v_rne = evaluate(m_rne, s)
         m, mism, mism_v, delta, tried = m_rne, mism_rne, v_rne, 0, 1
         if mism_rne:
@@ -296,6 +320,7 @@ def check_channel(K: int, qb: int, M: float, bits=BITS, seed=None, n_sat=N_SAT_S
             "m_rne": m_rne, "delta_from_rne": delta, "mismatches_rne": mism_rne,
             "candidates_tried": tried,
             "ref_float_vs_exact_diffs": diag,
+            "s_in_range": True,
         })
     return results
 
@@ -333,12 +358,15 @@ def run(nets, npz_paths, bits=BITS, n_sat=N_SAT_SAMPLES, out_csv=CSV_PATH, save=
                     agg = summary.setdefault((net, r["B"]), {"exact": 0, "sat": 0, "mism": 0,
                                                              "smin": 99, "smax": -1,
                                                              "mism_rne": 0, "adjusted": 0,
-                                                             "max_abs_delta": 0})
+                                                             "max_abs_delta": 0, "s_oor": 0})
+                    agg["smin"] = min(agg["smin"], r["s"])
+                    agg["smax"] = max(agg["smax"], r["s"])
+                    if not r["s_in_range"]:
+                        agg["s_oor"] += 1
+                        continue
                     agg["exact"] += r["values_checked_exact"]
                     agg["sat"] += r["values_checked_saturated"]
                     agg["mism"] += r["mismatches"]
-                    agg["smin"] = min(agg["smin"], r["s"])
-                    agg["smax"] = max(agg["smax"], r["s"])
                     agg["mism_rne"] += r["mismatches_rne"]
                     if r["delta_from_rne"] not in ("", 0):
                         agg["adjusted"] += 1
@@ -355,15 +383,17 @@ def run(nets, npz_paths, bits=BITS, n_sat=N_SAT_SAMPLES, out_csv=CSV_PATH, save=
     if verbose:
         print(f"\n{'net':8s} {'B':>3s} {'s_min':>5s} {'s_max':>5s} {'exact':>13s} "
               f"{'saturated':>13s} {'total':>13s} {'mism_rne':>8s} {'adj_ch':>6s} "
-              f"{'max|d|':>6s} {'mismatches':>10s}")
+              f"{'max|d|':>6s} {'mismatches':>10s} {'s_oor_ch':>8s}")
         for (net, B), a in sorted(summary.items()):
             print(f"{net:8s} {B:3d} {a['smin']:5d} {a['smax']:5d} {a['exact']:13,d} "
                   f"{a['sat']:13,d} {a['exact'] + a['sat']:13,d} {a['mism_rne']:8d} "
-                  f"{a['adjusted']:6d} {a['max_abs_delta']:6d} {a['mism']:10d}")
+                  f"{a['adjusted']:6d} {a['max_abs_delta']:6d} {a['mism']:10d} {a['s_oor']:8d}")
         diffs = sum(int(r["ref_float_vs_exact_diffs"] or 0) for r in rows if r["B"] == bits[0])
         print(f"\nfloat64 reference vs exact-rational RNE differences in exact regions: {diffs}")
 
-    passing = [B for B in bits if all(summary[(n, B)]["mism"] == 0 for n in nets)]
+    # A B passes only if every channel is in the s range and has 0 mismatches.
+    passing = [B for B in bits
+               if all(summary[(n, B)]["mism"] == 0 and summary[(n, B)]["s_oor"] == 0 for n in nets)]
     selected = min(passing) if passing else None
     if verbose:
         print(f"passing B (all channels, nets {list(nets)}): {passing}; selected B = {selected}")
@@ -386,7 +416,7 @@ def run(nets, npz_paths, bits=BITS, n_sat=N_SAT_SAMPLES, out_csv=CSV_PATH, save=
                 by = {r["channel"]: r for r in rows
                       if r["net"] == net and r["layer"] == L["layer"] and r["B"] == selected}
                 ms = [(by[c]["m"], by[c]["s"]) for c in range(L["M"].size)]
-                assert all(by[c]["mismatches"] == 0 for c in by)
+                assert all(by[c]["mismatches"] == 0 and by[c]["s_in_range"] for c in by)
                 sel[f"{L['layer']}_m"] = np.array([m for m, _ in ms], dtype=np.uint64)
                 sel[f"{L['layer']}_s"] = np.array([s for _, s in ms], dtype=np.uint8)
                 assert all(int(x) == m for x, (m, _) in zip(sel[f"{L['layer']}_m"], ms))

@@ -107,7 +107,7 @@ Per net: 100,000 seeded rows, channel uniform over **all** requantized channels 
 on even rows and over the exact region |v·M| ≤ 130 (requant_check.regions) on odd rows; then
 **every near-tie** v of every channel: exact |v·M − (n + ½)| < 1e-9 with Fraction(float64 M),
 searched over the whole exact region (these include the Step 2.1 values lenet5 conv5 ch82
-v = ±55930, fc1 ch54 v = ±31044, cifar10 conv2 ch0 v = ±80582, asserted present). (q_bias, m, s)
+v = ±55930, fc1 ch54 v = ±31044, cifar10 (r2) conv3 ch57 v = ±36475, asserted present). (q_bias, m, s)
 come from `gos_pack.load_params` (hw_requant.npz via NET_CONFIGS). Expected q = requant_check
 hardware arithmetic (`p = v·m; q = (p + 2^(s-1) − 1 + ((p >> s) & 1)) >>> s; clip`), asserted equal
 to the legacy float64 `requantize(v, M)` and to the Python-int formula for every row.

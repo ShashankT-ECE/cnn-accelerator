@@ -3,14 +3,19 @@
 
 Run from the repository root:
 
-    PYTHONDONTWRITEBYTECODE=1 .venv/bin/python v2/model/freeze_cifar10_int8.py [--out DIR]
+    PYTHONDONTWRITEBYTECODE=1 .venv/bin/python v2/model/freeze_cifar10_int8.py [--ckpt REL] [--out DIR]
 
-Default output: v2/model/frozen/cifar10_int8/{quant_params.npz, manifest.json, SHA256SUMS}.
+Default: NET_CONFIGS["cifar10"] (r2) -> v2/model/frozen/cifar10_int8_r2/{quant_params.npz,
+manifest.json, SHA256SUMS}. (Step 2.1 wrote the r1 set to frozen/cifar10_int8/.)
 
 Step 2.1b: ``--ckpt REL --out DIR`` freezes another FP32 checkpoint of the same
-network (e.g. v2/model/retrain/cifar10_fp32_r2.pt -> frozen/cifar10_int8_r2/)
-through the identical legacy calibrate path. A non-default checkpoint may not be
-written into the default cifar10_int8/ directory.
+network through the identical legacy calibrate path.
+Step 2.1c: the defaults follow net_config.NET_CONFIGS["cifar10"] (r2:
+v2/model/retrain/cifar10_fp32_r2.pt -> frozen/cifar10_int8_r2/). The r1 record is
+reproduced with ``--ckpt data/checkpoint/cifar10_fp32.pt --out v2/model/frozen/cifar10_int8``.
+A registered param dir (NET_CONFIGS) only accepts its own registered checkpoint.
+The manifest wording depends only on whether the checkpoint is the legacy one, so
+both committed manifests reproduce byte-for-byte.
 
 No reference math is implemented here. The parameters are produced by the legacy
 code exactly as python/eval_cifar10_int8.py does:
@@ -40,6 +45,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import common  # noqa: E402  (puts legacy python/ on sys.path)
 from common import FROZEN_DIR, REPO_ROOT, sha256_file  # noqa: E402
+from net_config import NET_CONFIGS  # noqa: E402
 
 import torch  # noqa: E402
 import torchvision  # noqa: E402
@@ -50,13 +56,17 @@ from cifar10.preprocess import make_transform  # noqa: E402
 from reference import quant  # noqa: E402
 
 SOURCE_TAG = "v1-baseline"
-CKPT_REL = "data/checkpoint/cifar10_fp32.pt"
+LEGACY_CKPT_REL = "data/checkpoint/cifar10_fp32.pt"          # r1 (v1-baseline)
+CKPT_REL = NET_CONFIGS["cifar10"]["checkpoint"]                # reference of record (D3)
 RAW_REL = "data/raw"
 CALIB_N = 1024                        # python/eval_cifar10_int8.py CALIB_N
 ROUNDTRIP_IDX = list(range(64))       # fixed test images for the npz round-trip check
 LAYERS = ("conv1", "conv2", "conv3", "fc")
 REQUANT_LAYERS = ("conv1", "conv2", "conv3")
-OUT_DIR = FROZEN_DIR / "cifar10_int8"
+OUT_DIR = NET_CONFIGS["cifar10"]["param_dir"]
+# registered param dir -> the only checkpoint it may be frozen from
+REGISTERED = {Path(c["param_dir"]).resolve(): c["checkpoint"]
+              for n, c in NET_CONFIGS.items() if c["dataset"] == "cifar10"}
 NPZ_NAME = "quant_params.npz"
 MANIFEST_NAME = "manifest.json"
 
@@ -187,9 +197,10 @@ def versions() -> dict:
 # ---------------------------------------------------------------- export
 def export(out_dir: Path = OUT_DIR, ckpt_rel: str = CKPT_REL) -> dict:
     out_dir = Path(out_dir)
-    default_ckpt = ckpt_rel == CKPT_REL
-    if not default_ckpt and out_dir.resolve() == OUT_DIR.resolve():
-        raise SystemExit(f"refusing to overwrite {OUT_DIR} with non-default checkpoint {ckpt_rel}")
+    legacy_ckpt = ckpt_rel == LEGACY_CKPT_REL
+    want = REGISTERED.get(out_dir.resolve())
+    if want is not None and ckpt_rel != want:
+        raise SystemExit(f"refusing to write {out_dir} (registered to {want}) from {ckpt_rel}")
     out_dir.mkdir(parents=True, exist_ok=True)
     params, w = legacy_params(return_weights=True, ckpt_rel=ckpt_rel)
     qp = params_to_arrays(params)
@@ -202,9 +213,9 @@ def export(out_dir: Path = OUT_DIR, ckpt_rel: str = CKPT_REL) -> dict:
     closure = legacy_import_closure()
     # A retrained checkpoint does not exist at SOURCE_TAG; only the legacy code is
     # compared against it then (the checkpoint is pinned by its sha256 below).
-    inputs = ([CKPT_REL] if default_ckpt else []) + closure
+    inputs = ([LEGACY_CKPT_REL] if legacy_ckpt else []) + closure
     manifest = {
-        "artifact": "V2 frozen CIFAR-10 INT8 reference parameters (Step 2.1, D3)" if default_ckpt
+        "artifact": "V2 frozen CIFAR-10 INT8 reference parameters (Step 2.1, D3)" if legacy_ckpt
                     else "V2 frozen CIFAR-10 INT8 reference parameters, retrained checkpoint "
                          "(Step 2.1b, not yet adopted)",
         "generator": "v2/model/freeze_cifar10_int8.py",

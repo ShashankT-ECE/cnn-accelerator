@@ -70,9 +70,11 @@ QUICK = {"pe_random_seqs": 60, "array_random_tiles": 6, "rot_random_per_kx": 8,
 
 NEAR_TIE_TOL = Fraction(1, 10**9)       # exact |v*M - (n + 1/2)| < 1e-9
 NEAR_TIE_FLOAT_PREFILTER = 1e-7         # float64 v*M error in the exact region is < 1e-13
-# Step 2.1 near-tie values (DECISIONS.md OC-1 / D1 outcome): must be present.
+# Near-tie values that force an adjusted m at B = 32 (DECISIONS.md OC-1 / D1 outcome): must be
+# present. They belong to the adopted parameter set: cifar10 = r2 since Step 2.1c (conv3 ch57,
+# v*M = 63.5 - 3.8e-15); the r1 value was conv2 ch0 v = 80582.
 REQUIRED_NEAR_TIES = (("lenet5", "conv5", 82, 55930), ("lenet5", "fc1", 54, 31044),
-                      ("cifar10", "conv2", 0, 80582))
+                      ("cifar10", "conv3", 57, 36475))
 
 # --------------------------------------------------------------------------- #
 # Record layouts: (field, lsb, width, signed). Unlisted bits are 0.

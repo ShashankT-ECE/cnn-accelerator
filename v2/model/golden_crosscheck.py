@@ -30,7 +30,7 @@ from net_config import NET_CONFIGS
 NETS = ("lenet5", "cifar10")
 TEST_N = 10000
 BATCH = 500
-ACCURACY_OF_RECORD = {"lenet5": 9879, "cifar10": 6576}   # DECISIONS D3 outcome
+ACCURACY_OF_RECORD = {"lenet5": 9879, "cifar10": 7852}   # DECISIONS D3 (cifar10 = r2, Step 2.1c)
 
 # golden layer name -> legacy forward_layers key (int8 outputs; final = acc key)
 LEGACY_KEYS = {

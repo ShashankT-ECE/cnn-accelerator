@@ -221,6 +221,8 @@ def load_params(net: str) -> dict:
             m = h[f"{n}_m"].astype(np.uint64)
             s = h[f"{n}_s"].astype(np.uint8)
             assert m.shape == (L["OC"],) and s.shape == (L["OC"],)
+            # requant layers: s in [1, 63] (6-bit field; DECISIONS OC-2)
+            assert int(s.min()) >= 1, f"{net}/{n}: s = 0 on a requant layer"
         assert int(m.max()) < 2 ** M_BITS, f"{net}/{n}: m >= 2^{M_BITS}"
         assert int(s.max()) < 2 ** S_BITS, f"{net}/{n}: s >= 2^{S_BITS}"
         out[n] = {"q_w": w, "q_b": b, "m": m, "s": s}
