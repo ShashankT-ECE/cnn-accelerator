@@ -49,19 +49,24 @@ def test_full_tile_utilization_is_one():
     assert r["T"] == 2 * 3 * 2 and r["util_theoretical"] == 1.0
 
 
-def test_defaults_are_unknown():
-    assert cm.C_PIPE is None and cm.C_START is None
+def test_defaults_are_rtl_derived():
+    # Step 4: constants derived from RTL latencies (committed before any core sim)
+    assert cm.C_PIPE == 29 and cm.C_START == 2 and cm.C_DONE == 0
     res = cm.net_cycles(_layers("lenet5"))
-    assert all(r["cycles_basis"] == "compute_only" and r["c_pipe"] is None
-               and r["cycles"] == r["compute_cycles"] for r in res["layers"].values())
-    assert res["total"]["cycles_basis"] == "compute_only"
-    assert res["total"]["cycles"] == SPEC_TOTAL["lenet5"]
+    for r in res["layers"].values():
+        assert r["cycles"] == r["compute_cycles"] + 29 and r["cycles_basis"] == "compute+c_pipe"
+    assert res["total"]["cycles"] == SPEC_TOTAL["lenet5"] + 5 * 29 + 2 + 0
+    res = cm.net_cycles(_layers("cifar10"))
+    assert res["total"]["cycles"] == SPEC_TOTAL["cifar10"] + 4 * 29 + 2 + 0
+    # compute-only view still available
+    co = cm.net_cycles(_layers("lenet5"), c_pipe=None, c_start=None, c_done=None)
+    assert co["total"]["cycles"] == SPEC_TOTAL["lenet5"] and co["total"]["cycles_basis"] == "compute_only"
 
 
 @pytest.mark.parametrize("net", NETS)
 def test_c_pipe_and_c_start_added(net):
     n = len(_layers(net))
-    res = cm.net_cycles(_layers(net), c_pipe=7, c_start=100)
+    res = cm.net_cycles(_layers(net), c_pipe=7, c_start=100, c_done=None)
     for name, r in res["layers"].items():
         assert r["cycles"] == SPEC_COMPUTE[net][name] + 7
         assert r["cycles_basis"] == "compute+c_pipe"
@@ -69,10 +74,10 @@ def test_c_pipe_and_c_start_added(net):
     assert res["total"]["cycles_basis"] == "compute+c_pipe+c_start"
     assert res["total"]["compute_cycles"] == SPEC_TOTAL[net]
 
-    only_start = cm.net_cycles(_layers(net), c_pipe=None, c_start=100)
+    only_start = cm.net_cycles(_layers(net), c_pipe=None, c_start=100, c_done=None)
     assert only_start["total"]["cycles"] == SPEC_TOTAL[net] + 100
     assert only_start["total"]["cycles_basis"] == "compute+c_start"
-    only_pipe = cm.net_cycles(_layers(net), c_pipe=3, c_start=None)
+    only_pipe = cm.net_cycles(_layers(net), c_pipe=3, c_start=None, c_done=None)
     assert only_pipe["total"]["cycles"] == SPEC_TOTAL[net] + 3 * n
     assert only_pipe["total"]["cycles_basis"] == "compute+c_pipe"
 
