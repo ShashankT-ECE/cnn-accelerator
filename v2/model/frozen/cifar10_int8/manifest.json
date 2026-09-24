@@ -1,0 +1,177 @@
+{
+  "arrays": {
+    "S_input": {
+      "dtype": "float64",
+      "shape": []
+    },
+    "conv1_M": {
+      "dtype": "float64",
+      "shape": [
+        32
+      ]
+    },
+    "conv1_S_a": {
+      "dtype": "float64",
+      "shape": []
+    },
+    "conv1_S_out": {
+      "dtype": "float64",
+      "shape": []
+    },
+    "conv1_S_w": {
+      "dtype": "float64",
+      "shape": [
+        32
+      ]
+    },
+    "conv1_q_b": {
+      "dtype": "int32",
+      "shape": [
+        32
+      ]
+    },
+    "conv1_q_w": {
+      "dtype": "int8",
+      "shape": [
+        32,
+        3,
+        5,
+        5
+      ]
+    },
+    "conv2_M": {
+      "dtype": "float64",
+      "shape": [
+        32
+      ]
+    },
+    "conv2_S_a": {
+      "dtype": "float64",
+      "shape": []
+    },
+    "conv2_S_out": {
+      "dtype": "float64",
+      "shape": []
+    },
+    "conv2_S_w": {
+      "dtype": "float64",
+      "shape": [
+        32
+      ]
+    },
+    "conv2_q_b": {
+      "dtype": "int32",
+      "shape": [
+        32
+      ]
+    },
+    "conv2_q_w": {
+      "dtype": "int8",
+      "shape": [
+        32,
+        32,
+        5,
+        5
+      ]
+    },
+    "conv3_M": {
+      "dtype": "float64",
+      "shape": [
+        64
+      ]
+    },
+    "conv3_S_a": {
+      "dtype": "float64",
+      "shape": []
+    },
+    "conv3_S_out": {
+      "dtype": "float64",
+      "shape": []
+    },
+    "conv3_S_w": {
+      "dtype": "float64",
+      "shape": [
+        64
+      ]
+    },
+    "conv3_q_b": {
+      "dtype": "int32",
+      "shape": [
+        64
+      ]
+    },
+    "conv3_q_w": {
+      "dtype": "int8",
+      "shape": [
+        64,
+        32,
+        5,
+        5
+      ]
+    },
+    "fc_S_a": {
+      "dtype": "float64",
+      "shape": []
+    },
+    "fc_S_w": {
+      "dtype": "float64",
+      "shape": [
+        10
+      ]
+    },
+    "fc_q_b": {
+      "dtype": "int32",
+      "shape": [
+        10
+      ]
+    },
+    "fc_q_w": {
+      "dtype": "int8",
+      "shape": [
+        10,
+        64
+      ]
+    }
+  },
+  "artifact": "V2 frozen CIFAR-10 INT8 reference parameters (Step 2.1, D3)",
+  "calibration": {
+    "method": "per-tensor activation scale = max|x|/127 (abs-max) of the input and of each layer's float ReLU(+pool) output computed from the INT8 path; per-output-channel weight scale = max|w[c]|/127; q_b = rint(b/(S_a*S_w)) -> int32; M = S_a*S_w/S_out",
+    "n": 1024,
+    "procedure": "cifar10.int8_model.calibrate(load_weights(checkpoint), calib) as in python/eval_cifar10_int8.py",
+    "randomness": "none (fixed contiguous indices; no RNG, seed, shuffle or augmentation anywhere in load_weights/calibrate/make_transform)",
+    "set": "CIFAR-10 train[0:1024] (torchvision CIFAR10, root=data/raw, download=False), cifar10.preprocess.make_transform() (ToTensor, [0,1], no normalization), stacked as float32"
+  },
+  "checkpoint": {
+    "path": "data/checkpoint/cifar10_fp32.pt",
+    "sha256": "febc11d84d4bbfb957bfeaffd38d69eb861915dcc170e23c793f5b74726984ed"
+  },
+  "generator": "v2/model/freeze_cifar10_int8.py",
+  "legacy_code": {
+    "python/cifar10/__init__.py": "e9f541a22310abc6e01aad16280d225c5005173147b0a906a7198ae422e0819e",
+    "python/cifar10/config.py": "3688b96fc7e96eca56e1d187886c30ad8065f856804ee8f69765d4e5c5d3fe4a",
+    "python/cifar10/int8_model.py": "f4a79f28b1f4c3bfc692519a93022a1de86f15cee9ab2655244c867abe03fb4a",
+    "python/cifar10/model.py": "61a38e9912468ef695428725fd74dc066b3d97d5ec02d86baa8cfe43634bb15f",
+    "python/cifar10/preprocess.py": "9f617642a92b2dde599d7f81e2a1572106528e7a04550e4f87f31d750bbd114a",
+    "python/lenet5/__init__.py": "ef03812d6bf3b1b9cd1732090fbf6b1d1bbe32ebe1356f814074a63f596c0a00",
+    "python/lenet5/config.py": "ef9f43b17fe8d6c35d71bc4a8abd4d16ed956ba65fe8caca0d93b1ee15d6e5d1",
+    "python/lenet5/int8_model.py": "a09514676a44e1704d1a2097325c55ec206f91ea15333fc2d60ae1e90a6518dd",
+    "python/lenet5/int8_quant.py": "805e10c7d442326f4281aea766fb7682d520ad4a3e779846622ec7968b1a9963",
+    "python/lenet5/model.py": "cc1583b01dd3d464493cbf2800e846f9e21be31037578317fc1b9612fea3b0c2",
+    "python/reference/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "python/reference/quant.py": "7a3ec5bb6761448fb412a01fcceb41b4b9cc7aac3ff677762fae62c3f84e1002"
+  },
+  "legacy_inputs_unchanged_since_source_commit": true,
+  "npz_keys": "export_lenet5_int8.py convention: {layer}_q_w, _q_b, _S_w, _S_a, _S_out, _M and S_input; fc (final layer) has no S_out/M",
+  "outputs": {
+    "quant_params.npz": "d2401ff8013ff839ec99efc2b88536b2f2606898f25c9516f82d1fc54a801397"
+  },
+  "roundtrip_check": "Int8Cifar10Net(npz) == Int8Cifar10Net(in-memory) bit-identical on all forward_layers outputs, test[0:64]",
+  "source_commit": "a824e982222d5c7088c048c23b17a611baf3f1f0",
+  "source_tag": "v1-baseline",
+  "versions": {
+    "numpy": "1.26.4",
+    "python": "3.10.12",
+    "torch": "2.1.2+cpu",
+    "torchvision": "0.16.2+cpu"
+  }
+}
