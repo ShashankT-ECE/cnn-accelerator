@@ -45,9 +45,15 @@ head = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=Tr
 TRAINING_ARTIFACTS = {"v2/results/cifar10_retrain_log.csv"}
 REGEN = {"reference_accuracy", "requant_equivalence", "final_layer_check", "cycle_model",
          "golden_crosscheck", "cifar10_r2_accuracy", "cifar10_r2_summary"}
+# CSVs written by the RTL / Vivado result scripts (checked by v2/scripts/check_results.py
+# after those scripts run; they may still be from the previous commit at this point).
+OTHER_PRODUCERS = {"unit_tb": "run_unit_all.sh", "ooc_synth": "ooc_all.sh",
+                   "rtl_cycles": "run_core.sh", "rtl_network": "run_core.sh",
+                   "rtl_checker": "run_core.sh", "impl_shell": "vivado/build_shell.sh"}
 paths = sorted(glob.glob("v2/results/*.csv"))
-found = {p.split("/")[-1][:-4] for p in paths if p not in TRAINING_ARTIFACTS}
-assert found == REGEN, f"results CSVs not produced by this script: {sorted(found - REGEN)}; missing {sorted(REGEN - found)}"
+found = {p.split("/")[-1][:-4] for p in paths if p not in TRAINING_ARTIFACTS} - set(OTHER_PRODUCERS)
+assert found == REGEN, f"results CSVs not produced by any known script: {sorted(found - REGEN)}; missing {sorted(REGEN - found)}"
+paths = [p for p in paths if p.split("/")[-1][:-4] not in OTHER_PRODUCERS]
 for path in paths:
     rows = list(csv.DictReader(open(path)))
     if path in TRAINING_ARTIFACTS:
