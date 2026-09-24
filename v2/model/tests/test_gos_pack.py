@@ -381,3 +381,35 @@ def test_max_act_read_word(net):
         m = gp.max_act_read_word(d)
         assert m == brute and m <= d["IN_END"] + 1 and m < gp.ACT_DEPTH
         print(net, d["name"], "max read word", m, "IN_END", d["IN_END"])
+
+
+# ---- Step 4: rule ids / job ERR_CODE (mirror of gos_cfg_check.sv) ----------------
+def test_rule_codes_agree_with_checker():
+    import gos_fuzz
+    rng = np.random.default_rng(4)
+    for net in ("lenet5", "cifar10"):
+        for w in gp.make_descriptors(net)[1]:
+            assert gp.check_descriptor_code(w) == 0
+    for _ in range(300):
+        f = gos_fuzz.draw_fields(rng)
+        f.update(gp.derive_fields(f))
+        w = np.array(gp.encode_descriptor(f), dtype=np.uint32)
+        # random single-word corruption
+        i = int(rng.integers(0, 16))
+        w[i] ^= np.uint32(1 << int(rng.integers(0, 32)))
+        ok, why = gp.check_descriptor(w)
+        assert ok == (gp.check_descriptor_code(w) == 0)
+        assert len(why) == len(gp.check_descriptor_rules(w))
+
+
+def test_job_err_code():
+    words = gp.make_descriptors("lenet5")[1]
+    full = np.zeros((8, 16), dtype=np.uint32)
+    full[:len(words)] = words
+    assert gp.job_err_code(len(words), full) == 0
+    assert gp.job_err_code(0, full) == gp.RULE_N_LAYERS << 8
+    assert gp.job_err_code(9, full) == gp.RULE_N_LAYERS << 8
+    bad = full.copy()
+    bad[2, 7] = 7                                   # K < 8 on layer 2
+    assert gp.job_err_code(len(words), bad) == (3 << 8) | 2
+    assert gp.job_err_code(2, bad) == 0             # layer 2 not in the job

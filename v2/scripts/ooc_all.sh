@@ -19,6 +19,8 @@ MODULES=(
     "gos_rotator:gos_pkg.sv gos_rotator.sv"
     "gos_pool:gos_pkg.sv gos_pool.sv"
     "gos_requant:gos_pkg.sv gos_requant.sv"
+    "gos_csr:gos_pkg.sv gos_csr.sv"
+    "gos_core:gos_pkg.sv gos_core.sv"
 )
 [[ $# -gt 0 ]] && { SEL=" $* "; } || SEL=""
 

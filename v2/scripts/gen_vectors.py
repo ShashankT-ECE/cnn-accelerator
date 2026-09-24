@@ -45,6 +45,7 @@ from common import REPO_ROOT, V2_ROOT, git_commit, git_dirty, sha256_file  # noq
 import final_layer  # noqa: E402
 import gos_addr_stream as ga  # noqa: E402
 import gos_cycle_model as cm  # noqa: E402
+import gos_fuzz  # noqa: E402
 import gos_golden as gg  # noqa: E402
 import gos_pack as gp  # noqa: E402
 import gos_tile_model as tm  # noqa: E402
@@ -61,12 +62,14 @@ BASE_SEED = 20260924
 SEEDS = {"pe": [BASE_SEED, 1], "array": [BASE_SEED, 2], "rotator": [BASE_SEED, 3],
          "requant_lenet5": [BASE_SEED, 4, 0], "requant_cifar10": [BASE_SEED, 4, 1],
          "pool": [BASE_SEED, 5], "layer_garbage": [BASE_SEED, 6],
-         "net_garbage": [BASE_SEED, 7]}
+         "net_garbage": [BASE_SEED, 7], "fuzz": [BASE_SEED, 8], "checker": [BASE_SEED, 9]}
 
 FULL = {"pe_random_seqs": 600, "array_random_tiles": 40, "rot_random_per_kx": 64,
-        "requant_samples": 100_000, "pool_cases": 512, "layer_images": 3, "net_images": 10}
+        "requant_samples": 100_000, "pool_cases": 512, "layer_images": 3, "net_images": 10,
+        "fuzz_cases": 100, "fuzz_max_tk": 60_000}
 QUICK = {"pe_random_seqs": 60, "array_random_tiles": 6, "rot_random_per_kx": 8,
-         "requant_samples": 2_000, "pool_cases": 48, "layer_images": 1, "net_images": 2}
+         "requant_samples": 2_000, "pool_cases": 48, "layer_images": 1, "net_images": 2,
+         "fuzz_cases": 4, "fuzz_max_tk": 6_000}
 
 NEAR_TIE_TOL = Fraction(1, 10**9)       # exact |v*M - (n + 1/2)| < 1e-9
 NEAR_TIE_FLOAT_PREFILTER = 1e-7         # float64 v*M error in the exact region is < 1e-13
@@ -529,6 +532,15 @@ def gen_net_common(o: Out, net: str) -> dict:
     return {"descs": descs, "words": words}
 
 
+def expect_cycles(layers) -> list[int]:
+    """Model cycles of a job running `layers` in order: LAYER_CYC[0..n-1], TOTAL_CYC, MAC_ACTIVE
+    (gos_cycle_model with the RTL-derived C_PIPE / C_START / C_DONE)."""
+    r = cm.net_cycles(layers)
+    assert all(v is not None for v in (cm.C_PIPE, cm.C_START, cm.C_DONE))
+    lc = [r["layers"][L["name"]]["cycles"] for L in layers]
+    return lc + [r["total"]["cycles"], r["total"]["mac_active"]]
+
+
 def layer_dir(i: int, name: str) -> str:
     return f"L{i}_{name}"
 
@@ -553,6 +565,9 @@ def gen_layers(o: Out, P: dict, net: str, common_: dict, x_int8: np.ndarray) -> 
         assert st.n_issues == TK and st.n_tiles == T and st.n_drain == 8 * T
         o.emit(f"{ld}/expect_tk.hex", [T, K, TK], 32,
                f"{net}/{d['name']}: expected T, K, T*K (gos_cycle_model, compute only)")
+        o.emit(f"{ld}/expect_cyc.hex", expect_cycles([L]), 32,
+               f"{net}/{d['name']}: expected cycles of a 1-layer job (model): "
+               "LAYER_CYC[0], TOTAL_CYC, MAC_ACTIVE")
         fi, fd = stream_fields(st)
         o.emit(f"{ld}/issue.hex", pack_records(fi, ISSUE_LAYOUT), ISSUE_WIDTH,
                f"{net}/{d['name']}: issue stream, one record per cycle (T*K = {TK})")
@@ -658,9 +673,141 @@ def gen_network(o: Out, P: dict, net: str, x_int8: np.ndarray, labels: np.ndarra
         assert pred == int(gold["pred"][n])
         preds.append(pred)
     o.emit(f"{net}/net/pred.hex", preds, 8, f"{net}: expected prediction per image (PS float32 argmax)")
+    o.emit(f"{net}/net/expect_cyc.hex", expect_cycles(list(NET_CONFIGS[net]["layers"])), 32,
+           f"{net}: expected cycles of the whole-network job (model): LAYER_CYC[0..N-1], "
+           "TOTAL_CYC, MAC_ACTIVE")
     o.emit(f"{net}/net/label.hex", [int(x) for x in labels], 8, f"{net}: dataset label per image")
     return {"images": int(x_int8.shape[0]), "preds": preds, "labels": [int(x) for x in labels],
             "correct": int(sum(p == int(lbl) for p, lbl in zip(preds, labels)))}
+
+
+# --------------------------------------------------------------------------- #
+# Config-checker cases (Step 4)
+# --------------------------------------------------------------------------- #
+FLAG_WORD = 6
+FLAG_BIT = {"relu_en": 0, "pool_en": 1, "out_raw": 2, "in_sel": 3}
+CHECKER_CASE_WORDS = 1 + 8 * gp.DESC_WORDS + 1        # n_layers, DESC[0..7][0..15], err_code
+
+
+def set_field(words, name, value):
+    """Raw field write into descriptor words (no consistency assert: for corruptions)."""
+    w = np.array(words, dtype=np.uint32).copy()
+    if name in FLAG_BIT:
+        b = FLAG_BIT[name]
+        w[FLAG_WORD] = (int(w[FLAG_WORD]) & ~(1 << b)) | ((int(value) & 1) << b)
+        return w
+    wi, lsb, width = gp.DESC_LAYOUT[name]
+    mask = ((1 << width) - 1) << lsb
+    w[wi] = np.uint32((int(w[wi]) & ~mask) | ((int(value) << lsb) & mask))
+    return w
+
+
+def corruptions(w):
+    """(label, corrupted words) list for one valid descriptor."""
+    f = gp.decode_descriptor(w)
+    out = [("pool_odd_OH", set_field(set_field(w, "pool_en", 1), "OH", f["OH"] | 1)),
+           ("K_lt_8", set_field(w, "K", 7)),
+           ("WGT_END", set_field(w, "WGT_END", gp.WGT_DEPTH)),
+           ("IN_END", set_field(w, "IN_END", gp.ACT_DEPTH)),
+           ("OUT_END", set_field(w, "OUT_END", gp.ACT_DEPTH)),
+           ("QP_END", set_field(w, "QP_END", gp.QP_CHANNELS)),
+           ("OH_gt_IH", set_field(set_field(w, "pool_en", 0), "OH", f["IH"] + 1)),
+           ("OW_gt_IW", set_field(set_field(w, "pool_en", 0), "OW", f["IW"] + 1)),
+           ("raw_OC_17", set_field(set_field(w, "out_raw", 1), "OC", 17))]
+    if f["OH"] & ~1:
+        out.append(("pool_odd_OW", set_field(set_field(set_field(w, "pool_en", 1), "OH", f["OH"] & ~1),
+                                             "OW", f["OW"] | 1)))
+    out += [(f"zero_{k}", set_field(w, k, 0)) for k in gp.NONZERO_FIELDS]
+    return out
+
+
+def gen_checker(o: Out) -> dict:
+    rng = np.random.default_rng(SEEDS["checker"])
+    cases = []                                          # (label, n_layers, desc[8,16], code)
+
+    def add(label, n, words):
+        full = rng.integers(0, 2**32, size=(8, gp.DESC_WORDS), dtype=np.uint64).astype(np.uint32)
+        full[:len(words)] = words                       # slots >= n_layers: garbage (ignored)
+        code = gp.job_err_code(n, full)
+        cases.append((label, n, full, code))
+
+    for net in NETS:
+        words = gp.make_descriptors(net)[1]
+        n = len(words)
+        add(f"{net}_valid", n, words)
+        for l, w in enumerate(words):
+            add(f"{net}_L{l}_valid", 1, [w])
+            for lab, cw in corruptions(w):
+                add(f"{net}_L{l}_{lab}", 1, [cw])
+        bad = words.copy()
+        bad[n - 1] = set_field(bad[n - 1], "K", 7)
+        bad[1] = set_field(bad[1], "QP_END", 300)
+        add(f"{net}_layers_1_and_last_bad", n, bad)     # first failing layer (1) reported
+        add(f"{net}_n_layers_0", 0, words)
+        add(f"{net}_n_layers_9", 9, words)
+    firsts = {c[3] >> 8 for c in cases if c[3]}
+    missing = set(range(1, 28)) - firsts - {16}         # rule 16 (K == 0) is shadowed by rule 3
+    assert not missing, f"checker cases miss rules {sorted(missing)}"
+    assert gp.RULE_N_LAYERS in firsts
+    flat = []
+    for lab, n, full, code in cases:
+        flat += [n] + [int(x) for x in full.reshape(-1)] + [code]
+    o.emit("checker/cases.hex", flat, 32,
+           f"config-checker cases: {len(cases)} x {CHECKER_CASE_WORDS} words "
+           "(N_LAYERS, DESC[0..7][0..15], expected ERR_CODE; 0 = accepted)")
+    o.emit("checker/n_cases.hex", [len(cases)], 32, "number of checker cases")
+    return {"cases": len(cases), "accepted": sum(1 for c in cases if c[3] == 0),
+            "rules_first_covered": sorted(firsts), "labels": [c[0] for c in cases]}
+
+
+# --------------------------------------------------------------------------- #
+# Fuzz layers (Step 4): random shapes, single-layer jobs, tile-model expected
+# --------------------------------------------------------------------------- #
+def gen_fuzz(o: Out, P: dict) -> dict:
+    rng = np.random.default_rng(SEEDS["fuzz"])
+    cases, rejects = gos_fuzz.draw_accepted(rng, P["fuzz_cases"], max_tk=P["fuzz_max_tk"])
+    summary = []
+    for i, (f, w) in enumerate(cases):
+        d = f"fuzz/F{i:03d}"
+        p = gos_fuzz.make_params(rng, f)
+        L = {"name": f"F{i:03d}", **{k: f[k] for k in ("IC", "OC", "OH", "OW", "K")}}
+        vb = gp.v_abs_bound({"K": f["K"]}, p["q_b"])
+        assert vb < 2 ** (gp.V_MUL_W - 1), f"{d}: |v| bound {vb} breaks V_MUL_W"
+        o.emit(f"{d}/desc.hex", w, 32, f"{d}: descriptor")
+        wl = gp._pack_wgt_layer(np.asarray(p["q_w"], dtype=np.int8))
+        o.emit(f"{d}/wgt.hex", wl, 64, f"{d}: WGT words at WGT_BASE={f['WGT_BASE']}")
+        e, od = gp.qparam_banks(tm.pack_layer_qparam(p["q_b"], p["m"], p["s"]))
+        o.emit(f"{d}/qp_e.hex", e, 64, f"{d}: QPARAM even bank at QP_BASE={f['QP_BASE']}")
+        o.emit(f"{d}/qp_o.hex", od, 64, f"{d}: QPARAM odd bank at QP_BASE={f['QP_BASE']}")
+        n_in = f["IN_END"] + 1
+        o.emit(f"{d}/act_in.hex", gp.pack_act_words(p["x"], n_in), 64,
+               f"{d}: input ACT[in_sel={f['in_sel']}] words 0..IN_END")
+        gold = gos_fuzz.golden_layer(f, p)
+        st = ga.addr_stream(np.array(w, dtype=np.uint32))
+        if f["out_raw"]:
+            v = np.zeros(gp.N_LOGITS, dtype=np.int64)
+            v[:f["OC"]] = gold[:, 0, 0]
+            o.emit(f"{d}/logit16.hex", u32(v), 32, f"{d}: expected LOGIT[0..15] (unused = 0)")
+        else:
+            n_out = f["OUT_END"] + 1
+            o.emit(f"{d}/act_out.hex", gp.pack_act_words(gold, n_out), 64,
+                   f"{d}: expected ACT[{1 - f['in_sel']}] words 0..OUT_END")
+            o.emit(f"{d}/act_out_mask.hex", out_byte_mask(st, n_out), 8, f"{d}: written-byte mask")
+        o.emit(f"{d}/expect_cyc.hex", expect_cycles([L]), 32,
+               f"{d}: expected LAYER_CYC[0], TOTAL_CYC, MAC_ACTIVE (model)")
+        # cross-check: tile model on garbage memories == golden
+        gos_fuzz.run_case(f, w, p, "fast", rng)
+        summary.append({k: f[k] for k in ("IC", "OC", "IH", "IW", "KH", "OH", "OW", "pool_en",
+                                          "relu_en", "out_raw", "in_sel", "K")}
+                       | {"TK": st.n_issues})
+    o.emit("fuzz/n_cases.hex", [len(cases)], 32, "number of fuzz cases")
+    cov = {"oc_tail": sum(s["OC"] % 8 != 0 for s in summary),
+           "ow_tail": sum(s["OW"] % 8 != 0 for s in summary),
+           "pool": sum(s["pool_en"] for s in summary), "no_pool": sum(1 - s["pool_en"] for s in summary),
+           "k1": sum(s["KH"] == 1 for s in summary), "k5": sum(s["KH"] == 5 for s in summary),
+           "out_raw": sum(s["out_raw"] for s in summary), "in_sel1": sum(s["in_sel"] for s in summary)}
+    return {"cases": len(cases), "max_tk": P["fuzz_max_tk"], "rejects": dict(rejects),
+            "coverage": cov, "total_issue_cycles": sum(s["TK"] for s in summary), "shapes": summary}
 
 
 # --------------------------------------------------------------------------- #
@@ -709,6 +856,9 @@ def generate(out: Path, manifest: Path, quick: bool = False, require_clean: bool
     for net in NETS:
         info["unit"]["requant"][net] = gen_requant(o, P, net)
         log(f"  unit requant {net} done ({time.time() - t0:.1f}s)")
+    info["checker"] = gen_checker(o)
+    info["fuzz"] = gen_fuzz(o, P)
+    log(f"  checker + fuzz done ({time.time() - t0:.1f}s)")
     for net in NETS:
         n_img = max(P["layer_images"], P["net_images"])
         x_fp, y = gg.load_test_set(net, n_img)

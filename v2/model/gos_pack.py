@@ -460,6 +460,51 @@ def check_descriptor(words) -> tuple[bool, list[str]]:
     return (not r), r
 
 
+# Rule ids of the RTL config checker (gos_cfg_check.sv; FORMATS.md). Priority =
+# ascending id; the job ERR_CODE reports the first failing layer, then its first rule.
+RULE_N_LAYERS = 32                       # N_LAYERS not in 1..MAX_LAYERS (checked by gos_core)
+
+
+def check_descriptor_rules(words) -> list[int]:
+    """All failing rule ids (1..27) of one descriptor, ascending; [] = accepted.
+
+    Same predicates and order as check_descriptor (comparisons only)."""
+    f = decode_descriptor(words)
+    preds = [
+        bool(f["pool_en"] and (f["OH"] & 1)),        # 1
+        bool(f["pool_en"] and (f["OW"] & 1)),        # 2
+        f["K"] < MIN_K,                              # 3
+        f["WGT_END"] > WGT_DEPTH - 1,                # 4
+        f["IN_END"] > ACT_DEPTH - 1,                 # 5
+        f["OUT_END"] > ACT_DEPTH - 1,                # 6
+        f["QP_END"] > QP_CHANNELS - 1,               # 7
+    ]
+    preds += [f[k] == 0 for k in NONZERO_FIELDS]   # 8..24
+    preds += [f["OH"] > f["IH"], f["OW"] > f["IW"],  # 25, 26
+              bool(f["out_raw"] and f["OC"] > N_LOGITS)]   # 27
+    assert len(preds) == 27
+    return [i + 1 for i, bad in enumerate(preds) if bad]
+
+
+def check_descriptor_code(words) -> int:
+    """First failing rule id of one descriptor (0 = accepted)."""
+    r = check_descriptor_rules(words)
+    return r[0] if r else 0
+
+
+def job_err_code(n_layers: int, desc_words) -> int:
+    """ERR_CODE the RTL reports for a job: {16'b0, rule_id[7:0], 5'b0, layer[2:0]}; 0 = ok.
+
+    desc_words: [8 or N_LAYERS, 16] (only layers < n_layers are checked)."""
+    if not 1 <= int(n_layers) <= MAX_LAYERS:
+        return RULE_N_LAYERS << 8
+    for l in range(int(n_layers)):
+        c = check_descriptor_code(desc_words[l])
+        if c:
+            return (c << 8) | l
+    return 0
+
+
 def make_descriptors(net: str) -> tuple[list[dict], np.ndarray]:
     """Descriptors of every layer of `net`: (field dicts incl. name, uint32 [N_LAYERS, 16]).
 

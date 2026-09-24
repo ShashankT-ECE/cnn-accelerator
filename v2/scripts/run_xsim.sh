@@ -5,6 +5,8 @@
 # (or absolute); the TB is v2/tb/<tb_name>.sv. If no RTL files are given, the
 # "// GOS_UNIT_TB:" header line of the TB lists them.
 # Exits 0 only if the log contains "TEST PASSED" and no ERROR/FATAL/"TEST FAILED".
+# Env: SIM_TAG=<tag> runs in v2/build/sim/<tb_name>_<tag>/ (parallel runs of one TB);
+#      XSIM_PLUSARGS="A=1 B=x" adds -testplusarg for each entry.
 set -uo pipefail
 
 [[ $# -ge 1 ]] || { echo "usage: $0 <tb_name> [rtl files...]" >&2; exit 2; }
@@ -24,16 +26,18 @@ for f in "${FILES[@]}"; do
 done
 SRCS+=("$TB_SRC")
 
-WORK="$V2/build/sim/$TB"
+WORK="$V2/build/sim/$TB${SIM_TAG:+_$SIM_TAG}"
 rm -rf "$WORK"; mkdir -p "$WORK"; cd "$WORK"
 # shellcheck disable=SC1090
 source "$HOME/Xilinx/Vivado/2023.1/settings64.sh" >/dev/null 2>&1
 VEC_DIR="${VEC_DIR:-$V2/vectors/generated}"
+EXTRA=()
+for a in ${XSIM_PLUSARGS:-}; do EXTRA+=(-testplusarg "$a"); done
 
 {
-    xvlog -sv "${SRCS[@]}" &&
+    xvlog -sv -i "$V2/rtl" "${SRCS[@]}" &&
     xelab "$TB" -s "${TB}_snap" -timescale 1ns/1ps --debug off &&
-    xsim "${TB}_snap" -R -testplusarg "VEC_DIR=$VEC_DIR"
+    xsim "${TB}_snap" -R -testplusarg "VEC_DIR=$VEC_DIR" "${EXTRA[@]}"
 } > run.log 2>&1
 rc=$?
 

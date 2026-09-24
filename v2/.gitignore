@@ -6,3 +6,4 @@ results/raw/
 *.pb
 xsim.dir/
 .Xil/
+vivado/out/
