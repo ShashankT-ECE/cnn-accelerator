@@ -70,9 +70,12 @@ C_PIPE: int | None = (L_LOAD + L_ISSUE + L_MEM_ACC + L_ROT + L_ARRAY + (L_DRAIN 
                       + L_QPARAM + L_RQ + L_POOL + L_RETIRE)            # = 29
 # TOTAL_CYC counts every cycle with STATUS.busy = 1: busy rises on the edge that
 # accepts `start` (IDLE) and falls on the edge after the last layer's end cycle.
-#   S_CHK1 (rule vectors registered) + S_CHK2 (priority encode / decide) = 2 cycles
-#   before layer 0's S_LOAD; the last layer's end cycle is already inside LAYER_CYC.
-C_START: int | None = 2      # S_CHK1 + S_CHK2
+# Config check before layer 0's S_LOAD (Step 4.5, D13: pipelined, was 2):
+#   S_CHK1: per-layer rule comparisons registered (fail_r)
+#   S_CHK2: per-layer OR-reduce + first-rule priority encode registered
+#   S_CHK3: pick the first failing layer, set ERR_CODE / refuse, or go to S_LOAD
+# = 3 cycles; the last layer's end cycle is already inside LAYER_CYC.
+C_START: int | None = 3      # S_CHK1 + S_CHK2 + S_CHK3 (gos_core N_CHK)
 C_DONE: int | None = 0       # busy falls right after the last layer-end cycle
 
 _MODULE = object()           # sentinel: "use the module-level parameter"

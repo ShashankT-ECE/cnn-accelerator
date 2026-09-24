@@ -15,7 +15,7 @@
 //   writer: ACT[!in_sel] port A, be & {8{ch_valid[col] & !out_raw}};
 //           out_raw: LOGIT[oc_tile*8 + col] <= v_raw of row 0.
 //
-// Sequencer: IDLE -start-> CHK1 -> CHK2 -> (error: IDLE) LOAD(l) -> RUN(l) -> ... -> IDLE
+// Sequencer: IDLE -start-> CHK1 -> CHK2 -> CHK3 -> (error: IDLE) LOAD(l) -> RUN(l) -> ... -> IDLE
 //   A layer ends when issue is finished and no tile is in flight (tiles issued vs.
 //   tiles retired at the writer — event counts, not cycle counts). Cycle model:
 //   LAYER_CYC = T*K + C_PIPE, TOTAL_CYC = C_START + sum(LAYER_CYC) + C_DONE
@@ -67,7 +67,7 @@ module gos_core
   // Structural latencies of the sequencer (used by the cycle model, gos_cycle_model.py):
   localparam int L_LOAD     = 1;  // S_LOAD cycle before issue state k0
   localparam int L_RETIRE   = 1;  // tile retire -> inflight update seen by the layer-end test
-  localparam int N_CHK      = 2;  // S_CHK1 + S_CHK2 before layer 0 (C_START)
+  localparam int N_CHK      = 3;  // S_CHK1 + S_CHK2 + S_CHK3 before layer 0 (C_START, D13)
   localparam int N_DONE     = 0;  // busy falls on the edge after the last layer-end cycle (C_DONE)
 
   // ------------------------------------------------------------------ reset
@@ -75,33 +75,46 @@ module gos_core
   assign crst = rst | soft_reset;
 
   // ------------------------------------------------------------------ sequencer
-  typedef enum logic [2:0] {S_IDLE, S_CHK1, S_CHK2, S_LOAD, S_RUN} state_t;
+  typedef enum logic [2:0] {S_IDLE, S_CHK1, S_CHK2, S_CHK3, S_LOAD, S_RUN} state_t;
   state_t      state;
   logic [2:0]  layer;
   logic [31:0] lcyc;              // cycles of the current layer (LOAD .. end)
-  logic [7:0][26:0] fail_r;       // registered per-layer rule failures (CHK1)
-  logic        nl_bad_r;
+  logic [7:0][26:0] fail_r;       // S_CHK1: registered per-layer rule failures
+  logic        nl_bad_r, nl_bad_r2;
   logic [7:0][26:0] fail_c;
+  logic [7:0]       lfail_r;      // S_CHK2: layer l has a failing rule
+  logic [7:0][7:0]  lrule_r;      // S_CHK2: first (lowest) failing rule id of layer l
 
   for (genvar l = 0; l < 8; l++) begin : g_chk
     gos_cfg_check u_chk (.d(desc[l]), .fail(fail_c[l]));
   end
 
-  // first failing (layer, rule): lowest layer, then lowest rule id
+  // S_CHK2 (registered): per-layer OR-reduce and first-rule priority encode
+  logic [7:0]      lfail_c;
+  logic [7:0][7:0] lrule_c;
+  always_comb begin
+    for (int l = 0; l < 8; l++) begin
+      lfail_c[l] = |fail_r[l];
+      lrule_c[l] = '0;
+      for (int i = 26; i >= 0; i--)
+        if (fail_r[l][i]) lrule_c[l] = 8'(i + 1);
+    end
+  end
+
+  // S_CHK3: first failing layer (lowest l) of the registered per-layer results
   logic        chk_fail;
   logic [7:0]  chk_rule;
   logic [2:0]  chk_layer;
   always_comb begin
     chk_fail = 1'b0; chk_rule = '0; chk_layer = '0;
-    if (nl_bad_r) begin
+    if (nl_bad_r2) begin
       chk_fail = 1'b1; chk_rule = 8'd32; chk_layer = '0;
     end else begin
       for (int l = 7; l >= 0; l--) begin
-        if (|fail_r[l]) begin
+        if (lfail_r[l]) begin
           chk_fail  = 1'b1;
           chk_layer = 3'(l);
-          for (int i = 26; i >= 0; i--)
-            if (fail_r[l][i]) chk_rule = 8'(i + 1);
+          chk_rule  = lrule_r[l];
         end
       end
     end
@@ -135,7 +148,7 @@ module gos_core
       state <= S_IDLE; layer <= '0; lcyc <= '0;
       busy <= 1'b0; done <= 1'b0; error <= 1'b0; err_code <= '0;
       total_cyc <= '0; mac_active <= '0; stall <= '0; layer_cyc <= '0;
-      inflight <= '0; nl_bad_r <= 1'b0; fail_r <= '0;
+      inflight <= '0; nl_bad_r <= 1'b0; nl_bad_r2 <= 1'b0; fail_r <= '0; lfail_r <= '0; lrule_r <= '0;
     end else begin
       inflight <= inflight + ((iss_valid && iss_last) ? 16'd1 : 16'd0) - (retire ? 16'd1 : 16'd0);
       if (busy) total_cyc <= total_cyc + 64'd1;
@@ -155,6 +168,12 @@ module gos_core
           state <= S_CHK2;
         end
         S_CHK2: begin
+          nl_bad_r2 <= nl_bad_r;
+          lfail_r   <= lfail_c;
+          lrule_r   <= lrule_c;
+          state     <= S_CHK3;
+        end
+        S_CHK3: begin
           if (chk_fail) begin
             error <= 1'b1; busy <= 1'b0; state <= S_IDLE;
             err_code <= {16'b0, chk_rule, 5'b0, chk_layer};

@@ -108,6 +108,9 @@ Items 1–6 approved at the Step 4 plan (user). Items marked "(Step 4 impl)" wer
 12. (Step 4 impl) **ACT / WGT alignment:** both reads are issued in the same cycle with the same documented latency (L_MEM_ACC); the WGT word then rides in the rotator token to the array. A simulation assertion checks the two valids are identical every cycle.
 13. (Step 4 impl) **Core OOC timing:** the worst path (+0.923 ns at 5 ns, post-synthesis OOC) is the config checker's priority encoder (fail_r → err_code, 14 LUT levels), not the datapath. A third check stage would fix it but would change C_START; left as is unless implementation timing requires it (then documented as a structural C_START change).
 
+## D13 — Config checker pipelined: C_START 2 → 3 (2026-09-24, Step 4.5)
+User decision. Reason: the Step 4 OOC worst path of `gos_core` (+0.923 ns at 5 ns, post-synthesis) was the checker's priority encoder (fail_r → err_code, 14 LUT levels), a timing risk for the 250/300 MHz variants. Structure: S_CHK1 registers the per-layer rule comparisons (fail_r); S_CHK2 registers, per layer, the OR-reduce (any failure) and the first failing rule id; S_CHK3 selects the first failing layer (8-way) and sets ERR_CODE / refuses the job or enters S_LOAD. One extra cycle per job: **C_START = 3** (was 2); C_PIPE and C_DONE unchanged. The model (`gos_cycle_model.py`) and the test tying C_START to the RTL (`N_CHK`, and the number of S_CHK states) were updated and committed before any simulation of the new RTL. Expected job totals from the model: LeNet-5 16,288 + 5·29 + 3 = 16,436; CIFAR-10 104,128 + 4·29 + 3 = 104,247 (to be verified by RTL simulation).
+
 ## Open conflicts
 
 ### OC-2 — RESOLVED (option 1, user decision 2026-09-24) — CIFAR r2: B = 48 is infeasible with the 6-bit s field (2026-09-24, Step 2.1c)

@@ -51,3 +51,12 @@ def test_constants_are_the_derivation():
                          + (cm.L_DRAIN - 1) + cm.L_QPARAM + cm.L_RQ + cm.L_POOL + cm.L_RETIRE)
     env = rtl_params("gos_core.sv")
     assert cm.C_START == env["N_CHK"] and cm.C_DONE == env["N_DONE"]
+
+
+def test_c_start_is_the_check_state_count():
+    # C_START must equal the number of S_CHK<n> states in the gos_core state enum
+    import re
+    src = (RTL / "gos_core.sv").read_text()
+    enum = re.search(r"typedef enum[^{]*\{([^}]*)\}\s*state_t", src).group(1)
+    n_chk = len(re.findall(r"\bS_CHK\d\b", enum))
+    assert n_chk == cm.C_START == rtl_params("gos_core.sv")["N_CHK"]

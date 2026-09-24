@@ -51,13 +51,13 @@ def test_full_tile_utilization_is_one():
 
 def test_defaults_are_rtl_derived():
     # Step 4: constants derived from RTL latencies (committed before any core sim)
-    assert cm.C_PIPE == 29 and cm.C_START == 2 and cm.C_DONE == 0
+    assert cm.C_PIPE == 29 and cm.C_START == 3 and cm.C_DONE == 0
     res = cm.net_cycles(_layers("lenet5"))
     for r in res["layers"].values():
         assert r["cycles"] == r["compute_cycles"] + 29 and r["cycles_basis"] == "compute+c_pipe"
-    assert res["total"]["cycles"] == SPEC_TOTAL["lenet5"] + 5 * 29 + 2 + 0
+    assert res["total"]["cycles"] == SPEC_TOTAL["lenet5"] + 5 * 29 + 3 + 0
     res = cm.net_cycles(_layers("cifar10"))
-    assert res["total"]["cycles"] == SPEC_TOTAL["cifar10"] + 4 * 29 + 2 + 0
+    assert res["total"]["cycles"] == SPEC_TOTAL["cifar10"] + 4 * 29 + 3 + 0
     # compute-only view still available
     co = cm.net_cycles(_layers("lenet5"), c_pipe=None, c_start=None, c_done=None)
     assert co["total"]["cycles"] == SPEC_TOTAL["lenet5"] and co["total"]["cycles_basis"] == "compute_only"
