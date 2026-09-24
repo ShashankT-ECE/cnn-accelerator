@@ -67,6 +67,8 @@ MIN_K = 8
 
 M_BITS = 32                 # requant multiplier width (D1 outcome: B = 32)
 S_BITS = 6                  # requant shift width
+V_MUL_W = 26                # signed v width of the requant multiply (gos_pkg::V_MUL_W)
+ACT_PROD_MAX = 128 * 128    # |a*w| <= 16384 for INT8 x INT8
 
 # Flag bit positions in descriptor word 6.
 FLAG_RELU_EN, FLAG_POOL_EN, FLAG_OUT_RAW, FLAG_IN_SEL = 0, 1, 2, 3
@@ -223,9 +225,33 @@ def load_params(net: str) -> dict:
             assert m.shape == (L["OC"],) and s.shape == (L["OC"],)
             # requant layers: s in [1, 63] (6-bit field; DECISIONS OC-2)
             assert int(s.min()) >= 1, f"{net}/{n}: s = 0 on a requant layer"
+            # requant multiply uses a V_MUL_W-bit signed v: every reachable
+            # |v| = |acc + q_bias| <= K*16384 + |q_bias| must be < 2^(V_MUL_W-1)
+            vmax = v_abs_bound(L, b)
+            assert vmax < 2 ** (V_MUL_W - 1), \
+                f"{net}/{n}: |v| bound {vmax} >= 2^{V_MUL_W - 1}; V_MUL_W={V_MUL_W} unsafe"
         assert int(m.max()) < 2 ** M_BITS, f"{net}/{n}: m >= 2^{M_BITS}"
         assert int(s.max()) < 2 ** S_BITS, f"{net}/{n}: s >= 2^{S_BITS}"
         out[n] = {"q_w": w, "q_b": b, "m": m, "s": s}
+    return out
+
+
+def v_abs_bound(L: dict, q_b) -> int:
+    """Max reachable |v| = |acc + q_bias| over the layer: K*16384 + max|q_bias| (Python int)."""
+    return int(L["K"]) * ACT_PROD_MAX + int(np.abs(np.asarray(q_b, dtype=np.int64)).max())
+
+
+def v_mul_margin(net: str) -> list[dict]:
+    """Per requantized layer: |v| bound, bits needed (signed), headroom vs V_MUL_W."""
+    P = load_params(net)          # asserts the bound
+    out = []
+    for L in layers(net):
+        if L["final"]:
+            continue
+        vmax = v_abs_bound(L, P[L["name"]]["q_b"])
+        bits = vmax.bit_length() + 1
+        out.append({"layer": L["name"], "K": L["K"], "v_abs_bound": vmax,
+                    "signed_bits_needed": bits, "headroom_bits": V_MUL_W - bits})
     return out
 
 
