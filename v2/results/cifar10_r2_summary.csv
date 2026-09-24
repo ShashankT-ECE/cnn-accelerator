@@ -1,11 +1,11 @@
 timestamp,git_commit,git_dirty,vivado_version,bitstream_sha256,board_id,net,layer,clock_mhz,source,duration_s,num_inferences,quantity,r1,r2,delta,note
-2026-09-24T05:17:28+00:00,bd28a729ffb13bb3b0d875ba3666a1b559e56632,True,,,,cifar10,all,,model,,,FP32_test_acc_pct,65.87,78.56,+12.69,
-2026-09-24T05:17:28+00:00,bd28a729ffb13bb3b0d875ba3666a1b559e56632,True,,,,cifar10,all,,model,,,INT8_test_acc_pct,65.76,78.52,+12.76,
-2026-09-24T05:17:28+00:00,bd28a729ffb13bb3b0d875ba3666a1b559e56632,True,,,,cifar10,all,,model,,,FP32_val_acc_pct,67.18,78.54,+11.36,
-2026-09-24T05:17:28+00:00,bd28a729ffb13bb3b0d875ba3666a1b559e56632,True,,,,cifar10,all,,model,,,INT8_val_acc_pct,67.42,78.30,+10.88,
-2026-09-24T05:17:28+00:00,bd28a729ffb13bb3b0d875ba3666a1b559e56632,True,,,,cifar10,all,,model,,,epochs_run,10,60,,
-2026-09-24T05:17:28+00:00,bd28a729ffb13bb3b0d875ba3666a1b559e56632,True,,,,cifar10,all,,model,,,selected_epoch,10,59,,"r1: last epoch (legacy, no selection); r2: argmax val FP32"
-2026-09-24T05:17:28+00:00,bd28a729ffb13bb3b0d875ba3666a1b559e56632,True,,,,cifar10,all,,model,,,train_time_s,,1835.40,,"CPU, 16 threads"
-2026-09-24T05:17:28+00:00,bd28a729ffb13bb3b0d875ba3666a1b559e56632,True,,,,cifar10,all,,model,,,requant_B32_mismatches,,0,,"values=195138270, mism_rne=2, adjusted_ch=1, max|d|=1, s=40-48"
-2026-09-24T05:17:28+00:00,bd28a729ffb13bb3b0d875ba3666a1b559e56632,True,,,,cifar10,all,,model,,,final_layer_bitexact,,10000/10000,,"argmax 10000/10000, max|v|=36603, int32_fits=True"
-2026-09-24T05:17:28+00:00,bd28a729ffb13bb3b0d875ba3666a1b559e56632,True,,,,cifar10,all,,model,,,recommendation,,accept,,rule: INT8 test gain >= 2.0 pp (+12.76) AND requant B=32 0 mismatches (0); final layer ok=True; not adopted
+2026-09-24T11:31:44+00:00,2c0f09f0181d67478557b194543bc56738db1015,False,,,,cifar10,all,,model,,,FP32_test_acc_pct,65.87,78.56,+12.69,
+2026-09-24T11:31:44+00:00,2c0f09f0181d67478557b194543bc56738db1015,False,,,,cifar10,all,,model,,,INT8_test_acc_pct,65.76,78.52,+12.76,
+2026-09-24T11:31:44+00:00,2c0f09f0181d67478557b194543bc56738db1015,False,,,,cifar10,all,,model,,,FP32_val_acc_pct,67.18,78.54,+11.36,
+2026-09-24T11:31:44+00:00,2c0f09f0181d67478557b194543bc56738db1015,False,,,,cifar10,all,,model,,,INT8_val_acc_pct,67.42,78.30,+10.88,
+2026-09-24T11:31:44+00:00,2c0f09f0181d67478557b194543bc56738db1015,False,,,,cifar10,all,,model,,,epochs_run,10,60,,
+2026-09-24T11:31:44+00:00,2c0f09f0181d67478557b194543bc56738db1015,False,,,,cifar10,all,,model,,,selected_epoch,10,59,,"r1: last epoch (legacy, no selection); r2: argmax val FP32"
+2026-09-24T11:31:44+00:00,2c0f09f0181d67478557b194543bc56738db1015,False,,,,cifar10,all,,model,,,train_time_s,,1835.40,,"CPU, 16 threads (training artifact, r2 meta json)"
+2026-09-24T11:31:44+00:00,2c0f09f0181d67478557b194543bc56738db1015,False,,,,cifar10,all,,model,,,requant_B32_mismatches,,0,,"values=195138270, mism_rne=2, adjusted=['conv3 ch57 d=-1'], s=40-48 (requant_equivalence.csv)"
+2026-09-24T11:31:44+00:00,2c0f09f0181d67478557b194543bc56738db1015,False,,,,cifar10,all,,model,,,final_layer_bitexact,,10000/10000,,"argmax 10000/10000, max|v|=36603, int32_fits=True (final_layer_check.csv)"
+2026-09-24T11:31:44+00:00,2c0f09f0181d67478557b194543bc56738db1015,False,,,,cifar10,all,,model,,,recommendation,,accept,,rule: INT8 test gain >= 2.0 pp (+12.76) AND requant B=32 0 mismatches (0); final layer ok=True; adopted in Step 2.1c (D3/D9)

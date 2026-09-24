@@ -1,5 +1,7 @@
-timestamp,git_commit,git_dirty,vivado_version,bitstream_sha256,board_id,net,layer,clock_mhz,source,duration_s,num_inferences,precision,correct,total,accuracy_pct
-2026-09-24T05:17:29+00:00,304e60ea40a33af8337b88b1393a7d0cb8bb4b00,False,,,,lenet5,all,,model,9.516,10000,FP32,9878,10000,98.78
-2026-09-24T05:17:36+00:00,304e60ea40a33af8337b88b1393a7d0cb8bb4b00,False,,,,lenet5,all,,model,6.283,10000,INT8,9879,10000,98.79
-2026-09-24T05:17:46+00:00,304e60ea40a33af8337b88b1393a7d0cb8bb4b00,False,,,,cifar10,all,,model,10.592,10000,FP32,6587,10000,65.87
-2026-09-24T05:18:46+00:00,304e60ea40a33af8337b88b1393a7d0cb8bb4b00,False,,,,cifar10,all,,model,60.27,10000,INT8,6576,10000,65.76
+timestamp,git_commit,git_dirty,vivado_version,bitstream_sha256,board_id,net,layer,clock_mhz,source,duration_s,num_inferences,reference_version,precision,correct,total,accuracy_pct
+2026-09-24T11:23:38+00:00,2c0f09f0181d67478557b194543bc56738db1015,False,,,,lenet5,all,,model,1.309,10000,lenet5_v1,FP32,9878,10000,98.78
+2026-09-24T11:23:45+00:00,2c0f09f0181d67478557b194543bc56738db1015,False,,,,lenet5,all,,model,6.221,10000,lenet5_v1,INT8,9879,10000,98.79
+2026-09-24T11:23:50+00:00,2c0f09f0181d67478557b194543bc56738db1015,False,,,,cifar10,all,,model,5.246,10000,cifar10_r1,FP32,6587,10000,65.87
+2026-09-24T11:24:51+00:00,2c0f09f0181d67478557b194543bc56738db1015,False,,,,cifar10,all,,model,60.735,10000,cifar10_r1,INT8,6576,10000,65.76
+2026-09-24T11:24:56+00:00,2c0f09f0181d67478557b194543bc56738db1015,False,,,,cifar10,all,,model,5.539,10000,cifar10_r2,FP32,7856,10000,78.56
+2026-09-24T11:25:57+00:00,2c0f09f0181d67478557b194543bc56738db1015,False,,,,cifar10,all,,model,60.529,10000,cifar10_r2,INT8,7852,10000,78.52

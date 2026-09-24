@@ -1,6 +1,6 @@
 {
  "generator": "v2/scripts/gen_vectors.py",
- "git_commit": "304e60ea40a33af8337b88b1393a7d0cb8bb4b00",
+ "git_commit": "2c0f09f0181d67478557b194543bc56738db1015",
  "git_dirty": false,
  "mode": "full",
  "generated_dir": "v2/vectors/generated",
@@ -82,12 +82,12 @@
   },
   "cifar10": {
    "quant_params": {
-    "path": "v2/model/frozen/cifar10_int8/quant_params.npz",
-    "sha256": "d2401ff8013ff839ec99efc2b88536b2f2606898f25c9516f82d1fc54a801397"
+    "path": "v2/model/frozen/cifar10_int8_r2/quant_params.npz",
+    "sha256": "7869babf991782459736bc43427d9a1fe14862b9ba2ad5b187efc7c0ce4ace12"
    },
    "hw_requant": {
-    "path": "v2/model/frozen/cifar10_int8/hw_requant.npz",
-    "sha256": "23b58b5d9941b37b08f4247ad0728f7110e10de32272be4534134de54542493e"
+    "path": "v2/model/frozen/cifar10_int8_r2/hw_requant.npz",
+    "sha256": "0cfc1802d81c97000d1a80d68a3869b116b60eda2d8e7e3fa3b47802d8219f49"
    }
   }
  },
@@ -677,21 +677,31 @@
      ]
     },
     "cifar10": {
-     "rows": 100002,
+     "rows": 100004,
      "sampled": 100000,
-     "near_tie_rows": 2,
-     "exact_region_rows": 54696,
+     "near_tie_rows": 4,
+     "exact_region_rows": 55787,
      "channels": 128,
      "near_ties": [
       {
        "layer": "conv2",
-       "ch": 0,
-       "v": -80582
+       "ch": 13,
+       "v": -42848
       },
       {
        "layer": "conv2",
-       "ch": 0,
-       "v": 80582
+       "ch": 13,
+       "v": 42848
+      },
+      {
+       "layer": "conv3",
+       "ch": 57,
+       "v": -36475
+      },
+      {
+       "layer": "conv3",
+       "ch": 57,
+       "v": 36475
       }
      ]
     }
@@ -868,11 +878,11 @@
       8,
       8,
       0,
-      4,
       6,
-      1,
       6,
-      5,
+      9,
+      6,
+      3,
       1
      ],
      "labels": [
@@ -887,13 +897,13 @@
       3,
       1
      ],
-     "correct": 8
+     "correct": 9
     }
    }
   }
  },
  "n_files": 186,
- "total_bytes": 18066154,
+ "total_bytes": 18066236,
  "files": [
   {
    "path": "cifar10/desc.hex",
@@ -945,7 +955,7 @@
   },
   {
    "path": "cifar10/layers/L0_conv1/img0/act_out.hex",
-   "sha256": "1dce04f2869c12b6e80f20246456310ffb39b1a34230c5593bb8d973dbebbf61",
+   "sha256": "cddb13daa383df40170a2c871ba801a93000bc0f74b57ce7626e635732d78c7d",
    "bytes": 15232,
    "lines": 896,
    "width_bits": 64,
@@ -961,7 +971,7 @@
   },
   {
    "path": "cifar10/layers/L0_conv1/img1/act_out.hex",
-   "sha256": "309935993927cc0457e14831b5ee5f79d0497045e3d034460642fa675a3b35df",
+   "sha256": "52674edb8bc74eaf24bc4885d770b3b168a9e17f41630b0b6a0dd1ced14eb0a4",
    "bytes": 15232,
    "lines": 896,
    "width_bits": 64,
@@ -977,7 +987,7 @@
   },
   {
    "path": "cifar10/layers/L0_conv1/img2/act_out.hex",
-   "sha256": "fddb651d32c8ee54d0fb65367f9e9ea783b4eb33009c1d8b943d79b0b1e483a1",
+   "sha256": "54fffaf6a524a9714c7f4610ba99b28542a023ab98c0fbd3e51ef7451a3e29c3",
    "bytes": 15232,
    "lines": 896,
    "width_bits": 64,
@@ -1025,7 +1035,7 @@
   },
   {
    "path": "cifar10/layers/L1_conv2/img0/act_in.hex",
-   "sha256": "1dce04f2869c12b6e80f20246456310ffb39b1a34230c5593bb8d973dbebbf61",
+   "sha256": "cddb13daa383df40170a2c871ba801a93000bc0f74b57ce7626e635732d78c7d",
    "bytes": 15232,
    "lines": 896,
    "width_bits": 64,
@@ -1033,7 +1043,7 @@
   },
   {
    "path": "cifar10/layers/L1_conv2/img0/act_out.hex",
-   "sha256": "a95f883a6301f5be76665e00b998cc2788cb8594567247fd76f15ba5399ad476",
+   "sha256": "3b792e6491c68bb7e0f138ecab6c101f586dcc98504ac0175ee95bec487b02e7",
    "bytes": 2720,
    "lines": 160,
    "width_bits": 64,
@@ -1041,7 +1051,7 @@
   },
   {
    "path": "cifar10/layers/L1_conv2/img1/act_in.hex",
-   "sha256": "309935993927cc0457e14831b5ee5f79d0497045e3d034460642fa675a3b35df",
+   "sha256": "52674edb8bc74eaf24bc4885d770b3b168a9e17f41630b0b6a0dd1ced14eb0a4",
    "bytes": 15232,
    "lines": 896,
    "width_bits": 64,
@@ -1049,7 +1059,7 @@
   },
   {
    "path": "cifar10/layers/L1_conv2/img1/act_out.hex",
-   "sha256": "f55dc7a266010dd662fddc84a98cceb2013639203a03e958ed22939aaf0a3a79",
+   "sha256": "ced5e865aeed15e51b95826cb7f8b062fe211aefe2cb37e702876e90df678a14",
    "bytes": 2720,
    "lines": 160,
    "width_bits": 64,
@@ -1057,7 +1067,7 @@
   },
   {
    "path": "cifar10/layers/L1_conv2/img2/act_in.hex",
-   "sha256": "fddb651d32c8ee54d0fb65367f9e9ea783b4eb33009c1d8b943d79b0b1e483a1",
+   "sha256": "54fffaf6a524a9714c7f4610ba99b28542a023ab98c0fbd3e51ef7451a3e29c3",
    "bytes": 15232,
    "lines": 896,
    "width_bits": 64,
@@ -1065,7 +1075,7 @@
   },
   {
    "path": "cifar10/layers/L1_conv2/img2/act_out.hex",
-   "sha256": "66df4a7a76efaed83f71b7192246a324fb0593fe2c8ef1679c7dae401ff314c8",
+   "sha256": "00208c4b69d6371bb8d3a4ef9432bcf627bc486f2a28026d5044e17d20e01392",
    "bytes": 2720,
    "lines": 160,
    "width_bits": 64,
@@ -1113,7 +1123,7 @@
   },
   {
    "path": "cifar10/layers/L2_conv3/img0/act_in.hex",
-   "sha256": "a95f883a6301f5be76665e00b998cc2788cb8594567247fd76f15ba5399ad476",
+   "sha256": "3b792e6491c68bb7e0f138ecab6c101f586dcc98504ac0175ee95bec487b02e7",
    "bytes": 2720,
    "lines": 160,
    "width_bits": 64,
@@ -1121,7 +1131,7 @@
   },
   {
    "path": "cifar10/layers/L2_conv3/img0/act_out.hex",
-   "sha256": "231b638192ca98b17d935639e6965868ff5e8acc827eed2d22000db1cdde8e4e",
+   "sha256": "e54585f2aa5540403fbd08aaa1524b9d70f79a3253d0f629cbac7368cc2291cf",
    "bytes": 1088,
    "lines": 64,
    "width_bits": 64,
@@ -1129,7 +1139,7 @@
   },
   {
    "path": "cifar10/layers/L2_conv3/img1/act_in.hex",
-   "sha256": "f55dc7a266010dd662fddc84a98cceb2013639203a03e958ed22939aaf0a3a79",
+   "sha256": "ced5e865aeed15e51b95826cb7f8b062fe211aefe2cb37e702876e90df678a14",
    "bytes": 2720,
    "lines": 160,
    "width_bits": 64,
@@ -1137,7 +1147,7 @@
   },
   {
    "path": "cifar10/layers/L2_conv3/img1/act_out.hex",
-   "sha256": "845651c7c58bb5d454371d95a4e2bd491c3b8a7c41aae304f6457b7c8bee69de",
+   "sha256": "c523af79d4de8322a45fbe5b34718e0769e9510bad23e162e20e47594a06b40f",
    "bytes": 1088,
    "lines": 64,
    "width_bits": 64,
@@ -1145,7 +1155,7 @@
   },
   {
    "path": "cifar10/layers/L2_conv3/img2/act_in.hex",
-   "sha256": "66df4a7a76efaed83f71b7192246a324fb0593fe2c8ef1679c7dae401ff314c8",
+   "sha256": "00208c4b69d6371bb8d3a4ef9432bcf627bc486f2a28026d5044e17d20e01392",
    "bytes": 2720,
    "lines": 160,
    "width_bits": 64,
@@ -1153,7 +1163,7 @@
   },
   {
    "path": "cifar10/layers/L2_conv3/img2/act_out.hex",
-   "sha256": "fa77e61cfc8a44d122a82912fef1f2e8af4c8947fe15967db94a89a56ac52d43",
+   "sha256": "42dba553334600400f8e9ac41b6af1afb2fb93b057e0816a0fc8f361c0aee40d",
    "bytes": 1088,
    "lines": 64,
    "width_bits": 64,
@@ -1193,7 +1203,7 @@
   },
   {
    "path": "cifar10/layers/L3_fc/img0/act_in.hex",
-   "sha256": "231b638192ca98b17d935639e6965868ff5e8acc827eed2d22000db1cdde8e4e",
+   "sha256": "e54585f2aa5540403fbd08aaa1524b9d70f79a3253d0f629cbac7368cc2291cf",
    "bytes": 1088,
    "lines": 64,
    "width_bits": 64,
@@ -1201,7 +1211,7 @@
   },
   {
    "path": "cifar10/layers/L3_fc/img0/logit16.hex",
-   "sha256": "d52a09b9df7997f1ce907101a8e44c5b5839aa06029c088a85bd708a2cba3bda",
+   "sha256": "9f8829c53902c8039cce87e51d06a358f81608613da3b9236eaa5ca05dc050db",
    "bytes": 144,
    "lines": 16,
    "width_bits": 32,
@@ -1209,7 +1219,7 @@
   },
   {
    "path": "cifar10/layers/L3_fc/img1/act_in.hex",
-   "sha256": "845651c7c58bb5d454371d95a4e2bd491c3b8a7c41aae304f6457b7c8bee69de",
+   "sha256": "c523af79d4de8322a45fbe5b34718e0769e9510bad23e162e20e47594a06b40f",
    "bytes": 1088,
    "lines": 64,
    "width_bits": 64,
@@ -1217,7 +1227,7 @@
   },
   {
    "path": "cifar10/layers/L3_fc/img1/logit16.hex",
-   "sha256": "5cb49e8230d07e2658d80431b3208656021902843dc8d49c4e5782614785dc37",
+   "sha256": "5545ab987ecc3aa788449eaf29586ada4943991c04f26817ebfbd57d4c75a40d",
    "bytes": 144,
    "lines": 16,
    "width_bits": 32,
@@ -1225,7 +1235,7 @@
   },
   {
    "path": "cifar10/layers/L3_fc/img2/act_in.hex",
-   "sha256": "fa77e61cfc8a44d122a82912fef1f2e8af4c8947fe15967db94a89a56ac52d43",
+   "sha256": "42dba553334600400f8e9ac41b6af1afb2fb93b057e0816a0fc8f361c0aee40d",
    "bytes": 1088,
    "lines": 64,
    "width_bits": 64,
@@ -1233,7 +1243,7 @@
   },
   {
    "path": "cifar10/layers/L3_fc/img2/logit16.hex",
-   "sha256": "f7671bcee3dbab8aff29bb48a6f4315463873d73825b0dee0bd37372149b10a8",
+   "sha256": "1bb037846a8e45ad39464beeffb8538ede31dcdd2bdebdb9d23371274cfff954",
    "bytes": 144,
    "lines": 16,
    "width_bits": 32,
@@ -1265,7 +1275,7 @@
   },
   {
    "path": "cifar10/net/img0/logit10.hex",
-   "sha256": "5e180a5e7f9b50c56a9b74771bfb554bd3900845a2bed1377468f769e3427e51",
+   "sha256": "0d824be6aca013157405f81322f783c55abfeaa716dcceed4f9d0a9cd8646073",
    "bytes": 90,
    "lines": 10,
    "width_bits": 32,
@@ -1273,7 +1283,7 @@
   },
   {
    "path": "cifar10/net/img0/logit16.hex",
-   "sha256": "d52a09b9df7997f1ce907101a8e44c5b5839aa06029c088a85bd708a2cba3bda",
+   "sha256": "9f8829c53902c8039cce87e51d06a358f81608613da3b9236eaa5ca05dc050db",
    "bytes": 144,
    "lines": 16,
    "width_bits": 32,
@@ -1289,7 +1299,7 @@
   },
   {
    "path": "cifar10/net/img1/logit10.hex",
-   "sha256": "16efce8a65fabfec27b0d2b2a5e2787c75580dd0bf6bad354f0ac8623a159a5f",
+   "sha256": "f052b3a7f52254a6bb5229565128501cc6d9549f7ea39abf8ece8a4208b3c23b",
    "bytes": 90,
    "lines": 10,
    "width_bits": 32,
@@ -1297,7 +1307,7 @@
   },
   {
    "path": "cifar10/net/img1/logit16.hex",
-   "sha256": "5cb49e8230d07e2658d80431b3208656021902843dc8d49c4e5782614785dc37",
+   "sha256": "5545ab987ecc3aa788449eaf29586ada4943991c04f26817ebfbd57d4c75a40d",
    "bytes": 144,
    "lines": 16,
    "width_bits": 32,
@@ -1313,7 +1323,7 @@
   },
   {
    "path": "cifar10/net/img2/logit10.hex",
-   "sha256": "60fd31be30ffedc3812269fb9c4080b4220d8563c0a7054deffac8e681ecb6ef",
+   "sha256": "57ddef6e46c8b3d6c8efba9aa578f48dc1e59b7e1b628ed5d5d238d867875626",
    "bytes": 90,
    "lines": 10,
    "width_bits": 32,
@@ -1321,7 +1331,7 @@
   },
   {
    "path": "cifar10/net/img2/logit16.hex",
-   "sha256": "f7671bcee3dbab8aff29bb48a6f4315463873d73825b0dee0bd37372149b10a8",
+   "sha256": "1bb037846a8e45ad39464beeffb8538ede31dcdd2bdebdb9d23371274cfff954",
    "bytes": 144,
    "lines": 16,
    "width_bits": 32,
@@ -1337,7 +1347,7 @@
   },
   {
    "path": "cifar10/net/img3/logit10.hex",
-   "sha256": "316e4c25817ef9b16890df6b9c8d017e28ccfe65a747b5950d1ad14811a16e19",
+   "sha256": "8722ecfcb022db4b84af5bf28b0dd21581fdbe21721cb46d12039bb3601711ef",
    "bytes": 90,
    "lines": 10,
    "width_bits": 32,
@@ -1345,7 +1355,7 @@
   },
   {
    "path": "cifar10/net/img3/logit16.hex",
-   "sha256": "5df2410eae185863ec77a1522550e4df619f219ac92156b754754029654e5223",
+   "sha256": "d767a50e9916fa1400504bd56f95c4d081a06da85a89d32354d0c9e51f454ebd",
    "bytes": 144,
    "lines": 16,
    "width_bits": 32,
@@ -1361,7 +1371,7 @@
   },
   {
    "path": "cifar10/net/img4/logit10.hex",
-   "sha256": "c2da59b521efb9d23464e728b2db0fe03b66c472e7820eac32b8c954e1b233e8",
+   "sha256": "ec94b4fa39ba08b6b43bf442cfb878ccac0bfc4d19a7749a8f029b4fae55704c",
    "bytes": 90,
    "lines": 10,
    "width_bits": 32,
@@ -1369,7 +1379,7 @@
   },
   {
    "path": "cifar10/net/img4/logit16.hex",
-   "sha256": "8442b1e6e3cc3a5178bfc3714efddee93375941ccc23ad3993e8f107a9e1550e",
+   "sha256": "88b6ca6acbae63cf2dad34e7c3f91a479629e96c53ec57ffaa405839cf50098c",
    "bytes": 144,
    "lines": 16,
    "width_bits": 32,
@@ -1385,7 +1395,7 @@
   },
   {
    "path": "cifar10/net/img5/logit10.hex",
-   "sha256": "30524758e057d36eb4c0d43a95012b8d8a3dcdd04ee59c95730c0bf3969a2cbe",
+   "sha256": "4808faa022c5fbbb40fc7b96fa410045e4d7bef28efbdbb97b6b9b88aeb5bed5",
    "bytes": 90,
    "lines": 10,
    "width_bits": 32,
@@ -1393,7 +1403,7 @@
   },
   {
    "path": "cifar10/net/img5/logit16.hex",
-   "sha256": "97741ace41d721c53e35b7be51215e8398b5b7fadffce1643fc3008131e7f8d9",
+   "sha256": "3ee852c0185adc65703f7508f9b631b5fc43d40a91dc2f4b102c8787a54a5c71",
    "bytes": 144,
    "lines": 16,
    "width_bits": 32,
@@ -1409,7 +1419,7 @@
   },
   {
    "path": "cifar10/net/img6/logit10.hex",
-   "sha256": "66b397b2edf202ce7294318a80a14817b97421a5092b9b0ba0a9164731263354",
+   "sha256": "97b122fbf1d31bffab0c88a617924b400d5c359b3f38de388f9dacff4ba85a36",
    "bytes": 90,
    "lines": 10,
    "width_bits": 32,
@@ -1417,7 +1427,7 @@
   },
   {
    "path": "cifar10/net/img6/logit16.hex",
-   "sha256": "ef73d5bca7a81b8e80be355447565154716b92312c5bc5713504484e492df07e",
+   "sha256": "ba0428ee747c0a3f1a4438d9992af6f7904b18c67e088a097cd29d2ac519eb7c",
    "bytes": 144,
    "lines": 16,
    "width_bits": 32,
@@ -1433,7 +1443,7 @@
   },
   {
    "path": "cifar10/net/img7/logit10.hex",
-   "sha256": "926df0396b1d533b84bed26f354e00472b981db35774d923399a3a49d42760b2",
+   "sha256": "dd6fa4d0b55da1e20ceba683bcf89f4d62f673d1590f44fb1ab14c12f616fa46",
    "bytes": 90,
    "lines": 10,
    "width_bits": 32,
@@ -1441,7 +1451,7 @@
   },
   {
    "path": "cifar10/net/img7/logit16.hex",
-   "sha256": "2bcc7084e4356769c4eda5e99eb3fbff87bd80e0c34eba47c4a70725012ed8f3",
+   "sha256": "6c29f44971511d0fff9ceeebcafee5a826c5a36035155acbc734894851672688",
    "bytes": 144,
    "lines": 16,
    "width_bits": 32,
@@ -1457,7 +1467,7 @@
   },
   {
    "path": "cifar10/net/img8/logit10.hex",
-   "sha256": "ef0a8237d6040d67cd45e84d1472d1173b7f219c8abf1c813c725ea4f6a4f69b",
+   "sha256": "6a7dd300938f093d1ffde2adb14be7ac797d57f1a70d6d38ef0eb94797695133",
    "bytes": 90,
    "lines": 10,
    "width_bits": 32,
@@ -1465,7 +1475,7 @@
   },
   {
    "path": "cifar10/net/img8/logit16.hex",
-   "sha256": "dbd5a44c812ee1c14529112d55f6b0ea9fc020569c7f192c8515184c1cd03706",
+   "sha256": "976dd637582f4931caf0d9155d5c0d85abd395072f26355c99acf61c7489592c",
    "bytes": 144,
    "lines": 16,
    "width_bits": 32,
@@ -1481,7 +1491,7 @@
   },
   {
    "path": "cifar10/net/img9/logit10.hex",
-   "sha256": "e7e06dbec75fe220132bd52d24c8badb819a9bc8aa5d8dc004e70d19eb09a07b",
+   "sha256": "b833f57385d8ccafa6e170623199ae4e08f5e1a32f3cdd4fe835f8cae072b4b1",
    "bytes": 90,
    "lines": 10,
    "width_bits": 32,
@@ -1489,7 +1499,7 @@
   },
   {
    "path": "cifar10/net/img9/logit16.hex",
-   "sha256": "ed8a30f9be8b76b2a1095f168139a0d4fd2eaee2503dc5110924566e0487ddf0",
+   "sha256": "7ce0f667a9cb7a61ad1f742c92071e614cbbedc386d161da707ce69fe83eb4c1",
    "bytes": 144,
    "lines": 16,
    "width_bits": 32,
@@ -1505,7 +1515,7 @@
   },
   {
    "path": "cifar10/net/pred.hex",
-   "sha256": "62eaef7af189dfc4c8aafda3fda4bd3dd5dc1e57bf432f3dbf49a5662de41978",
+   "sha256": "d6e4dea46c8ad37a5a63cb8fc31374b93c8a24bf816102cbb3e53bdc06cc6faf",
    "bytes": 30,
    "lines": 10,
    "width_bits": 8,
@@ -1513,7 +1523,7 @@
   },
   {
    "path": "cifar10/qparam.hex",
-   "sha256": "11c24335b16061f9281a7e5fafa42058ed7f95d5a2f4dad08e3c8b8dbc9eb653",
+   "sha256": "b49c517486d7cbd867dd88c2c339eec4a14e0fb5e5eabf76ab1fb4c8399a03a9",
    "bytes": 4692,
    "lines": 276,
    "width_bits": 64,
@@ -1521,7 +1531,7 @@
   },
   {
    "path": "cifar10/qparam_e.hex",
-   "sha256": "16ed8a1f9dcd1e23a54748efbd808e196a326b51d2968c9451fba94695d7b668",
+   "sha256": "2305c3c3a60d0c4f84837e3b1b500165a154d4cc1a9d3b2d70c7717cce02f0cb",
    "bytes": 2346,
    "lines": 138,
    "width_bits": 64,
@@ -1529,7 +1539,7 @@
   },
   {
    "path": "cifar10/qparam_o.hex",
-   "sha256": "c6b589767941243ff7cf77db4dfd5da78f6ff521c258b0e489b91da7f6cc62fa",
+   "sha256": "4e2095daee2f884a085551b9c82b9558a4073edb29d18752db8fbfbe51fb1705",
    "bytes": 2346,
    "lines": 138,
    "width_bits": 64,
@@ -1537,7 +1547,7 @@
   },
   {
    "path": "cifar10/wgt.hex",
-   "sha256": "2b34ecacf794c59b232396638bc2d6dc5b7dc61d1d2e572505f6d0833d9b4ff3",
+   "sha256": "1f957fbf4a27f9999b039975568705ee28f3c08127041398f9ac09c38f65ec61",
    "bytes": 170476,
    "lines": 10028,
    "width_bits": 64,
@@ -2345,11 +2355,11 @@
   },
   {
    "path": "unit/requant/cifar10_requant.hex",
-   "sha256": "4c52971bca679fbb09f2e1254d909f88e2565ea8d172512bf8b16655e19e46e9",
-   "bytes": 4100082,
-   "lines": 100002,
+   "sha256": "71a5699196b1989bdc0be3f419e974802fa2f57e3dbeeeedb2f6ba191f0bba00",
+   "bytes": 4100164,
+   "lines": 100004,
    "width_bits": 160,
-   "description": "requant lane (cifar10): 100000 seeded rows + 2 near-tie rows {acc, q_bias, m, v, s, flags, q pre-ReLU, q post-ReLU, QPARAM channel}"
+   "description": "requant lane (cifar10): 100000 seeded rows + 4 near-tie rows {acc, q_bias, m, v, s, flags, q pre-ReLU, q post-ReLU, QPARAM channel}"
   },
   {
    "path": "unit/requant/lenet5_requant.hex",
