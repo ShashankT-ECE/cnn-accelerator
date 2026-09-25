@@ -98,7 +98,7 @@ def main():
     fclk0 = Clocks.fclk0_mhz
     print(f"  pl_clk0 (PYNQ Clocks.fclk0_mhz) = {fclk0:.3f} MHz")
     if fclk0 > a.max_fclk0:
-        print(f"  FAIL: pl_clk0 {fclk0:.3f} MHz > {a.max_fclk0} MHz (timing closed for 200 MHz only)")
+        print(f"  FAIL: pl_clk0 {fclk0:.3f} MHz > {a.max_fclk0} MHz (above the limit; pass the bitstream's closed clock via --max-fclk0)")
         ok = False
 
     # address map cross-check against the .hwh (informational)

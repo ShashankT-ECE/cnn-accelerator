@@ -47,6 +47,9 @@ done
 
 python3 "$HERE/board_common.py" verify "$HERE/data" || { echo "ERROR: data package incomplete (run make_board_data.py)"; exit 1; }
 PKG_SHA=$(sha256sum "$HERE/data/PACKAGE.json" | cut -d' ' -f1)
+# fclk0 limit for the smoke tests = the build's closed pl_clk0 (summary.json) + 0.5 MHz
+MAXF=$(python3 -c 'import json,sys; print(round(float(json.load(open(sys.argv[1]))["pl_clk0_mhz_actual"]) + 0.5, 3))' \
+       "$BITDIR/summary.json" 2>/dev/null || echo 200.5)
 
 COMMIT=$(git -C "$REPO" rev-parse HEAD)
 if [ -n "$(git -C "$REPO" status --porcelain -- . ':!v2/results' ':!v2/vectors/MANIFEST.json')" ]; then
@@ -94,8 +97,8 @@ cat <<MSG
 
 $WHAT $R:~/$DEST (commit ${COMMIT:0:8}, dirty=$DIRTY, bit $(basename "$BIT") ${BIT_SHA:0:12}).
 On the board (ssh $R), cd ~/$DEST, then:
-  Session 1:  sudo -E python3 test_shell.py --bit bit/$(basename "$BIT") --expect-version 0x474F5302 --skip-scratch
-              sudo -E python3 test_core_smoke.py
+  Session 1:  sudo -E python3 test_shell.py --bit bit/$(basename "$BIT") --expect-version 0x474F5302 --skip-scratch --max-fclk0 $MAXF
+              sudo -E python3 test_core_smoke.py --bit bit/$(basename "$BIT") --max-fclk0 $MAXF
   Session 2:  sudo -E ./run_all.sh 2>&1 | tee results/run_all_\$(date +%Y%m%d_%H%M%S).log
   Session 3:  sudo -E python3 exp_b1_power.py --modes idle fpga cpu --net lenet5
               sudo -E python3 exp_b2_clock.py --net lenet5
