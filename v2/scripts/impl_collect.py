@@ -26,7 +26,7 @@ FIELDS = ["top", "build_id", "pl_clk0_mhz_requested", "pl_clk0_mhz_actual", "pl_
           "methodology_critical", "methodology_warning", "drc_error", "drc_critical", "drc_warning",
           "unconstrained_endpoints", "latches", "comb_loops", "latch_loops", "check_timing_nonzero",
           "synth_latch", "synth_multidriven", "synth_undriven", "synth_removed", "synth_unwaived_groups",
-          "synth_scan_pass"]
+          "synth_truncated", "synth_logs", "synth_scan_pass"]
 
 # report_utilization rows (Used column) -> csv field (same parser as ooc_collect.py)
 RPT_ROWS = {"CLB LUTs": "clb_luts", "LUT as Memory": "lut_as_memory", "CLB Registers": "clb_registers",
@@ -88,16 +88,21 @@ def parse_static(outdir):
         nz = sorted({l.strip() for l in txt.splitlines()
                      if re.match(r"\s*There (?:are|is) [1-9]\d* ", l)})
         out["check_timing_nonzero"] = "; ".join(nz)
-    sl = outdir / "synth_1.log"
-    if sl.exists():
+    logs = [outdir / n for n in ("synth_1.log", "synth_gos_top.log") if (outdir / n).exists()]
+    if logs:
         import subprocess
-        r = subprocess.run([sys.executable, str(V2 / "scripts" / "synth_scan.py"), str(sl),
-                            "--out", str(outdir / "synth_scan.txt")], capture_output=True, text=True)
-        last = r.stdout.strip().splitlines()[-1]
-        kv = dict(x.split("=") for x in last.split()[2:])
-        out.update(synth_latch=int(kv["latch"]), synth_multidriven=int(kv["multidriven"]),
-                   synth_undriven=int(kv["undriven"]), synth_removed=int(kv["removed"]),
-                   synth_unwaived_groups=int(kv["unwaived_groups"]), synth_scan_pass=r.returncode == 0)
+        tot, passed = {}, True
+        for sl in logs:
+            r = subprocess.run([sys.executable, str(V2 / "scripts" / "synth_scan.py"), str(sl),
+                                "--out", str(outdir / f"{sl.stem}_scan.txt")], capture_output=True, text=True)
+            last = r.stdout.strip().splitlines()[-1]
+            for k, v in (x.split("=") for x in last.split()[2:]):
+                tot[k] = tot.get(k, 0) + int(v)
+            passed &= r.returncode == 0
+        out.update(synth_latch=tot["latch"], synth_multidriven=tot["multidriven"], synth_undriven=tot["undriven"],
+                   synth_removed=tot["removed"], synth_unwaived_groups=tot["unwaived_groups"],
+                   synth_truncated=tot["truncated"], synth_logs="+".join(l.name for l in logs),
+                   synth_scan_pass=passed)
     pw = outdir / "power.rpt"
     if pw.exists():
         for l in pw.read_text().splitlines():

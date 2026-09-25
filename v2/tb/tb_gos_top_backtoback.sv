@@ -7,6 +7,7 @@
 // soft_reset between jobs. Special jobs:
 //   job NJOBS*37/100 : refused by the config checker (layer 1 K = 7) -> STATUS.error, ERR_CODE
 //                      = {rule 3, layer 1}; the next job runs normally without any reset.
+//   (+J_REFUSE=<n> / +J_RESET=<n> override the two indices; -1 = none.)
 //   job NJOBS*63/100 : soft_reset (CTRL bit1) while the job is running -> STATUS idle; then the
 //                      same job is started again and must complete bit-exact.
 // Every completed job: LOGIT[0..15] bit-exact, LAYER_CYC[l], TOTAL_CYC, MAC_ACTIVE == model,
@@ -169,8 +170,13 @@ module tb_gos_top_backtoback;
     void'($value$plusargs("NJOBS=%d", njobs));
     j_refuse = njobs * 37 / 100;
     j_reset  = njobs * 63 / 100;
+    void'($value$plusargs("J_REFUSE=%d", j_refuse));   // overrides (-1 = none), e.g. the reduced netlist run
+    void'($value$plusargs("J_RESET=%d", j_reset));
     awvalid = 0; wvalid = 0; bready = 0; arvalid = 0; rready = 0; awaddr = 0; araddr = 0; wdata = 0; wstrb = 0;
     ps_idle();
+`ifdef NETLIST
+    rst = 1; wait (glbl.GSR === 1'b0);   // gate-level: every flop is held by GSR for the first 100 ns
+`endif
     rst = 1; repeat (5) @(negedge clk); rst = 0;
     axi_rd(12'h0F8, rv, rr); chk(rv == 32'h474F_5302, $sformatf("VERSION %h", rv));
     cur_net = "";
@@ -210,7 +216,11 @@ module tb_gos_top_backtoback;
       check_job(net, nl, img, job);
       completed++;
     end
-    chk(completed == njobs - 1, $sformatf("completed %0d of %0d", completed, njobs - 1));
+    begin
+      int exp_done;
+      exp_done = njobs - ((j_refuse >= 0 && j_refuse < njobs) ? 1 : 0);
+      chk(completed == exp_done, $sformatf("completed %0d of %0d", completed, exp_done));
+    end
     if (errors == 0) $display("TEST PASSED checks=%0d jobs=%0d", checks, njobs);
     else begin $display("TEST FAILED errors=%0d", errors); $fatal(1, "tb_gos_top_backtoback failed"); end
     $finish;

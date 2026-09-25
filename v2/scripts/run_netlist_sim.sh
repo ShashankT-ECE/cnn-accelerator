@@ -2,7 +2,9 @@
 # run_netlist_sim.sh — post-synthesis functional simulation of gos_top (V2 step 4.5, Part B2).
 # 1) netlist_synth.tcl: synth_design (OOC) + write_verilog -mode funcsim -> v2/build/netlist/
 # 2) xsim with the UNISIM library on the netlist: tb_gos_top (1 LeNet + 1 CIFAR image) and
-#    tb_gos_top_backtoback with +NJOBS=${NETLIST_NJOBS:-10} (both compiled with -d NETLIST).
+#    tb_gos_top_backtoback with ${NETLIST_BTB:-NJOBS=3 J_RESET=1 J_REFUSE=-1} (LeNet, CIFAR with a mid-job
+#    soft_reset then the same job again, LeNet; gate-level xsim runs ~500 cycles/s). Both compiled with -d NETLIST;
+#    the TBs wait for glbl.GSR release before reset.
 # Runs in v2/build/sim/netlist_<tb>/; PASS iff "TEST PASSED" and no ERROR/FATAL/"TEST FAILED".
 set -uo pipefail
 V2="$(cd "$(dirname "$0")/.." && pwd)"
@@ -39,7 +41,8 @@ run_tb() {
     fi
 }
 run_tb tb_gos_top &
-run_tb tb_gos_top_backtoback -testplusarg "NJOBS=${NETLIST_NJOBS:-10}" &
+BTB=(); for a in ${NETLIST_BTB:-NJOBS=3 J_RESET=1 J_REFUSE=-1}; do BTB+=(-testplusarg "$a"); done
+run_tb tb_gos_top_backtoback "${BTB[@]}" &
 wait
 # re-evaluate from logs (background subshells cannot set fail)
 for tb in tb_gos_top tb_gos_top_backtoback; do

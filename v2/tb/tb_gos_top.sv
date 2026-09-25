@@ -157,6 +157,9 @@ module tb_gos_top;
     if (!$value$plusargs("VEC_DIR=%s", vec)) begin $display("TEST FAILED: no VEC_DIR"); $fatal(1, "no VEC_DIR"); end
     awvalid = 0; wvalid = 0; bready = 0; arvalid = 0; rready = 0; awaddr = 0; araddr = 0; wdata = 0; wstrb = 0;
     ps_idle();
+`ifdef NETLIST
+    rst = 1; wait (glbl.GSR === 1'b0);   // gate-level: every flop is held by GSR for the first 100 ns
+`endif
     rst = 1; repeat (5) @(negedge clk); rst = 0;
 
     axi_rd(12'h0F8, rv, rr); chk(rv == 32'h474F_5302 && rr == 0, $sformatf("VERSION %h", rv));

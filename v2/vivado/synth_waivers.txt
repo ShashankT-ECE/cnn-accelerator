@@ -1,2 +1,32 @@
 # synth_waivers.txt — reviewed "removed logic" groups of the gos_top / full-design synthesis (scripts/synth_scan.py).
-# Format: <Synth id> <file-or-module glob> <signal glob> <DECISIONS entry>. Reasons live in docs/DECISIONS.md.
+# Format: <Synth id> <file-or-module glob> <signal glob> <DECISIONS entry>. Reasons live in docs/DECISIONS.md (D15).
+# gos_requant: product registers absorbed into the DSP48E2 pipeline (A/B/M/P regs); 59-bit product trimmed to 58
+8-3332 gos_requant     mp4        D15-1
+8-6014 gos_requant.sv  mp2        D15-1
+8-3936 gos_requant.sv  mp[234]    D15-1
+# gos_requant: 6-deep relu/s==0 shift registers, only tap [4] is read (S6)
+8-3936 gos_requant.sv  relu_q     D15-2
+8-3936 gos_requant.sv  sz_q       D15-2
+# gos_ctrl: descriptor fields latched but only needed at S_LOAD (derived *_m1 / rem / wgt / qp_tile are used instead)
+8-6014 gos_ctrl.sv     f_ic       D15-3
+8-6014 gos_ctrl.sv     f_oc       D15-3
+8-6014 gos_ctrl.sv     f_kh       D15-3
+8-6014 gos_ctrl.sv     f_kw       D15-3
+8-6014 gos_ctrl.sv     f_oh       D15-3
+8-6014 gos_ctrl.sv     f_out_h    D15-3
+8-6014 gos_ctrl.sv     f_oc_tiles D15-3
+8-6014 gos_ctrl.sv     f_ow_tiles D15-3
+8-6014 gos_ctrl.sv     f_wgt_base D15-3
+8-6014 gos_ctrl.sv     f_qp_base  D15-3
+8-3936 gos_ctrl.sv     f_k        D15-3
+# gos_ctrl: debug issue outputs left open in gos_core (iss_k/ic/ky/kx/ox_tile/oy/oc_tile/dy/tile), and the
+# token dy flop (normal synthesis mapping; netlist sim is the evidence, D15-4)
+8-6014 gos_ctrl.sv     iss_oc_tile D15-4
+8-6014 gos_ctrl.sv     iss_tok    D15-4
+# unused input bits by specification
+8-7129 gos_ctrl        desc       D15-5
+8-7129 gos_cfg_check   d          D15-5
+8-7129 gos_csr         s_axi_awaddr D15-6
+8-7129 gos_csr         s_axi_araddr D15-6
+8-7129 gos_csr         s_axi_awprot D15-6
+8-7129 gos_csr         s_axi_arprot D15-6
