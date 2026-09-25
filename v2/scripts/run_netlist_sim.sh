@@ -19,6 +19,7 @@ if [[ "${SKIP_SYNTH:-0}" != 1 ]]; then
     ( cd "$NL" && vivado -mode batch -nojournal -log synth.log -source "$V2/vivado/netlist_synth.tcl" \
         -tclargs "$NL" "$BID" "${SRCS[@]}" > stdout.log 2>&1 )
     grep -q NETLIST_DONE "$NL/stdout.log" || { echo "run_netlist_sim.sh: synthesis FAILED ($NL/synth.log)" >&2; exit 1; }
+    "$V2/../.venv/bin/python" "$V2/scripts/synth_scan.py" "$NL/synth.log" --out "$NL/synth_scan.txt" | tail -1
 fi
 
 fail=0

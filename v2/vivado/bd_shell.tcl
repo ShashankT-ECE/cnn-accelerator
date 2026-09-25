@@ -214,12 +214,17 @@ if {$A(strategy) eq "explore"} {
     set_property STEPS.POST_ROUTE_PHYS_OPT_DESIGN.IS_ENABLED true [get_runs impl_1]
 }
 puts "bd_shell: impl_1 strategy [get_property STRATEGY [get_runs impl_1]]"
+# synth_1 runs in its own process: lift the per-ID message limit there so synth_scan.py sees every message
+set pre [file join $outdir synth_pre.tcl]
+set fh [open $pre w]; puts $fh "set_param messaging.defaultLimit 100000"; close $fh
+set_property STEPS.SYNTH_DESIGN.TCL.PRE $pre [get_runs synth_1]
 launch_runs impl_1 -to_step write_bitstream -jobs $A(jobs)
 wait_on_run impl_1
 if {[get_property PROGRESS [get_runs impl_1]] ne "100%"} {
     error "bd_shell: impl_1 did not complete: [get_property STATUS [get_runs impl_1]]"
 }
 open_run impl_1
+file copy -force [file join [get_property DIRECTORY [get_runs synth_1]] runme.log] [file join $outdir synth_1.log]
 
 report_utilization -file [file join $outdir utilization.rpt]
 report_utilization -hierarchical -file [file join $outdir utilization_hier.rpt]

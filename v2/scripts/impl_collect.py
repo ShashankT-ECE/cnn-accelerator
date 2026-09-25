@@ -24,7 +24,9 @@ FIELDS = ["top", "build_id", "pl_clk0_mhz_requested", "pl_clk0_mhz_actual", "pl_
           "timing_met", "strategy", "worst_path", "power_w_estimate",
           "core_luts", "core_registers", "core_lutram", "core_dsps", "core_ramb36", "core_ramb18",
           "methodology_critical", "methodology_warning", "drc_error", "drc_critical", "drc_warning",
-          "unconstrained_endpoints", "latches"]
+          "unconstrained_endpoints", "latches", "comb_loops", "latch_loops", "check_timing_nonzero",
+          "synth_latch", "synth_multidriven", "synth_undriven", "synth_removed", "synth_unwaived_groups",
+          "synth_scan_pass"]
 
 # report_utilization rows (Used column) -> csv field (same parser as ooc_collect.py)
 RPT_ROWS = {"CLB LUTs": "clb_luts", "LUT as Memory": "lut_as_memory", "CLB Registers": "clb_registers",
@@ -81,6 +83,21 @@ def parse_static(outdir):
         m = re.findall(r"There (?:are|is) (\d+) (?:register/latch pins with no clock|input ports with no input delay"
                        r"|ports with no output delay|unconstrained internal endpoints)", txt)
         out["unconstrained_endpoints"] = sum(int(x) for x in m) if m else 0
+        loops = lambda kind: sum(int(x) for x in re.findall(rf"There (?:are|is) (\d+) {kind} loops?", txt))
+        out["comb_loops"], out["latch_loops"] = loops("combinational"), loops("latch")
+        nz = sorted({l.strip() for l in txt.splitlines()
+                     if re.match(r"\s*There (?:are|is) [1-9]\d* ", l)})
+        out["check_timing_nonzero"] = "; ".join(nz)
+    sl = outdir / "synth_1.log"
+    if sl.exists():
+        import subprocess
+        r = subprocess.run([sys.executable, str(V2 / "scripts" / "synth_scan.py"), str(sl),
+                            "--out", str(outdir / "synth_scan.txt")], capture_output=True, text=True)
+        last = r.stdout.strip().splitlines()[-1]
+        kv = dict(x.split("=") for x in last.split()[2:])
+        out.update(synth_latch=int(kv["latch"]), synth_multidriven=int(kv["multidriven"]),
+                   synth_undriven=int(kv["undriven"]), synth_removed=int(kv["removed"]),
+                   synth_unwaived_groups=int(kv["unwaived_groups"]), synth_scan_pass=r.returncode == 0)
     pw = outdir / "power.rpt"
     if pw.exists():
         for l in pw.read_text().splitlines():

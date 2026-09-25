@@ -2,6 +2,7 @@
 # the post-synthesis functional-simulation netlist (write_verilog -mode funcsim) for gate-level sim.
 #   vivado -mode batch -source netlist_synth.tcl -tclargs <outdir> <build_id_hex8> <rtl files...>
 set_param general.maxThreads 8   ;# user rule after the OOM freeze: one Vivado job, <= 8 threads
+set_param messaging.defaultLimit 100000   ;# full synthesis log for synth_scan.py
 set outdir [lindex $argv 0]
 set bid    [lindex $argv 1]
 file mkdir $outdir

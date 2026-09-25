@@ -1,0 +1,2 @@
+# synth_waivers.txt — reviewed "removed logic" groups of the gos_top / full-design synthesis (scripts/synth_scan.py).
+# Format: <Synth id> <file-or-module glob> <signal glob> <DECISIONS entry>. Reasons live in docs/DECISIONS.md.
