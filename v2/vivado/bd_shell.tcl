@@ -24,7 +24,6 @@ set_param general.maxThreads 8   ;# user rule after the OOM freeze: one Vivado j
 # ------------------------------------------------------------------ arguments
 array set A {top gos_shell_top build_id "" outdir "" filelist "" name gos_shell jobs 8 bd_only 0
              pl_mhz 200 freq_tol_pct 1.0 strategy default}
-set A(jobs) 1   ;# one run at a time (synth, IP OOC and impl runs are serialized)
 foreach a $argv {
     set kv [split $a =]
     if {[llength $kv] < 2} { error "bd_shell.tcl: bad argument '$a' (expected key=value)" }
@@ -32,6 +31,7 @@ foreach a $argv {
     if {![info exists A($k)]} { error "bd_shell.tcl: unknown argument '$k'" }
     set A($k) [join [lrange $kv 1 end] =]
 }
+set A(jobs) 1   ;# forced after argv: one run at a time (synth, IP OOC and impl runs are serialized)
 foreach k {build_id outdir filelist} {
     if {$A($k) eq ""} { error "bd_shell.tcl: missing $k=..." }
 }

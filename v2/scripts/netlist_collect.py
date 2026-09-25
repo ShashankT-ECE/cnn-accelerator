@@ -23,13 +23,14 @@ for tb in ("tb_gos_top", "tb_gos_top_backtoback"):
     row = base_meta(layer="", source="post_synth_funcsim")
     row.update(vivado_version=ver.group(1) if ver else "", tb=tb, checks=m[-1] if m else "",
                passed=passed, jobs_completed=len(jobs), cycles_exact=exact,
-               logits_ok=sum(r.get("logits_ok", "1") == "1" for r in jobs),
+               logits_checked=sum("logits_ok" in r for r in jobs),
+               logits_ok=sum(r.get("logits_ok") == "1" for r in jobs),
                refused_jobs=sum("refused" in r for r in res), soft_resets=sum("soft_reset" in r for r in res))
-    ok &= passed and exact == len(jobs)
+    ok &= passed and exact == len(jobs) and row["logits_ok"] == row["logits_checked"]
     rows.append(row)
     print(f"  {tb}: passed={passed} checks={row['checks']} jobs={len(jobs)} cycles_exact={exact}")
 out = write_results_csv(RESULTS_DIR / "rtl_netlist.csv", rows,
-                        ["tb", "checks", "passed", "jobs_completed", "cycles_exact", "logits_ok",
+                        ["tb", "checks", "passed", "jobs_completed", "cycles_exact", "logits_checked", "logits_ok",
                          "refused_jobs", "soft_resets"])
 print(f"netlist_collect: wrote {out}")
 sys.exit(0 if ok else 1)
