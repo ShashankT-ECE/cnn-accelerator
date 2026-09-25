@@ -11,6 +11,7 @@ For paper-grade rows run from a clean, committed tree (git_dirty=False).
 """
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -52,8 +53,9 @@ def parse_core_share(path):
         return {}
     lines = path.read_text().splitlines()
     hdr = next((l for l in lines if "Instance" in l and "Total LUTs" in l), None)
-    row = next((l for l in lines if l.strip().startswith("|") and "u_core" in l.split("|")[1]
-                and "(gos_core" in l), None)
+    # instance u_core; module "gos_core" (OOC) or "<bd>_gos_top_0_0_gos_core" (block design)
+    row = next((l for l in lines if l.strip().startswith("|") and l.split("|")[1].strip() == "u_core"
+                and re.search(r"(^|_|\()gos_core\)?$", l.split("|")[2].strip())), None)
     if not hdr or not row:
         return {}
     h = [c.strip() for c in hdr.split("|")]
