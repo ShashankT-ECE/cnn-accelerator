@@ -1,0 +1,3 @@
+timestamp,git_commit,git_dirty,vivado_version,bitstream_sha256,board_id,net,layer,clock_mhz,source,duration_s,num_inferences,tb,checks,passed,jobs_completed,cycles_exact,logits_checked,logits_ok,refused_jobs,soft_resets
+2026-09-25T09:41:06+00:00,fc13c0890e0d073c07948cde82d8c04d3ec291e1,False,2023.1,,,,,,post_synth_funcsim,,,tb_gos_top,209,True,2,2,0,0,0,0
+2026-09-25T09:41:06+00:00,fc13c0890e0d073c07948cde82d8c04d3ec291e1,False,2023.1,,,,,,post_synth_funcsim,,,tb_gos_top_backtoback,316,True,3,3,3,3,0,1
