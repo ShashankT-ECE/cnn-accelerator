@@ -49,6 +49,15 @@
 //
 // Latency: write = AW/W handshakes -> +1 commit cycle -> bvalid; read = AR handshake -> +1 ->
 // rvalid. Not a token-pipeline module.
+//
+// DESC write stage (Step 5, timing): a DESC write is decided (address decode, busy lock, bresp)
+// in the commit cycle as before, but the descriptor register itself is written one cycle later
+// from a per-layer staging register (data/word/strobe, one copy per layer l with its own load
+// enable, so each copy fans out to 16 words instead of 128; the 200 MHz worst path was
+// w_data -> desc_q, fanout 128). Visible effects: desc changes at commit+1 instead of at commit,
+// i.e. on the same edge bvalid is first seen high. Safe: write commits are >= 3 cycles apart
+// (bvalid -> bready -> awready), so a DESC write lands before any later CTRL start can pulse,
+// and a read issued after the B handshake samples the new value. Core cycle counts unchanged.
 module gos_csr #(
   parameter logic [31:0] BUILD_ID = 32'h0000_0000
 ) (
@@ -169,7 +178,6 @@ module gos_csr #(
       start_pulse      <= 1'b0;
       soft_reset_pulse <= 1'b0;
       n_layers_q       <= '0;
-      desc_q           <= '0;
     end else begin
       start_pulse      <= 1'b0;
       soft_reset_pulse <= 1'b0;
@@ -195,11 +203,33 @@ module gos_csr #(
         end
         if (wr_nl && !wr_lock && w_strb[0])
           n_layers_q <= w_data[3:0];
-        if (wr_desc && !wr_lock)
-          for (int b = 0; b < 4; b++)
-            if (w_strb[b]) desc_q[wr_l][wr_w][8*b +: 8] <= w_data[8*b +: 8];
       end else if (s_axi_bvalid && s_axi_bready) begin
         s_axi_bvalid <= 1'b0;
+      end
+    end
+  end
+
+  // --------------------------------------------------------------- DESC write stage
+  logic [7:0][31:0] dw_data;   // per-layer copy of the write data (loaded only for that layer)
+  logic [7:0][3:0]  dw_word;
+  logic [7:0][3:0]  dw_strb;   // byte strobes of a committed, unlocked DESC write; 0 otherwise
+
+  always_ff @(posedge clk) begin
+    if (rst) begin
+      dw_strb <= '0;
+      desc_q  <= '0;
+    end else begin
+      for (int l = 0; l < 8; l++) begin
+        dw_strb[l] <= '0;
+        if (wr_commit && wr_desc && !wr_lock && wr_l == 3'(l)) begin
+          dw_data[l] <= w_data;
+          dw_word[l] <= wr_w;
+          dw_strb[l] <= w_strb;
+        end
+        for (int w = 0; w < 16; w++)
+          if (dw_word[l] == 4'(w))
+            for (int b = 0; b < 4; b++)
+              if (dw_strb[l][b]) desc_q[l][w][8*b +: 8] <= dw_data[l][8*b +: 8];
       end
     end
   end

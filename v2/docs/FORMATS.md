@@ -328,6 +328,8 @@ Access rules:
   outstanding write and one outstanding read at a time (a write and a read may be in flight
   concurrently); `bvalid`/`rvalid` are held until `bready`/`rready`. `awprot`/`arprot` are ignored.
   Latency: the write commits the cycle after both AW and W have been accepted (B follows);
+  a DESC write takes effect on the descriptor outputs one cycle after the commit, the edge on which
+  bvalid is first seen high (DECISIONS D17; core cycles unaffected);
   R is returned one cycle after the AR handshake. Core-side inputs are sampled when the read is served.
 
 ## PL top ports and address map (KV260 block design)

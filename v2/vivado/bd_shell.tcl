@@ -233,6 +233,8 @@ report_utilization -file [file join $outdir utilization.rpt]
 report_utilization -hierarchical -file [file join $outdir utilization_hier.rpt]
 report_timing_summary -max_paths 10 -file [file join $outdir timing_summary.rpt]
 report_timing -max_paths 1 -nworst 1 -delay_type max -file [file join $outdir worst_path.rpt]
+# distinct endpoints (one path each) so a failing variant shows every path family, not 10 copies of one bus
+report_timing -max_paths 200 -nworst 1 -unique_pins -delay_type max -file [file join $outdir top_paths.rpt]
 report_power -file [file join $outdir power.rpt]
 # static checks (Step 4.5)
 report_methodology -file [file join $outdir methodology.rpt]
