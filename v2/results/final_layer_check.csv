@@ -1,3 +1,3 @@
 timestamp,git_commit,git_dirty,vivado_version,bitstream_sha256,board_id,net,layer,clock_mhz,source,duration_s,num_inferences,images,argmax_match,logits_bitexact,max_abs_v,bound_abs_v,int32_fits,raw_argmax_differs
-2026-09-24T16:30:17+00:00,c6ff5d9686e36de54234b0d9261cdaeaeced59a5,False,,,,lenet5,fc2,,model,7.9,10000,10000,10000,10000,73231,1376611,True,55
-2026-09-24T16:30:59+00:00,c6ff5d9686e36de54234b0d9261cdaeaeced59a5,False,,,,cifar10,fc,,model,42.64,10000,10000,10000,10000,36603,1049956,True,1276
+2026-09-25T08:24:02+00:00,e93db3d7a74b1d98f41fcba2fecbf37dc70175ec,False,,,,lenet5,fc2,,model,6.83,10000,10000,10000,10000,73231,1376611,True,55
+2026-09-25T08:24:34+00:00,e93db3d7a74b1d98f41fcba2fecbf37dc70175ec,False,,,,cifar10,fc,,model,32.28,10000,10000,10000,10000,36603,1049956,True,1276

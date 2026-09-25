@@ -1,12 +1,12 @@
 timestamp,git_commit,git_dirty,vivado_version,bitstream_sha256,board_id,net,layer,clock_mhz,source,duration_s,num_inferences,images,bit_identical,predictions_identical,golden_correct,legacy_correct,compared
-2026-09-24T16:31:16+00:00,c6ff5d9686e36de54234b0d9261cdaeaeced59a5,False,,,,lenet5,input,,model,14.0,10000,10000,10000,10000,9879,9879,quantized input
-2026-09-24T16:31:16+00:00,c6ff5d9686e36de54234b0d9261cdaeaeced59a5,False,,,,lenet5,conv1,,model,14.0,10000,10000,10000,10000,9879,9879,int8 layer output
-2026-09-24T16:31:16+00:00,c6ff5d9686e36de54234b0d9261cdaeaeced59a5,False,,,,lenet5,conv3,,model,14.0,10000,10000,10000,10000,9879,9879,int8 layer output
-2026-09-24T16:31:16+00:00,c6ff5d9686e36de54234b0d9261cdaeaeced59a5,False,,,,lenet5,conv5,,model,14.0,10000,10000,10000,10000,9879,9879,int8 layer output
-2026-09-24T16:31:16+00:00,c6ff5d9686e36de54234b0d9261cdaeaeced59a5,False,,,,lenet5,fc1,,model,14.0,10000,10000,10000,10000,9879,9879,int8 layer output
-2026-09-24T16:31:16+00:00,c6ff5d9686e36de54234b0d9261cdaeaeced59a5,False,,,,lenet5,fc2,,model,14.0,10000,10000,10000,10000,9879,9879,raw int32 v = acc + q_bias
-2026-09-24T16:32:35+00:00,c6ff5d9686e36de54234b0d9261cdaeaeced59a5,False,,,,cifar10,input,,model,79.5,10000,10000,10000,10000,7852,7852,quantized input
-2026-09-24T16:32:35+00:00,c6ff5d9686e36de54234b0d9261cdaeaeced59a5,False,,,,cifar10,conv1,,model,79.5,10000,10000,10000,10000,7852,7852,int8 layer output
-2026-09-24T16:32:35+00:00,c6ff5d9686e36de54234b0d9261cdaeaeced59a5,False,,,,cifar10,conv2,,model,79.5,10000,10000,10000,10000,7852,7852,int8 layer output
-2026-09-24T16:32:35+00:00,c6ff5d9686e36de54234b0d9261cdaeaeced59a5,False,,,,cifar10,conv3,,model,79.5,10000,10000,10000,10000,7852,7852,int8 layer output
-2026-09-24T16:32:35+00:00,c6ff5d9686e36de54234b0d9261cdaeaeced59a5,False,,,,cifar10,fc,,model,79.5,10000,10000,10000,10000,7852,7852,raw int32 v = acc + q_bias
+2026-09-25T08:24:46+00:00,e93db3d7a74b1d98f41fcba2fecbf37dc70175ec,False,,,,lenet5,input,,model,10.6,10000,10000,10000,10000,9879,9879,quantized input
+2026-09-25T08:24:46+00:00,e93db3d7a74b1d98f41fcba2fecbf37dc70175ec,False,,,,lenet5,conv1,,model,10.6,10000,10000,10000,10000,9879,9879,int8 layer output
+2026-09-25T08:24:46+00:00,e93db3d7a74b1d98f41fcba2fecbf37dc70175ec,False,,,,lenet5,conv3,,model,10.6,10000,10000,10000,10000,9879,9879,int8 layer output
+2026-09-25T08:24:46+00:00,e93db3d7a74b1d98f41fcba2fecbf37dc70175ec,False,,,,lenet5,conv5,,model,10.6,10000,10000,10000,10000,9879,9879,int8 layer output
+2026-09-25T08:24:46+00:00,e93db3d7a74b1d98f41fcba2fecbf37dc70175ec,False,,,,lenet5,fc1,,model,10.6,10000,10000,10000,10000,9879,9879,int8 layer output
+2026-09-25T08:24:46+00:00,e93db3d7a74b1d98f41fcba2fecbf37dc70175ec,False,,,,lenet5,fc2,,model,10.6,10000,10000,10000,10000,9879,9879,raw int32 v = acc + q_bias
+2026-09-25T08:25:49+00:00,e93db3d7a74b1d98f41fcba2fecbf37dc70175ec,False,,,,cifar10,input,,model,63.0,10000,10000,10000,10000,7852,7852,quantized input
+2026-09-25T08:25:49+00:00,e93db3d7a74b1d98f41fcba2fecbf37dc70175ec,False,,,,cifar10,conv1,,model,63.0,10000,10000,10000,10000,7852,7852,int8 layer output
+2026-09-25T08:25:49+00:00,e93db3d7a74b1d98f41fcba2fecbf37dc70175ec,False,,,,cifar10,conv2,,model,63.0,10000,10000,10000,10000,7852,7852,int8 layer output
+2026-09-25T08:25:49+00:00,e93db3d7a74b1d98f41fcba2fecbf37dc70175ec,False,,,,cifar10,conv3,,model,63.0,10000,10000,10000,10000,7852,7852,int8 layer output
+2026-09-25T08:25:49+00:00,e93db3d7a74b1d98f41fcba2fecbf37dc70175ec,False,,,,cifar10,fc,,model,63.0,10000,10000,10000,10000,7852,7852,raw int32 v = acc + q_bias
