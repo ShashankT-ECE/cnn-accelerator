@@ -1,11 +1,12 @@
 timestamp,git_commit,git_dirty,vivado_version,bitstream_sha256,board_id,net,layer,clock_mhz,source,duration_s,num_inferences,tb,dut,checks,passed
-2026-09-24T16:29:06+00:00,c6ff5d9686e36de54234b0d9261cdaeaeced59a5,False,2023.1,,,,,,rtl_sim,8.6,,tb_gos_act_buf,gos_act_buf.sv,729936,True
-2026-09-24T16:29:06+00:00,c6ff5d9686e36de54234b0d9261cdaeaeced59a5,False,2023.1,,,,,,rtl_sim,15.3,,tb_gos_array,gos_pe.sv gos_array.sv,92888,True
-2026-09-24T16:29:06+00:00,c6ff5d9686e36de54234b0d9261cdaeaeced59a5,False,2023.1,,,,,,rtl_sim,17.4,,tb_gos_csr,gos_csr.sv,465594,True
-2026-09-24T16:29:06+00:00,c6ff5d9686e36de54234b0d9261cdaeaeced59a5,False,2023.1,,,,,,rtl_sim,8.8,,tb_gos_pool,gos_pool.sv,70933,True
-2026-09-24T16:29:06+00:00,c6ff5d9686e36de54234b0d9261cdaeaeced59a5,False,2023.1,,,,,,rtl_sim,9.7,,tb_gos_qparam_mem,gos_qparam_mem.sv,841952,True
-2026-09-24T16:29:06+00:00,c6ff5d9686e36de54234b0d9261cdaeaeced59a5,False,2023.1,,,,,,rtl_sim,42.7,,tb_gos_requant,gos_requant.sv,10450304,True
-2026-09-24T16:29:06+00:00,c6ff5d9686e36de54234b0d9261cdaeaeced59a5,False,2023.1,,,,,,rtl_sim,8.9,,tb_gos_rotator,gos_rotator.sv,19499,True
-2026-09-24T16:29:06+00:00,c6ff5d9686e36de54234b0d9261cdaeaeced59a5,False,2023.1,,,,,,rtl_sim,9.7,,tb_gos_shell_top,gos_act_buf.sv gos_wgt_mem.sv gos_qparam_mem.sv gos_shell_scratch.v gos_shell_top.v,288,True
-2026-09-24T16:29:06+00:00,c6ff5d9686e36de54234b0d9261cdaeaeced59a5,False,2023.1,,,,,,rtl_sim,20.2,,tb_gos_top,gos_csr.sv gos_cfg_check.sv gos_ctrl.sv gos_act_buf.sv gos_wgt_mem.sv gos_qparam_mem.sv gos_rotator.sv gos_pe.sv gos_array.sv gos_requant.sv gos_pool.sv gos_core.sv gos_top.sv,209,True
-2026-09-24T16:29:06+00:00,c6ff5d9686e36de54234b0d9261cdaeaeced59a5,False,2023.1,,,,,,rtl_sim,9.2,,tb_gos_wgt_mem,gos_wgt_mem.sv,1876006,True
+2026-09-25T08:20:27+00:00,8050f4474ff96102bb79b4ec3bc30dbe6341cf0f,False,2023.1,,,,,,rtl_sim,9.8,,tb_gos_act_buf,gos_act_buf.sv,729936,True
+2026-09-25T08:20:27+00:00,8050f4474ff96102bb79b4ec3bc30dbe6341cf0f,False,2023.1,,,,,,rtl_sim,12.2,,tb_gos_array,gos_pe.sv gos_array.sv,92888,True
+2026-09-25T08:20:27+00:00,8050f4474ff96102bb79b4ec3bc30dbe6341cf0f,False,2023.1,,,,,,rtl_sim,13.8,,tb_gos_csr,gos_csr.sv,465594,True
+2026-09-25T08:20:27+00:00,8050f4474ff96102bb79b4ec3bc30dbe6341cf0f,False,2023.1,,,,,,rtl_sim,8.5,,tb_gos_pool,gos_pool.sv,70933,True
+2026-09-25T08:20:27+00:00,8050f4474ff96102bb79b4ec3bc30dbe6341cf0f,False,2023.1,,,,,,rtl_sim,8.8,,tb_gos_qparam_mem,gos_qparam_mem.sv,841952,True
+2026-09-25T08:20:27+00:00,8050f4474ff96102bb79b4ec3bc30dbe6341cf0f,False,2023.1,,,,,,rtl_sim,32.1,,tb_gos_requant,gos_requant.sv,10450304,True
+2026-09-25T08:20:27+00:00,8050f4474ff96102bb79b4ec3bc30dbe6341cf0f,False,2023.1,,,,,,rtl_sim,7.1,,tb_gos_rotator,gos_rotator.sv,19499,True
+2026-09-25T08:20:27+00:00,8050f4474ff96102bb79b4ec3bc30dbe6341cf0f,False,2023.1,,,,,,rtl_sim,7.7,,tb_gos_shell_top,gos_act_buf.sv gos_wgt_mem.sv gos_qparam_mem.sv gos_shell_scratch.v gos_shell_top.v,288,True
+2026-09-25T08:20:27+00:00,8050f4474ff96102bb79b4ec3bc30dbe6341cf0f,False,2023.1,,,,,,rtl_sim,262.9,,tb_gos_top_backtoback,gos_csr.sv gos_cfg_check.sv gos_ctrl.sv gos_act_buf.sv gos_wgt_mem.sv gos_qparam_mem.sv gos_rotator.sv gos_pe.sv gos_array.sv gos_requant.sv gos_pool.sv gos_core.sv gos_top.sv,10032,True
+2026-09-25T08:20:27+00:00,8050f4474ff96102bb79b4ec3bc30dbe6341cf0f,False,2023.1,,,,,,rtl_sim,14.9,,tb_gos_top,gos_csr.sv gos_cfg_check.sv gos_ctrl.sv gos_act_buf.sv gos_wgt_mem.sv gos_qparam_mem.sv gos_rotator.sv gos_pe.sv gos_array.sv gos_requant.sv gos_pool.sv gos_core.sv gos_top.sv,209,True
+2026-09-25T08:20:27+00:00,8050f4474ff96102bb79b4ec3bc30dbe6341cf0f,False,2023.1,,,,,,rtl_sim,7.9,,tb_gos_wgt_mem,gos_wgt_mem.sv,1876006,True
