@@ -7,3 +7,5 @@ results/raw/
 xsim.dir/
 .Xil/
 vivado/out/
+results/dryrun/
+board/data/
