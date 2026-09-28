@@ -139,7 +139,9 @@ The 200 MHz worst path (+0.291 ns, build c88e71a0) was `u_csr/w_data_reg -> desc
 6. **tb_gos_top reporting.** The TB always compared LOGIT[0..15] through `chk()`, but its RESULT line had no `logits_ok`, so `rtl_netlist.csv` counted 0 logit checks; the RESULT line now reports it (RTL sim re-verified: PASS, logits_ok=1 for both nets).
 
 ## TODO
-- **Final results freeze:** re-run all result producers from one commit before the paper (incl. the stale gos_core OOC row in `ooc_synth.csv`, which predates C_START = 3).
+- ~~Final results freeze~~ **DONE 2026-09-28 (step 9):** every producer re-run clean @ 63261ad (code = 3527f97), results commit 8b8acce; the gos_core OOC row now reflects C_START = 3; bitstream rows kept @ fd880d4 (D18-2); `check_results.py` ALL CLEAN. Re-freeze if v2/rtl, v2/vivado, v2/model or v2/analysis change.
+- Board sessions 1–3 on the KV260 (A1–A5, B1–B3 hardware rows).
+- Open (board README): meter-log join script, only if the optional external meter is used.
 
 ## Open conflicts
 

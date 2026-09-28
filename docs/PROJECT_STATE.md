@@ -2,6 +2,20 @@
 
 ## Current Status
 
+### V2 generalized OS accelerator (branch `v2-dev`, `v2/`) — ACTIVE (updated 2026-09-28)
+
+Current work is V2, a generalized INT8 8x8 output-stationary accelerator running LeNet-5 and CIFAR-10 end to end (frozen spec `v2/docs/ARCH_SPEC.md`; decisions `v2/docs/DECISIONS.md` D1–D18; plan `v2/docs/EXPERIMENTS.md`). Target: ROCS 2026 short paper (4 pages + refs, IEEE 2-col, single-blind), deadline 2026-10-09 AoE. The V1 material below is the frozen baseline (`v1-snapshot` / `v1-baseline`).
+
+- **Verified (RTL sim / post-synth netlist sim):** bit-exact logits and cycle-exact agreement with the model on the network, layer, fuzz and checker suites; gate-level netlist sim cycle- and logit-exact; untruncated synthesis-log scan PASS. Counts: `v2/results/verification_stats.csv`.
+- **Implementation (post-impl, build fd880d43):** 200, 250 and 300 MHz all close timing with 0 critical warnings. **Performance bitstream = 300 MHz, fallback = 250 MHz** (D14, D18). Numbers: `v2/results/impl_gos.csv`.
+- **Results freeze (step 9) done 2026-09-28:** all producers re-run from one clean commit, `check_results.py` ALL CLEAN (results commit 8b8acce).
+- **Paper pipeline (step 10):** `v2/paper/scripts/make_all.py` renders every table/figure from the CSVs; board cells are placeholders until hardware rows exist. Model analyses in `v2/analysis/` (utilization, V1-vs-V2 schedule ablation, 16x16 projection labeled "projected", not C1). Reproduction: `v2/REPRODUCE.md`.
+- **Power plan:** primary = on-board INA260 SOM rail (VCC_SOM), `v2/board/power_log.py`, label "SOM-rail power (INA260)"; external meter optional cross-check.
+- **Next:** KV260 board sessions 1–3 (`v2/board/session.sh`, see `v2/board/README.md`) — nothing has been measured on the board yet; then the paper text.
+- **Open questions:** INA260 real update rate and VCC_SOM rail coverage (confirm on the board / schematic); ΔP includes PS activity driving the accelerator.
+
+### V1 (frozen baseline)
+
 The repository baseline and shared development environment documentation are
 established.
 

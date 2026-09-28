@@ -187,7 +187,7 @@ All V2 work lives in `v2/` on branch `v2-dev`. For any file under `v2/`,
 directory. Legacy files (rtl/, sim/, python/, data/, docs/, scripts/,
 software/) are read-only references for V2 work.
 
-## Where the project stands (snapshot 2026-09-28)
+## Where the project stands (updated 2026-09-28, after the step 9 freeze)
 
 Update this section whenever a step finishes. It is a pointer summary. The
 records of truth are `v2/docs/DECISIONS.md` (decisions D1–D17, open
@@ -232,7 +232,13 @@ v2/scripts/run_netlist_sim.sh        # post-synth netlist sim (Vivado job) -> rt
 v2/scripts/ooc_all.sh                # leaf OOC synth (Vivado)              -> ooc_synth.csv
 v2/vivado/build_gos.sh <200|250|300> # full bitstream (Vivado)              -> impl_gos.csv via impl_collect.py
 .venv/bin/python v2/scripts/check_results.py   # provenance check (read-only)
+.venv/bin/python v2/scripts/verification_stats.py   # verification_stats.csv (after all producers)
+.venv/bin/python v2/paper/scripts/make_all.py       # paper tables/figures -> v2/paper/generated/
+.venv/bin/python -m pytest v2/board/tests v2/paper/tests v2/analysis v2/scripts/tests
+# board (on the KV260, cd ~/gos): sudo -E ./session.sh 1|2|3|all [--budget-min N]   (see v2/board/README.md)
 ```
+Full step-by-step reproduction: `v2/REPRODUCE.md`. Analyses (`v2/analysis/*.py`) run
+inside `regen_results.sh`.
 
 Run only one Vivado job at a time, through `vivado_guard.sh` (the resource
 rule in `v2/CLAUDE.md`). xsim may run alongside it. The board workflow
@@ -241,59 +247,43 @@ rule in `v2/CLAUDE.md`). xsim may run alongside it. The board workflow
 
 ### Done (V2 steps, each committed on v2-dev)
 
-- **1–2.2:** scaffold, frozen spec, INT8 references. CIFAR uses the retrained
-  r2, and the accuracies of record (model) are LeNet-5 INT8 98.79% and CIFAR-10
-  INT8 78.52%. Requant B=32 is bit-exact to float64 (0 mismatches). The golden
-  model, formats, cycle model and vectors are done.
-- **3:** leaf RTL + unit TBs all PASS; OOC at 5 ns met.
-- **4:** core/ctrl/cfg_check/CSR/top. RTL-sim cycles equal the model exactly
-  (C_PIPE=29, C_DONE=0).
-- **4.5:** checker pipelined, so C_START=3 (D13). Job totals from RTL sim
-  match the model: LeNet 16,436 and CIFAR 104,247 cycles. RTL-sim logits are
-  bit-exact on 10 LeNet + 10 CIFAR images (`rtl_network.csv`). Back-to-back
-  100 jobs PASS. Post-synth netlist sim PASS (reduced scope, D15-7). Static
-  checks are clean.
-- **4.5 impl (post-impl):** the 200 MHz build c88e71a0 met timing (WNS +0.291).
-- **5 part 0/1 (fd880d4):** D16 per-row provenance rule; D17 CSR DESC staging
-  register (cycle-neutral) for higher clocks.
-- **5 part 2 (a660a04, d8fedfd):** board software (`gos_driver` with
-  Pynq/Model backends, data package, A1–A4/B1–B3 scripts, smoke test,
-  `run_all.sh`, `deploy.sh`) + CPU baselines. Laptop dry runs
-  (`source=dryrun_model`) pass end to end on 10k images per net. These are a
-  software check only, not measurements.
+- **1–4.5:** frozen INT8 references (model accuracies of record: LeNet-5 INT8 98.79%,
+  CIFAR-10 r2 INT8 78.52%), requant B=32 bit-exact, full RTL, unit/core/fuzz/checker/
+  network/back-to-back/netlist verification, C_START=3 (D13), static checks (D15).
+- **5:** D16 per-row provenance, D17 CSR staging (cycle-neutral), board software.
+- **Build audit + 300 MHz (2026-09-28, D18):** the parallel 200/250/300 runs in
+  `~/gos_build_wt` (b5fbcd6) were killed in synthesis — INCOMPLETE, not used. Builds
+  of record are fd880d43 in `~/gos-build` (copied to `v2/vivado/out/gos_<MHz>/`, no proj/).
+- **Steps 9/10 (2026-09-28):** code 3527f97; interim results 63261ad; **freeze results
+  8b8acce** — every producer re-run clean, `check_results.py` ALL CLEAN, untruncated
+  netlist synth scan PASS, netlist sim now reports logits (2/2, 3/3). New: `v2/paper/`
+  (make_all.py, tables/figures from CSVs, board placeholders), `v2/analysis/`
+  (utilization, V1-vs-V2 ablation, 16x16 "projected" — not C1), `v2/board/session.sh`
+  (resumable sessions, budget, pre-flight), `v2/board/power_log.py` (INA260 SOM rail =
+  primary power, label "SOM-rail power (INA260)"), `v2/REPRODUCE.md`,
+  `verification_stats.csv`.
 
-### State of the working tree and builds (as of 2026-09-28)
+### Final implementation table (post-impl, build fd880d43, from `v2/results/impl_gos.csv`)
 
-- `v2-dev` is **3 commits ahead of origin** (fd880d4, a660a04, d8fedfd are
-  not pushed).
-- **12 regenerated results CSVs are uncommitted** (git_dirty=False rows from
-  a660a04 / fd880d4). They include `impl_gos.csv` with two post-impl rows
-  (build fd880d43, 0 critical warnings each):
-  - **200 MHz:** WNS +0.757 ns; 16,513 LUT / 22,977 FF / 80 DSP / 50 RAMB36
-    + 1 RAMB18.
-  - **250 MHz:** WNS +0.207 ns; 16,538 LUT / 22,985 FF.
-- Bitstreams on disk: `v2/vivado/out/gos_200/` and `gos_250/` (build
-  fd880d43), plus the older `gos_200_c88e71a0/`. **No 300 MHz build exists.**
-- `check_results.py` currently FAILS. The stale rows are `impl_shell.csv`,
-  `ooc_synth.csv` (from c6ff5d9) and `rtl_netlist.csv` (from fc13c08). All
-  three predate the D17 CSR change and must be re-run before the final
-  freeze.
+| Clock | Complete? | Current RTL? | WNS (ns) | WHS (ns) | CW | LUT / FF / DSP / BRAM36+18 | bit sha256 | Verdict |
+|---|---|---|---|---|---|---|---|---|
+| 200 | yes | yes | +0.757 | +0.010 | 0 | 16,513 / 22,977 / 80 / 50+1 | 87fcae36… | VALID |
+| 250 | yes | yes | +0.207 | +0.010 | 0 | 16,538 / 22,985 / 80 / 50+1 | 7b2dac60… | VALID (fallback) |
+| 300 | yes | yes | +0.122 | +0.011 | 0 | 16,563 / 23,528 / 80 / 50+1 | 2d40e2c8… | VALID (performance) |
+
+Superseded: `out/gos_200_c88e71a0` (STALE, pre-D17 CSR), `out/shell_c6ff5d96` (old shell).
+`synth_scan_pass=False` on these rows = truncated BD synth log only (D18-3); the
+untruncated netlist scan passes.
 
 ### Pending (in order)
 
-1. Commit the 12 regenerated CSVs as a separate results commit, then push
-   `v2-dev`. This needs the user's go-ahead.
-2. Decide on the performance variant (D14). 250 MHz passes the D14 rule.
-   300 MHz has not been tried; it runs only on user request.
-3. Re-run the stale producers (netlist sim, OOC, shell) so that
-   `check_results.py` passes.
-4. **Board bring-up on the KV260** (never done yet): `make_board_data.py` →
-   `deploy.sh` → Session 1 (`test_shell.py`, `test_core_smoke.py`). Confirm
-   the assumptions in `v2/board/README.md`: `--write-mode slice`, runtime
-   fclk0 change, INA260 path.
-5. Session 2 (A1–A4, B3, CPU A5 on the Cortex-A53) and Session 3 (B1 power
-   with inline meter, B2 clock sweep).
-6. Open tool: a script that joins the meter log to the B1/B2 windows and
-   computes ΔP and energy per inference.
-7. Final results freeze from one commit (DECISIONS TODO), then the paper
-   (`v2/paper/`). C1 (16×16) and C2 are optional.
+1. Push `v2-dev` (done at the end of the 2026-09-28 session if the push succeeded —
+   check `git status -sb`).
+2. **KV260 board sessions** (nothing measured on the board yet): `make_board_data.py` →
+   `deploy.sh <ip> --bit v2/vivado/out/gos_300/gos_300.bit` → on the board
+   `power_log.py --list-sensors` / `--sample-only` first, then `sudo -E ./session.sh 1`,
+   `2`, `3` (resumable). Fallback bitstream gos_250.
+3. Copy board results back, `check_results.py`, commit results, rerun
+   `v2/paper/scripts/make_all.py`.
+4. Paper text (ROCS 2026 short paper, 4 pages + refs, IEEE 2-col, deadline 2026-10-09 AoE).
+5. Optional: meter-log join script (only if the external meter is used); C1/C2.
