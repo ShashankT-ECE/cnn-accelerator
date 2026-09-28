@@ -77,7 +77,7 @@ for p in sorted((V2 / "results").glob("*.csv")):
         print(f"      row {i + 2}: {why}  {ident}")
     if len(bad) > 5 and not a.verbose:
         print(f"      ... {len(bad) - 5} more (--verbose)")
-print(f"check_results: sources compared against {commit[:8]} ({', '.join(SOURCE_PATHS)}; "
-      f"+v2/analysis for {', '.join(sorted(EXTRA_SOURCES))})")
+extra = "; ".join(f"{n}: +{'+'.join(v)}" for n, v in sorted(EXTRA_SOURCES.items()))
+print(f"check_results: sources compared against {commit[:8]} ({', '.join(SOURCE_PATHS)}; {extra})")
 print("check_results:", "ALL CLEAN" if ok else "FAILURES (stale/dirty rows above)")
 sys.exit(0 if ok else 1)
