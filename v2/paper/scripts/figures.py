@@ -307,35 +307,47 @@ B3_STYLE = {"input_write": dict(facecolor="white", hatch=""), "status_clear": di
             "ps_dequant": dict(facecolor="0.85", hatch="////")}
 
 
+B3_FILES = {"safe": "hw_b3_breakdown.csv", "fast": "hw_b3_breakdown_fast.csv"}
+
+
 def fig_b3(c: FCtx) -> Artifact:
+    """B3 stacked host phases per net and host path (safe = per-word MMIO, fast = mapped numpy
+    windows), median per phase; black tick = PL compute (cycle counter)."""
     art = c.art("fig_b3_breakdown")
-    rows = art.rows("hw_b3_breakdown.csv", hw=True) or []
-    b = latest(rows, lambda r: (r["net"], r["phase"]))
-    fig, ax = plt.subplots(figsize=(COL_W, 1.75), layout="constrained")
+    b = {}
+    for hp, name in B3_FILES.items():
+        rows = art.rows(name, hw=True) or []
+        for k, r in latest(rows, lambda r: (r["net"], r["phase"])).items():
+            b[(hp,) + k] = r
+    keys = [(net, hp) for net in NETS for hp in B3_FILES]
+    fig, ax = plt.subplots(figsize=(COL_W, 2.3), layout="constrained")
     out = []
-    ys = list(range(len(NETS)))
+    ys = list(range(len(keys)))
     have = False
-    for y, net in zip(ys, NETS):
+    for y, (net, hp) in zip(ys, keys):
         left = 0.0
-        if all((net, p) in b for p in B3_STACK):
+        if all((hp, net, p) in b for p in B3_STACK):
             have = True
             for p in B3_STACK:
-                v = fnum(b[(net, p)]["median_us"])
+                r = b[(hp, net, p)]
+                v = fnum(r["median_us"])
                 ax.barh(y, v, 0.55, left=left, edgecolor="black", lw=0.5, zorder=3, **B3_STYLE[p])
-                out.append({"net": net, "phase": p, "median_us": v, "src": f"{b[(net, p)]['_file']}:{b[(net, p)]['_line']}"})
+                out.append({"net": net, "host_path": hp, "phase": p, "median_us": v,
+                            "src": f"{r['_file']}:{r['_line']}"})
                 left += v
-            if (net, "pl_compute") in b:
-                pc = fnum(b[(net, "pl_compute")]["median_us"])
+            if (hp, net, "pl_compute") in b:
+                r = b[(hp, net, "pl_compute")]
+                pc = fnum(r["median_us"])
                 ax.plot([pc, pc], [y - 0.36, y + 0.36], color="black", lw=1.0, zorder=5)
-                out.append({"net": net, "phase": "pl_compute", "median_us": pc,
-                            "src": f"{b[(net, 'pl_compute')]['_file']}:{b[(net, 'pl_compute')]['_line']}"})
+                out.append({"net": net, "host_path": hp, "phase": "pl_compute", "median_us": pc,
+                            "src": f"{r['_file']}:{r['_line']}"})
         else:
-            art.placeholder(f"B3 {net}: hw_b3_breakdown.csv (source=hw)")
+            art.placeholder(f"B3 {net} {hp}: {B3_FILES[hp]} (source=hw)")
             ax.add_patch(Rectangle((0, y - 0.275), 1, 0.55, transform=blended_transform_factory(ax.transAxes, ax.transData),
                                    fill=False, lw=0.5, edgecolor="0.55", hatch="////", linestyle=(0, (2, 1.5))))
     ax.set_yticks(ys)
-    ax.set_yticklabels([NET_TITLE[n] for n in NETS])
-    ax.set_ylim(len(NETS) - 0.5, -0.5)
+    ax.set_yticklabels([f"{NET_TITLE[n]} {hp}" for n, hp in keys])
+    ax.set_ylim(len(keys) - 0.5, -0.5)
     ax.set_xlabel("time per image (µs, median)")
     ax.xaxis.grid(True, color="0.88", lw=0.4, zorder=0)
     if have:

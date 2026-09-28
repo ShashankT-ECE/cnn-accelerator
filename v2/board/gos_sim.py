@@ -148,6 +148,35 @@ class SimCsr:
         raise SimSlvErr(f"CSR write to {kind} offset 0x{off:03X}")
 
 
+class SimCsrArray:
+    """Fast-host-path view of SimCsr: integer word indices and slices, every element access
+    routed through SimCsr.read/write (so STATUS/counter/SLVERR semantics are kept). Used by
+    ModelBackend.fast_windows(); the laptop cost of this adapter is NOT representative of a
+    mapped window (see mock_mmio.py for the host-overhead measurement)."""
+
+    def __init__(self, csr: SimCsr, words: int = 1024):
+        self.csr, self.size = csr, words
+
+    def rd(self, i: int) -> int:
+        return self.csr.read(4 * i)
+
+    def wr(self, i: int, v: int):
+        self.csr.write(4 * i, v)
+
+    def __getitem__(self, k):
+        if isinstance(k, slice):
+            return np.array([self.csr.read(4 * i) for i in range(*k.indices(self.size))],
+                            dtype=np.uint32)
+        return self.csr.read(4 * int(k))
+
+    def __setitem__(self, k, v):
+        if isinstance(k, slice):
+            for i, x in zip(range(*k.indices(self.size)), np.asarray(v).reshape(-1).tolist()):
+                self.csr.write(4 * i, int(x))
+        else:
+            self.csr.write(4 * int(k), int(v))
+
+
 class SimDevice:
     def __init__(self, job_fn, version: int = D.VERSION_CORE, build_id: int = 0,
                  busy_polls: int = 1):

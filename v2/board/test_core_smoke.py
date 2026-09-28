@@ -13,6 +13,11 @@ Checks, in order (each prints PASS/FAIL; exit 0 only if all pass):
   3. refused job (LeNet descriptors with layer 1 K = 4, refuse_test.json): STATUS.error,
      ERR_CODE == expected (rule 3, layer 1), TOTAL_CYC == C_START; then soft_reset -> STATUS 0;
      then the good descriptors again and one image, bit- and cycle-exact.
+  4. with --host-path fast (Session 1 step s1.fast): GosDevice.check_fast_path() before and
+     after the images (whole ACT0 window written with the fast vectorized copy and read back
+     word by word + by block read, 3 patterns; LOGIT / LAYER_CYC block reads == per-word reads;
+     memoryview scalar reads == MMIO reads), then checks 2-3 run on the fast path. PASS here is
+     the bring-up condition for using --host-path fast in Sessions 2/3.
 No CSV is written (bring-up check, not a result).
 """
 from __future__ import annotations
@@ -80,6 +85,22 @@ def main(argv=None) -> int:
                 f"({'readback' if be.kind == 'pynq' else 'nominal'})")
     st = dev.status()
     print(f"  STATUS at start = 0x{st:X}")
+    print(f"  host path: {dev.host_path_desc}")
+
+    def fast_check(when: str) -> bool:
+        try:
+            chk = dev.check_fast_path()
+        except Exception as e:  # noqa: BLE001 - any failure means: fast path not validated
+            return check(False, f"fast path check ({when}): {type(e).__name__}: {e}")
+        return check(True, f"fast path check ({when}): {chk['patterns']} patterns x "
+                     f"{chk['act0_words_checked'] // chk['patterns']} ACT0 words written (fast "
+                     f"{chk['fast_store']}) + read back per word and by block; "
+                     f"{chk['csr_block_words_checked']} CSR block words == per-word ({chk['windows']})")
+    if dev.host_path == "fast":
+        ok &= fast_check("before any job")
+        if not ok:
+            print("TEST FAILED")
+            return 1
 
     pkgs = {net: bc.load_package(a.data_dir, net) for net in bc.NETS}
     for net, pkg in pkgs.items():
@@ -89,6 +110,8 @@ def main(argv=None) -> int:
         ok &= check(True, f"{net} load_net: WGT {pkg.wgt.size} + QPARAM {pkg.qparam.size} words, "
                     f"{pkg.desc.shape[0]} descriptors written and read back")
         ok &= run_image(dev, pkg, a.img, net)
+        if dev.host_path == "fast":
+            ok &= fast_check(f"after a {net} job (LOGIT/LAYER_CYC non-zero)")
 
     # refused job, soft_reset, good job
     pkg = pkgs["lenet5"]

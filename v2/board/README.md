@@ -6,7 +6,9 @@ Board-side code needs only **numpy + pynq** and the files in this directory plus
 
 | file | role |
 |---|---|
-| `gos_driver.py` | `GosDevice` register-level driver; `PynqBackend` (KV260) and `ModelBackend` (dry run), same API |
+| `gos_driver.py` | `GosDevice` register-level driver; `PynqBackend` (KV260), `ModelBackend` (dry run) and `MockMmioBackend` (laptop host overhead), same API; host path `safe` (default) or `fast` (below) |
+| `mock_mmio.py` | MockMMIO: numpy arrays standing in for the mapped PL windows (pynq-MMIO-like read/write + fast views), golden-logit job lookup; **laptop host-overhead measurements only** |
+| `exp_host_overhead.py` | safe vs fast host path per-image phases on the MockMMIO (laptop), → `results/dryrun/host_overhead_mock.csv` |
 | `gos_sim.py` | simulated CSR + memories (FORMATS.md semantics) used by the dry run and the tests |
 | `gos_model_backend.py` | dry-run job model: gos_pack unpack + gos_golden + gos_cycle_model (laptop only) |
 | `board_common.py` | data-package loading + SHA256 verification, PS dequant, provenance, CSV rules, `infer_loop` |
@@ -16,8 +18,8 @@ Board-side code needs only **numpy + pynq** and the files in this directory plus
 | `exp_a1_accuracy.py` | A1 correctness on all 10k images per net |
 | `exp_a2_a3_cycles.py` | A2 latency + A3 model / RTL / accelerator cycles per layer, determinism over images |
 | `exp_a4_util.py` | A4 MAC_ACTIVE / cycles vs theoretical |
-| `exp_b3_breakdown.py` | B3 host-side phase times (≥1000 images, warm-up discarded) |
-| `power_log.py` | **B1/B2 primary power:** on-board INA260 SOM-rail (VCC_SOM) logger + protocol (idle/accel/idle/cpu ×3 + idle), sensor check, sensor probe |
+| `exp_b3_breakdown.py` | B3 host-side phase times (≥1000 images, warm-up discarded); `--host-path safe` → `hw_b3_breakdown.csv`, `--host-path fast` → `hw_b3_breakdown_fast.csv` (after the fast-path check) |
+| `power_log.py` | **B1/B2 primary power:** on-board INA260 SOM-rail (VCC_SOM) logger + protocol (B1: idle/accel/idle/control/idle/cpu ×3 + idle), energy two ways (E_sys, E_comp) + duty cycle, sensor check, sensor probe |
 | `exp_b1_power.py` | B1 **optional** external-meter cross-check windows idle / fpga / cpu (`--with-meter`) |
 | `exp_b2_clock.py` | B2 pl_clk0 sweep (≤ closed clock): cycles == model, latency, INA260 idle/accel/idle per clock (+ meter window with `--with-meter`) |
 | `session.sh` / `run_sessions.py` | **one command per session** (`1`, `2`, `3`, `all`): pre-flight, resumable state, time budget, per-step timeout (below) |
@@ -70,13 +72,15 @@ sudo -E ./session.sh all --budget-min 240           # or everything in one go
 
 | session | steps (ids) | what |
 |---|---|---|
-| 1 | `s1.shell`, `s1.smoke`, `s1.smoke_slice` | `test_shell.py --skip-scratch` (pl_clk0 read back, VERSION/BUILD_ID, every BRAM filled + read back); `test_core_smoke.py` (one LeNet-5 + one CIFAR-10 image bit- and cycle-exact, refused job → ERR_CODE rule 3, soft_reset, good job); the same with `--write-mode slice` (**informational**: a failure does not fail the session; use `--write-mode slice` for Sessions 2/3 only if it passed) |
-| 2 | `s2.A1`, `s2.A2A3`, `s2.A4`, `s2.B3`, `s2.CPU` | A1 all 10k images per net, A2/A3 all images, A4 1000 images, B3 1000 (+50 warm-up), CPU baselines `--tag board` |
-| 3 | `s3.B1.lenet5`, `s3.B1.cifar10`, `s3.B2` (+ `s3.B1meter`, `s3.B1meter_cpu4` with `--with-meter`) | B1 = INA260 SOM-rail protocol per net (idle/accel/idle/cpu × `--power-repeats` 3 + final idle, `--window-s` phases; CPU = `cpu_int8_ref`, 1 thread) ≈ 14.5 min per net; B2 clock sweep (LeNet-5): cycles == model + INA260 idle/accel/idle × `--b2-power-repeats` 3 per clock ≈ 9.5 min per clock; meter steps optional |
+| 1 | `s1.shell`, `s1.smoke`, `s1.smoke_slice`, `s1.fast` | `test_shell.py --skip-scratch` (pl_clk0 read back, VERSION/BUILD_ID, every BRAM filled + read back); `test_core_smoke.py` (one LeNet-5 + one CIFAR-10 image bit- and cycle-exact, refused job → ERR_CODE rule 3, soft_reset, good job); the same with `--write-mode slice` (**informational**: a failure does not fail the session; use `--write-mode slice` for Sessions 2/3 only if it passed); `s1.fast` = the same smoke on the **fast host path** preceded and followed by `GosDevice.check_fast_path()` (**informational**; its PASS is the bring-up condition for `--host-path fast`, see "Host paths") |
+| 2 | `s2.A1`, `s2.A2A3`, `s2.A4`, `s2.B3`, `s2.B3fast`, `s2.CPU` | A1 all 10k images per net, A2/A3 all images, A4 1000 images, B3 1000 (+50 warm-up) on the safe host path, B3 on the fast host path (**informational**, only if `s1.fast` passed, else BLOCKED), CPU baselines `--tag board` |
+| 3 | `s3.B1.lenet5`, `s3.B1.cifar10`, `s3.B2` (+ `s3.B1meter`, `s3.B1meter_cpu4` with `--with-meter`) | B1 = INA260 SOM-rail protocol per net (idle/accel/idle/**control**/idle/cpu × `--power-repeats` 3 + final idle = 19 phases of `--window-s` 60 s ≈ 20.5 min per net incl. setup; `--no-power-control`: 13 phases ≈ 14.5 min; CPU = `cpu_int8_ref`, 1 thread); B2 clock sweep (LeNet-5): cycles == model + INA260 idle/accel/idle × `--b2-power-repeats` 3 per clock ≈ 9.5 min per clock; meter steps optional. Session 3 at the defaults (3 clocks) ≈ 70 min |
 
 Options: `--budget-min N`, `--resume` (default) / `--fresh`, `--quick` (200 images per step, B3
 `--n 200`, CPU `--quick`, 30 s windows), `--plan`, `--steps s2.A1 s3.B2` (subset),
-`--step-timeout-min M`, `--write-mode {elem,slice}`, `--window-s/--gap-s` (B1/B2 INA260 phase and
+`--step-timeout-min M`, `--write-mode {elem,slice}`, `--host-path {safe,fast}` (A1-A4, B1, B2; default
+safe; fast requires `s1.fast` OK in the same state, else those steps are BLOCKED = failed, nothing
+run), `--fast-store {block,words32}`, `--no-power-control` (B1 without control phases), `--window-s/--gap-s` (B1/B2 INA260 phase and
 meter window / meter gap, default 60/10 s; `--quick` 30 s), `--power-repeats`, `--b2-power-repeats`
 (default 3 each), `--power-rate-hz` (default 10), `--with-meter` (optional meter cross-check),
 `--b2-images`, `--allow-dirty` (rows git_dirty=True, invalid for the paper), `--no-bringup-check`,
@@ -128,14 +132,25 @@ the sweep. Each row records requested, read-back and closed clock.
 **Session 3 power (primary = INA260 SOM-rail):** `run_sessions.power_hook_steps` (block
 `POWER HOOK`) schedules one `power_log.py --protocol --net <net> --tag _<net>` step per net
 (`s3.B1.lenet5`, `s3.B1.cifar10`); `s3.B2` calls the same logger per clock
-(`power_log.run_power_protocol`, reduced protocol idle/accel/idle without CPU phases — the CPU
-baseline does not depend on pl_clk0). Label of every number: **"SOM-rail power (INA260)"** — the
-SOM rail VCC_SOM as reported by the on-board INA260; it is **not** accelerator-only power and
-**not** board input power (it includes the PS running the Python driver / CPU baseline). Per
-phase: mean, std, n samples, achieved rate, max gap, duration, images; per repeat and mean/std
-over repeats: P_idle (mean of the two idle phases bracketing the run phase), ΔP = P_run − P_idle,
-time/image = phase duration / images, energy/image = ΔP × time/image — all computed by
-`power_log.py`. CPU phases use `cpu_int8_ref` with 1 thread (same INT8 arithmetic as the
+(`power_log.run_power_protocol`, reduced protocol idle/accel/idle without CPU or control phases —
+the CPU baseline does not depend on pl_clk0). Label of every number: **"SOM-rail power (INA260)"**
+— the SOM rail VCC_SOM as reported by the on-board INA260; it is **not** accelerator-only power and
+**not** board input power (it includes the PS running the Python driver / CPU baseline; coverage
+below). B1 phases per repeat: idle_pre → **accel** → idle_mid → **control** → idle_ctl → **cpu**,
+× 3, + idle_post (19 × 60 s). Accel loop per image: `infer` (host path as selected) + TOTAL_CYC
+lo/hi read + PS dequant/argmax. **Control** = the same host loop with the accelerator **not
+started** (`GosDevice.control_step`): input write, the soft_reset + clear poll that `infer` issues
+before every start, a STATUS poll spin for the median start→done time of the preceding accel phase
+(calibrated on 20 warm-up images before the first phase), LOGIT read, TOTAL_CYC read, dequant;
+CTRL.start is never written and STATUS ≠ 0 / TOTAL_CYC ≠ 0 aborts the step. Per phase: mean, std,
+n samples, achieved rate, max gap, duration, images (+ TOTAL_CYC median/min/max and start→done
+median for accel, pacing for control); per repeat and mean/std over repeats: P_idle (mean of the
+two idle phases bracketing the run phase), ΔP = P_run − P_idle, time/image = phase duration /
+images, energy/image = ΔP × time/image; accelerator energy two ways: **E_sys** = ΔP_accel ×
+time/image (host loop included), **E_comp** = ΔP_accel × TOTAL_CYC / f (TOTAL_CYC = hardware
+counter median, f = read-back pl_clk0), **duty** = (TOTAL_CYC / f) / time/image, and the
+control-subtracted **ΔP_accel − ΔP_control** with E_sys,net / E_comp,net — all computed by
+`power_log.py` (`energy_rule` column), never typed. CPU phases use `cpu_int8_ref` with 1 thread (same INT8 arithmetic as the
 accelerator, A5's single-thread configuration). Sensor path (`--sensor auto`): hwmon `ina260*`
 → `platformstats -p` → read-only I2C (smbus2, ID-checked; never writes a register); none found →
 the step fails (no fallback). **First run `power_log.py --sample-only`** on the board: it prints
@@ -171,8 +186,8 @@ Expected board time is dominated by Python MMIO (per image: input writes 256 / 7
 | `hw_a1_accuracy.csv` | per net | images, logit/prediction mismatches vs golden, golden (model) and accelerator accuracy |
 | `hw_a2_a3_cycles.csv` | per net × layer + total | model / RTL-sim / accelerator cycles, min/max/distinct over images, errors %, µs at the read-back clock, wall-clock per image |
 | `hw_a4_util.csv` | per net × layer + total | MAC_ACTIVE/cycles vs theoretical (per-layer MAC_ACTIVE is **model T·K**, only the total is a HW counter) |
-| `hw_b3_breakdown.csv` | per net × phase | input write, start→done, logit read, PS dequant, end-to-end, counter read, PL compute (median, p5, p95, p99) |
-| `hw_b1_power_ina260_{samples,phases,summary}_{lenet5,cifar10}.csv` | per sample / per phase / per repeat + mean + std | **B1 primary**, "SOM-rail power (INA260)": P_idle, P_accel, P_cpu, ΔP, time/image, energy/image (J, mJ), sensor backend/device/limits, requested + achieved rate, max gap |
+| `hw_b3_breakdown.csv` / `hw_b3_breakdown_fast.csv` | per net × phase | safe / fast host path: input write, status clear, start→done (= start write + poll), logit read, PS dequant, end-to-end, counter read, PL compute (median, p5, p95, p99), `host_path`, `fast_store` |
+| `hw_b1_power_ina260_{samples,phases,summary}_{lenet5,cifar10}.csv` | per sample / per phase / per repeat + mean + std | **B1 primary**, "SOM-rail power (INA260)": P_idle, P_accel, P_control, P_cpu, ΔP, time/image, energy/image (J, mJ); accel E_sys, t_PL = TOTAL_CYC/f, E_comp, duty, ΔP_accel − ΔP_control, E_sys,net, E_comp,net; host path; sensor backend/device/limits, requested + achieved rate, max gap |
 | `hw_b2_clock.csv` | per clock | requested/read-back clock, cycles (must equal the model), latency, INA260 P_idle/P_accel/ΔP/energy per image (mean/std over repeats) |
 | `hw_b2_power_ina260_{samples,phases,summary}_lenet5_<NNN>mhz.csv` | per clock (NNN = rounded requested clock, e.g. 200mhz) | B2 INA260 idle/accel/idle protocol at that clock |
 | `hw_b1_meter_windows[_cpu4_cifar10].csv`, `hw_b1_meter_samples*.csv`, `hw_b2_meter_*.csv` | per window / sample | only with `--with-meter`: window timestamps for the external meter cross-check |
@@ -203,6 +218,49 @@ CTRL.start it decodes the descriptors actually written, runs the config-checker 
 the ACT/WGT/QPARAM images actually written, computes every layer with `gos_golden.gos_layer`
 and the counters with `gos_cycle_model`. Dry-run times (B3, B1 inference rates) are the laptop
 simulator's and mean nothing.
+
+## Host paths (`--host-path safe|fast`)
+
+| | safe (default, verified) | fast |
+|---|---|---|
+| windows | pynq `MMIO` per access | mapped once: pynq `MMIO.array` numpy views (or an own `/dev/mem` mmap, `DevMemWindow`, if a pynq version has no `.array`); `backend.fast_windows()` |
+| input image → ACT0 | one 32-bit numpy element store per word (`--write-mode elem`; `mmio` = `MMIO.write`; `slice` = numpy block copy) | ONE vectorized numpy copy of the whole image (`--fast-store block`: contiguous copy, store width chosen by numpy/libc; `words32`: lo-word and hi-word strided copies, numpy's strided 4-byte loop = 32-bit stores) |
+| LOGIT | `OC` × `MMIO.read` | ONE vectorized read of all 16 LOGIT words (0x080-0x0BF: 64 B, 64-B aligned, no read side effects), sliced to `OC` |
+| CSR scalars (CTRL, STATUS, counters) | `MMIO.read/write` | `memoryview` item access on the mapped CSR window (CPython packs/unpacks a fixed 4-byte item: one 32-bit load/store) |
+| STATUS poll | `MMIO.read` + clock read per poll | tight loop, clock read every 64 polls |
+| counters | lo then hi (latch) | unchanged: ordered scalar reads, lo then hi (never a block read: a block copy does not guarantee the load order); LAYER_CYC[0..7] as one block read (no side effects) |
+| WGT/QPARAM/DESC (once per net) | per word + readback | unchanged (safe path) |
+
+Protocol, error handling and API are identical (`GosDevice(..., host_path="fast")`, same `infer()`,
+`InferResult` gains `t_start_ns` = the CTRL.start write alone). **The default stays `safe`** until
+the board check passes: a numpy block copy / vectorized read on Device memory (`/dev/mem`, mapped
+uncached) is only safe if every access is naturally aligned and the AXI slaves accept the widths
+numpy/libc choose — an unaligned or unsupported access can raise SIGBUS or corrupt data. Therefore:
+
+1. Session 1 step **`s1.fast`** (`test_core_smoke.py --host-path fast`) runs
+   `GosDevice.check_fast_path()`: 3 patterns (seeded random, its complement, index hash) over the
+   **whole** ACT0 window (4096 × 64 bit) written with the fast copy and **every word read back**
+   through the safe per-word `MMIO.read` and through a fast block read; LOGIT[0..15] and
+   LAYER_CYC[0..7] block reads compared with per-word reads (again after a real job, when they are
+   non-zero); memoryview scalar reads == `MMIO.read`; then both nets bit- and cycle-exact on the
+   fast path. Any mismatch or exception → FAIL (informational step: the session goes on, safe).
+2. Only with `s1.fast` recorded OK in the same state do `--host-path fast` steps run
+   (`requires=("s1.fast",)`); otherwise they are **BLOCKED** (recorded, exit 1, nothing run) — rerun
+   with the default safe path. `--no-bringup-check` overrides (not for paper runs).
+3. `exp_b3_breakdown.py --host-path fast` repeats the ACT0/CSR check before measuring and writes
+   nothing if it fails; `s2.B3fast` always measures the fast path (when `s1.fast` passed) next to
+   the safe `s2.B3`, so B3 reports both.
+4. If `block` fails but you want to try `words32`: `sudo -E python3 test_core_smoke.py --host-path
+   fast --fast-store words32`, then `session.sh ... --fast-store words32` (the steps' parameters
+   change, so `s1.fast` reruns with it).
+
+**Laptop measurement (MockMMIO, NOT the KV260):** `python3 exp_host_overhead.py [--fast-store
+block|words32]` runs both paths interleaved per image on `mock_mmio.MockMmioBackend` (numpy arrays
+as windows; pynq-like `read/write` for the safe path; the fast path's CSR scalars go through Python
+methods on the mock, memoryview on the board) → `results/dryrun/host_overhead_mock.csv`, label
+"host overhead, laptop mock (MockMMIO), not KV260", `source=dryrun_model`. It shows the Python/
+numpy cost only (zero bus latency); start_write/poll/status_clear also include the mock's register
+emulation (`mock_emulation_us_*`, identical on both paths). Board numbers come from B3.
 
 ## Driver (`gos_driver.py`)
 
@@ -252,8 +310,7 @@ pred = bc.predict(r.logits, pkg.dequant)                 # PS float32 dequant + 
   `platformstats -p` (format assumed; matched raw line recorded), else read-only I2C via smbus2
   (0x40 first, then 0x41–0x4F; Manufacturer ID 0xFE = 0x5449, Die ID 0xFF = 0x2270; power 0x03
   LSB 10 mW, current 0x01 1.25 mA signed, bus voltage 0x02 1.25 mV; config 0x00 decoded, never
-  written). Assumed to measure the SOM rail VCC_SOM; whether that rail covers PL + PS (+ DDR) is
-  to be confirmed from the K26/KV260 documentation. The meter-window scripts keep their own
+  written). Rail coverage: see "VCC_SOM coverage (INA260)" below. The meter-window scripts keep their own
   simpler sampler (hwmon / platformstats) for the INA260 column of the cross-check rows.
 - **board_id:** `--board-id` / `$GOS_BOARD_ID`, else device-tree model + first 8 chars of
   `/etc/machine-id`.
@@ -263,6 +320,65 @@ pred = bc.predict(r.logits, pkg.dequant)                 # PS float32 dequant + 
 - **Open:** (only for the optional meter cross-check) a script that joins the manual meter log
   with the B1/B2 meter window timestamps and
   computes ΔP and energy per inference; per-layer MAC_ACTIVE is not measurable (no HW counter).
+
+## VCC_SOM coverage (INA260) — what the B1/B2 numbers include
+
+Sources read on 2026-09-29 (text extracted with `pdftotext`; quotes verbatim):
+
+- **AMD UG1089 "Kria KV260 Vision AI Starter Kit User Guide", v1.3, May 14, 2024**, Chapter 2
+  "Initial Setup", section "Powering the Starter Kit and Power Budgets" (PDF p. 9-10; copy fetched
+  from https://docs.xibif.ch/_downloads/480ec1217d1ac2bd520e695148cfe86f/KV260_Userguide.pdf,
+  SHA256 f2bb7a37…8e1763; the same section is on
+  https://docs.amd.com/r/en-US/ug1089-kv260-starter-kit/Powering-the-Starter-Kit-and-Power-Budgets,
+  whose page header reads v1.4, 2025-06-25 — only the summary of that page could be read, its
+  wording matches v1.3):
+  - "Powering the K26 SOM: • The KV260 Starter Kit carrier card on-board regulator generates a 5V
+    supply and provides power to other voltage regulators. • The SOM power rail (VCC_SOM) is
+    powered by the 5V supply. • Next, the SOM on-board power-on sequencing starts. • The carrier
+    card provides the programmable logic (PL) the VCCO voltage rails after the SOM asserts the
+    VCCOEN_S_M2C and VCCOEN_PL_M2C signals"
+  - "Power Telemetry: A power monitor device is available on the SOM power rail (VCC_SOM). You can
+    access the total power consumed by the SOM module through the I2C bus and AMD provided
+    utilities."
+  - UG1089 does **not** name the device, its I2C address, or list the loads on VCC_SOM.
+- **AMD/Xilinx DS987 "Kria K26 SOM Data Sheet", v1.0, April 20, 2021 (Preliminary)** (copy
+  https://mm.digikey.com/Volume0/opasdata/d220001/medias/docus/7171/122_SM-K26-XCL2GC.pdf, SHA256
+  3d6da9a7…4e00a1; current revision not accessible here):
+  - Overview, "Integrated and flexible power design: ○ SOC power supplies derived from a single +5V
+    input ○ PL I/O supplies customized through carrier card defined power rails"
+  - "Power Management Signals": "VCCOEN_PS_M2C … to enable the PS VCCO rails that are supplied by
+    the carrier card"; "VCCOEN_PL_M2C … to enable the PL VCCO rails that are supplied by the carrier
+    card"; "PWROFF_C2M_L is … pulled High to the +5V SOM input power rail"; "The VCCO for MIO banks
+    501 and 502 is fixed at 1.8V and is supplied by the K26 SOM."
+  - Table 8 (connector legend): "VCC_SOM — Both SOM240_1 and SOM240_2 — Power connection pins";
+    Table 4 "SOM I2C Interface Addresses" lists on the SOM: DA9062 PMIC (0x30, 0x31), DA9130 (0x32),
+    DA9131 (0x33), "PL power domain monitor" (0x68), "PS power domain monitor" (0x70).
+  - A search-engine snippet of DS987 "Power Sequencing" (docs.amd.com, not opened) reads "Your
+    carrier card supplies the +5V SOM power rail (VCC_SOM)."
+- **Upstream Linux device tree of the KV260 carrier card**
+  (`arch/arm64/boot/dts/xilinx/zynqmp-sck-kv-g-revB.dtso` and `-revA.dtso`, torvalds/linux master,
+  last commit bc7b1759, 2026-06-03): on `&i2c1 /* I2C_SCK C23/C24 - MIO from SOM */`:
+  `u14: ina260@40 { compatible = "ti,ina260"; label = "ina260-u14"; reg = <0x40>; };` — the only
+  power monitor on the carrier I2C bus.
+
+**Conclusion (what is sourced, what is inferred):**
+- *Sourced:* VCC_SOM is the SOM's single +5 V input rail (UG1089, DS987); the monitor on it gives
+  "the total power consumed by the SOM module" (UG1089). The PL and PS **VCCO** (I/O bank) rails for
+  carrier-side I/O are supplied **by the carrier card**, not from VCC_SOM (UG1089, DS987); MIO banks
+  501/502 VCCO (1.8 V) come from the SOM.
+- *Inferred, not stated in the documents:* that the "power monitor device" of UG1089 is the INA260
+  U14 at 0x40 (the device tree names no other monitor on the carrier bus); that VCC_SOM therefore
+  covers every on-SOM load — PS (APU running the Python host and the CPU baseline, LPD/FPD), PL core
+  rails (the accelerator), the on-SOM 4 GB DDR4, eMMC/QSPI/TPM, and the PMIC/regulator conversion
+  losses — since the SOM has no other supply input apart from VCC_BATT (RTC) and the carrier VCCO
+  rails. DS987 v1.0 does not break VCC_SOM down per load.
+- *Not covered:* carrier-side regulators and their losses (12 V → 5 V), carrier peripherals (USB,
+  Ethernet PHY, fan, …), PL/PS VCCO supplied by the carrier (this design drives no PL I/O banks),
+  so VCC_SOM ≠ board input power.
+- **Open questions:** (1) confirm U14 = the VCC_SOM monitor from the KV260 carrier schematic
+  (not accessed); (2) the current DS987 revision / UG1091 per-rail budget (not accessible here);
+  (3) the SOM's "PL power domain monitor" (0x68) / "PS power domain monitor" (0x70) could split PL
+  from PS power — device type and access are undocumented here; not used.
 
 ## Data package (`v2/board/data/<net>/`, gitignored)
 

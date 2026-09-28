@@ -5,11 +5,18 @@
     ./session.sh all --backend model --allow-dirty          # laptop dry run -> v2/results/dryrun/
 
 Sessions (v2/board/README.md):
-  1  bring-up       test_shell (--skip-scratch), test_core_smoke (+ informational --write-mode slice)
-  2  A1-A4, B3, CPU A1 accuracy, A2/A3 cycles, A4 utilization, B3 breakdown, CPU baselines (A5)
-  3  B1, B2         B1 INA260 SOM-rail power protocol per net (power_log.py: idle/accel/idle/cpu x3
-                    + final idle), B2 clock sweep (cycles == model + INA260 idle/accel/idle per clock);
+  1  bring-up       test_shell (--skip-scratch), test_core_smoke (+ informational --write-mode slice,
+                    + informational s1.fast = fast host path bring-up check)
+  2  A1-A4, B3, CPU A1 accuracy, A2/A3 cycles, A4 utilization, B3 breakdown (safe host path) + B3
+                    fast host path (informational, needs s1.fast OK), CPU baselines (A5)
+  3  B1, B2         B1 INA260 SOM-rail power protocol per net (power_log.py: idle/accel/idle/control/
+                    idle/cpu x3 + final idle; --no-power-control: idle/accel/idle/cpu x3 + idle),
+                    B2 clock sweep (cycles == model + INA260 idle/accel/idle per clock);
                     --with-meter adds the optional external-meter cross-check windows (exp_b1_power.py)
+
+Host path (--host-path, default safe): A1-A4, B1 and B2 use it. fast needs s1.fast (fast-path
+bring-up check) recorded OK in the same state, else those steps are BLOCKED (failure, nothing run;
+rerun with --host-path safe). s2.B3 always measures the safe path and s2.B3fast the fast path.
 
 Every invocation first runs the PRE-FLIGHT (fails loudly, exit 3): DEPLOY_INFO present; .bit/.hwh
 SHA256 vs DEPLOY_INFO and the shipped .bit.sha256; summary.json build id / closed clock / timing
@@ -106,6 +113,7 @@ class Step:
     out_flag: str | None = "--out-dir"
     expect: tuple = ()              # outputs that must exist after a successful run
     required: bool = True
+    requires: tuple = ()            # step ids that must be recorded ok before this step runs
 
     @property
     def params_key(self) -> str:
@@ -147,7 +155,8 @@ def n_images(data_dir: Path, net: str) -> int:
 def build_steps(cfg: Config, sessions, quick: bool = False, window_s: float = 60.0,
                 gap_s: float = 10.0, write_mode: str = "elem", b2_images: int = 100,
                 board_id: str | None = None, power_repeats: int = 3, b2_power_repeats: int = 3,
-                power_rate_hz: float = 10.0, with_meter: bool = False) -> list[Step]:
+                power_rate_hz: float = 10.0, with_meter: bool = False, host_path: str = "safe",
+                fast_store: str = "block", power_control: bool = True) -> list[Step]:
     be, dd = cfg.backend, str(cfg.data_dir)
     closed = cfg.closed_mhz
     maxf = f"{closed + cfg.clock_tol:.6f}"
@@ -160,6 +169,9 @@ def build_steps(cfg: Config, sessions, quick: bool = False, window_s: float = 60
         dev += ["--board-id", board_id]
     dirty = ["--allow-dirty"] if cfg.allow_dirty else []
     wm = ["--write-mode", write_mode]
+    fs = ["--fast-store", fast_store]
+    hp = ["--host-path", host_path, *fs]
+    need = ("s1.fast",) if host_path == "fast" else ()
     nets = bc.NETS
     n_all = sum(n_images(cfg.data_dir, n) for n in nets)
     lim = 200 if quick else None
@@ -178,23 +190,32 @@ def build_steps(cfg: Config, sessions, quick: bool = False, window_s: float = 60
             Step("s1.smoke_slice", 1, "core smoke with --write-mode slice (informational)",
                  ["test_core_smoke.py", *dev, "--max-fclk0", maxf, "--write-mode", "slice"],
                  kind="bringup", out_flag=None, required=False),
+            Step("s1.fast", 1, "fast host path bring-up check (ACT0 fast write + per-word readback, "
+                 "CSR block reads; core smoke on the fast path) (informational)",
+                 ["test_core_smoke.py", *dev, "--max-fclk0", maxf, "--host-path", "fast", *fs],
+                 kind="bringup", out_flag=None, required=False),
         ]
     if 2 in sessions:
         lim_a = ["--limit", str(lim)] if lim else []
         a4_lim = lim or 1000
         b3_n = 200 if quick else 1000
         steps += [
-            Step("s2.A1", 2, "A1 accuracy", ["exp_a1_accuracy.py", *dev, *wm, *dirty, *lim_a],
-                 images=n_lim, expect=("hw_a1_accuracy.csv",)),
-            Step("s2.A2A3", 2, "A2/A3 cycles", ["exp_a2_a3_cycles.py", *dev, *wm, *dirty, *lim_a],
-                 images=n_lim, expect=("hw_a2_a3_cycles.csv",)),
-            Step("s2.A4", 2, "A4 utilization", ["exp_a4_util.py", *dev, *wm, *dirty,
+            Step("s2.A1", 2, "A1 accuracy", ["exp_a1_accuracy.py", *dev, *wm, *hp, *dirty, *lim_a],
+                 images=n_lim, expect=("hw_a1_accuracy.csv",), requires=need),
+            Step("s2.A2A3", 2, "A2/A3 cycles", ["exp_a2_a3_cycles.py", *dev, *wm, *hp, *dirty,
+                                                *lim_a],
+                 images=n_lim, expect=("hw_a2_a3_cycles.csv",), requires=need),
+            Step("s2.A4", 2, "A4 utilization", ["exp_a4_util.py", *dev, *wm, *hp, *dirty,
                                                 "--limit", str(a4_lim)],
                  images=sum(min(a4_lim, n_images(cfg.data_dir, n)) for n in nets),
-                 expect=("hw_a4_util.csv",)),
-            Step("s2.B3", 2, "B3 breakdown", ["exp_b3_breakdown.py", *dev, *wm, *dirty,
-                                              "--n", str(b3_n)],
+                 expect=("hw_a4_util.csv",), requires=need),
+            Step("s2.B3", 2, "B3 breakdown (safe host path)",
+                 ["exp_b3_breakdown.py", *dev, *wm, *dirty, "--n", str(b3_n), "--host-path", "safe"],
                  images=len(nets) * (b3_n + 50), expect=("hw_b3_breakdown.csv",)),
+            Step("s2.B3fast", 2, "B3 breakdown (fast host path; informational, needs s1.fast)",
+                 ["exp_b3_breakdown.py", *dev, *wm, *dirty, "--n", str(b3_n), "--host-path", "fast",
+                  *fs], images=len(nets) * (b3_n + 50), expect=("hw_b3_breakdown_fast.csv",),
+                 required=False, requires=("s1.fast",)),
         ]
         cpu = ["cpu/run_cpu_baselines.py", "--data-dir", dd, "--tag",
                "laptop" if cfg.dry else "board", *(["--quick"] if quick else []), *dirty]
@@ -205,7 +226,8 @@ def build_steps(cfg: Config, sessions, quick: bool = False, window_s: float = 60
         w = ["--window-s", f"{window_s:g}", "--gap-s", f"{gap_s:g}"]
         clocks = bc.b2_sweep_clocks(closed, cfg.clock_tol)
         # B1 primary: INA260 SOM-rail protocol, one step per net
-        steps += power_hook_steps(cfg, dev, dirty, window_s, power_repeats, power_rate_hz, wm)
+        steps += power_hook_steps(cfg, dev, dirty, window_s, power_repeats, power_rate_hz,
+                                  [*wm, *hp], control=power_control, requires=need)
         if with_meter:      # optional cross-check with the external inline 12 V meter
             steps += [
                 Step("s3.B1meter", 3, f"B1 cross-check windows idle/fpga/cpu (LeNet-5): {METER_LABEL}",
@@ -230,21 +252,24 @@ def build_steps(cfg: Config, sessions, quick: bool = False, window_s: float = 60
                  f"{POWER_LABEL} idle/accel/idle x{b2_power_repeats} per clock",
                  ["exp_b2_clock.py", *dev, *wm, *dirty, "--net", b2_net, "--clocks",
                   *[f"{c:.6f}" for c in clocks], "--max-mhz", f"{closed:.6f}",
-                  "--images", str(b2_images), *w, "--power-repeats", str(b2_power_repeats),
+                  *hp, "--images", str(b2_images), *w, "--power-repeats", str(b2_power_repeats),
                   "--rate-hz", f"{power_rate_hz:g}",
                   *(["--sensor", "mock"] if cfg.dry else []),
                   *(["--with-meter"] if with_meter else [])], kind="infer",
                  images=len(clocks) * b2_images, fixed_s=len(clocks) * per_clock,
-                 expect=("hw_b2_clock.csv", *b2_power)))
+                 expect=("hw_b2_clock.csv", *b2_power), requires=need))
     return steps
 
 
 # ==== POWER HOOK (Session 3) ====================================================================
 # B1 PRIMARY = the INA260 SOM-rail power protocol (power_log.py), one step per net:
 #   python3 power_log.py --backend {pynq,model} --data-dir D (--bit B | --clock-mhz C) [--allow-dirty]
-#       --write-mode M --protocol --net <net> --tag _<net> --phase-s W --repeats R --rate-hz H
-#       --cpu-kind cpu_int8_ref --cpu-threads 1 [dry run: --sensor mock] --out-dir <staging dir>
-# Phases per repeat idle/accel/idle/cpu (W s each) x R + one final idle -> 4R+1 phases.
+#       --write-mode M --host-path P --fast-store S --protocol --net <net> --tag _<net> --phase-s W
+#       --repeats R --rate-hz H --cpu-kind cpu_int8_ref --cpu-threads 1 [--no-control]
+#       [dry run: --sensor mock] --out-dir <staging dir>
+# Phases per repeat idle/accel/idle/control/idle/cpu (W s each) x R + one final idle -> 6R+1
+# phases (19 x 60 s = 19 min per net at the defaults); --no-power-control: idle/accel/idle/cpu,
+# 4R+1. Control = the same host loop with the accelerator not started (power_log.py docstring).
 # CPU phases = the INT8 numpy reference (cpu_int8_ref), 1 thread: the same INT8 arithmetic as the
 # accelerator and A5's single-thread configuration, so dP_cpu is a like-for-like single-core
 # software baseline on the same rail (4-thread CPU power only via the optional meter step).
@@ -262,23 +287,27 @@ def clock_tag(mhz: float) -> str:
     return f"{int(round(float(mhz)))}mhz"
 
 
-def power_phases(repeats: int) -> int:
-    return 4 * repeats + 1
+def power_phases(repeats: int, control: bool = True) -> int:
+    return (6 if control else 4) * repeats + 1
 
 
 def power_hook_steps(cfg: Config, dev: list, dirty: list, window_s: float, repeats: int = 3,
-                     rate_hz: float = 10.0, wm: list | None = None) -> list[Step]:
+                     rate_hz: float = 10.0, wm: list | None = None, control: bool = True,
+                     requires: tuple = ()) -> list[Step]:
     extra = ["--sensor", "mock"] if cfg.dry else []
     out = []
     for net in bc.NETS:
         tag = f"_{net}"
         out.append(Step(
-            f"s3.B1.{net}", 3, f"B1 {POWER_LABEL} protocol {net} (idle/accel/idle/cpu x{repeats} "
-            f"+ idle, {window_s:g} s phases, CPU {B1_CPU_KIND} x{B1_CPU_THREADS})",
+            f"s3.B1.{net}", 3, f"B1 {POWER_LABEL} protocol {net} "
+            f"({'idle/accel/idle/control/idle/cpu' if control else 'idle/accel/idle/cpu'} "
+            f"x{repeats} + idle, {window_s:g} s phases, CPU {B1_CPU_KIND} x{B1_CPU_THREADS})",
             [POWER_HOOK_SCRIPT, *dev, *(wm or []), *dirty, "--protocol", "--net", net, "--tag", tag,
              "--phase-s", f"{window_s:g}", "--repeats", str(repeats), "--rate-hz", f"{rate_hz:g}",
-             "--cpu-kind", B1_CPU_KIND, "--cpu-threads", str(B1_CPU_THREADS), *extra],
-            kind="fixed", fixed_s=power_phases(repeats) * window_s + B1_POWER_OVERHEAD_S,
+             "--cpu-kind", B1_CPU_KIND, "--cpu-threads", str(B1_CPU_THREADS),
+             *([] if control else ["--no-control"]), *extra],
+            kind="fixed", fixed_s=power_phases(repeats, control) * window_s + B1_POWER_OVERHEAD_S,
+            requires=requires,
             expect=tuple(f"hw_b1_power_ina260_{k}{tag}.csv" for k in ("samples", "phases", "summary"))))
     return out
 # ==== end POWER HOOK ============================================================================
@@ -792,6 +821,11 @@ def make_parser() -> argparse.ArgumentParser:
     ap.add_argument("--with-meter", action="store_true",
                     help="also run the optional external-meter cross-check windows (B1 + B2)")
     ap.add_argument("--write-mode", choices=("elem", "mmio", "slice"), default="elem")
+    ap.add_argument("--host-path", choices=("safe", "fast"), default="safe",
+                    help="host path of A1-A4/B1/B2 (fast only after s1.fast passed; B3 runs both)")
+    ap.add_argument("--fast-store", choices=("block", "words32"), default="block")
+    ap.add_argument("--no-power-control", action="store_true",
+                    help="B1 without the control phases (4R+1 instead of 6R+1 phases)")
     ap.add_argument("--board-id", default=None)
     ap.add_argument("--clock-tol-mhz", type=float, default=bc.CLOCK_TOL_MHZ)
     ap.add_argument("--min-free-mb", type=float, default=1000.0)
@@ -896,7 +930,10 @@ def _main(a, board_dir, data_dir, rd, window_s, gap_s, say, lock_fd, open_backen
 
     steps = build_steps(cfg, a.sessions, a.quick, window_s, gap_s, a.write_mode, a.b2_images,
                         a.board_id, a.power_repeats, a.b2_power_repeats, a.power_rate_hz,
-                        a.with_meter)
+                        a.with_meter, a.host_path, a.fast_store, not a.no_power_control)
+    say(f"[session] host path for A1-A4/B1/B2: {a.host_path}"
+        + (f" (store {a.fast_store}; requires s1.fast OK)" if a.host_path == "fast" else
+           " (default; s2.B3fast measures the fast path if s1.fast passed)"))
     if 3 in a.sessions:
         say(f"[session] Session 3 power: primary {POWER_LABEL} via {POWER_HOOK_SCRIPT} "
             f"(B1 per net, B2 per clock); external meter cross-check "
@@ -940,6 +977,19 @@ def _main(a, board_dir, data_dir, rd, window_s, gap_s, say, lock_fd, open_backen
         if blocked:
             report.append((st.id, "not run", None, est, "Session 1 bring-up failed"))
             incomplete = True
+            continue
+        unmet = [q for q in st.requires if state["steps"].get(q, {}).get("status") != "ok"]
+        if unmet and not a.no_bringup_check:
+            why = (f"prerequisite {unmet} not recorded OK in this state (fast host path not "
+                   "validated at bring-up)")
+            say(f"\n[session] BLOCKED {st.id}: {why}"
+                + ("; rerun with --host-path safe" if st.required else " (informational step)"))
+            state["steps"].setdefault(st.id, {}).update(status="blocked", blocked_utc=utc_now(),
+                                                        blocked_reason=why)
+            save_state(state_path, state)
+            report.append((st.id, "BLOCKED", None, est, why))
+            if st.required:
+                any_fail = True
             continue
         elapsed = time.monotonic() - t_start
         remaining = None if budget_s is None else budget_s - elapsed

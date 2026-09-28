@@ -244,6 +244,9 @@ def test_dryrun_off_by_default_and_watermarked(res, tmp_path):
 
 def test_300mhz_column_added_only_if_timing_met(res, tmp_path):
     fields, rows = read_csv(res / "impl_gos.csv")
+    # since step 9 the real impl_gos.csv has a timing-met 300 MHz build: test the rule on a temp
+    # copy without it (the synthetic row below is the only 300 MHz candidate)
+    rows = [r for r in rows if r["pl_clk0_mhz_requested"] not in ("300", "300.0")]
     new = dict(rows[-1], pl_clk0_mhz_requested="300", pl_clk0_mhz_actual="299.997", wns_ns="0.011",
                timestamp="2026-10-02T00:00:00+00:00")
     write_csv(res / "impl_gos.csv", fields, rows + [new])
@@ -352,3 +355,61 @@ def test_t1_gets_300mhz_column_from_build_copy(res, tmp_path):
     t = tex(out, "tab_t1_impl")
     assert "200~MHz & 250~MHz & 300~MHz" in t
     assert "300~MHz" in tex(out, "tab_a2_latency")
+
+
+# ------------------------------------------------ B1 energy two ways / control; B3 safe vs fast
+def test_b1_control_energy_rows_and_placeholders(res, tmp_path):
+    out0 = tmp_path / "out0"
+    run(res, out0)
+    t0 = tex(out0, "tab_b1_power")
+    for lab in ("$\\Delta P$ control", "$E_\\mathrm{comp}$ accel.", "Duty cycle",
+                "$E_\\mathrm{sys}$ accel.\\ $-$ control"):
+        assert lab in t0, lab                      # rows present, cells pending
+    assert PH_BOARD in t0.split("Duty cycle", 1)[1].split("\\\\", 1)[0]
+    synth_ina(res, "hw_b1_power_ina260_summary_lenet5.csv", "lenet5", "199.998001", 0.3456)
+    f, rows = read_csv(res / "hw_b1_power_ina260_summary_lenet5.csv")
+    extra = ["host_path", "control_dp_w", "accel_dp_net_w", "accel_t_pl_s", "accel_duty",
+             "accel_e_comp_mj", "accel_e_sys_net_mj", "accel_e_comp_net_mj"]
+    for r in rows:
+        std = r["row_kind"] == "std"
+        r.update(host_path="fast", control_dp_w="0.001" if std else "0.0456",
+                 accel_dp_net_w="0.001" if std else f"{float(r['accel_dp_w']) - 0.0456:.6f}",
+                 accel_t_pl_s="0" if std else "0.000411235", accel_duty="0" if std else "0.102809",
+                 accel_e_comp_mj="0" if std else "0.142129", accel_e_sys_net_mj="0" if std else "1.2",
+                 accel_e_comp_net_mj="0" if std else "0.123")
+    write_csv(res / "hw_b1_power_ina260_summary_lenet5.csv", f + extra, rows)
+    out = tmp_path / "out"
+    run(res, out)
+    t = tex(out, "tab_b1_power")
+    assert "0.046\\,$\\pm$\\,0.001" in t                  # dP control
+    assert "411.235" in t and "10.281" in t              # t_PL in us; duty in %
+    assert "0.1421" in t and "0.1230" in t               # E_comp, E_comp net (f4)
+    assert "fast" in t
+
+
+def synth_b3(res: Path, name: str, host_path: str, e2e: float):
+    head = read_csv(res / "cycle_model.csv")[1][0]
+    rows = []
+    for net in ("lenet5", "cifar10"):
+        for ph, v in (("input_write", e2e * 0.5), ("status_clear", 1.0), ("start_done", e2e * 0.3),
+                      ("logit_read", 2.0), ("ps_dequant", 3.0), ("end_to_end", e2e), ("pl_compute", 80.0)):
+            rows.append({"timestamp": "2026-10-01T00:00:00+00:00", "git_commit": head["git_commit"],
+                         "git_dirty": "False", "net": net, "layer": "all", "clock_mhz": "199.998001",
+                         "source": "hw", "phase": ph, "median_us": f"{v:.3f}", "p95_us": f"{v * 1.1:.3f}",
+                         "host_path": host_path})
+    write_csv(res / name, META + ["phase", "median_us", "p95_us", "host_path"], rows)
+
+
+def test_b3_safe_vs_fast_columns_and_speedup(res, tmp_path):
+    synth_b3(res, "hw_b3_breakdown.csv", "safe", 900.0)
+    out = tmp_path / "out"
+    m = run(res, out)
+    t = tex(out, "tab_b3_breakdown")
+    assert "900.0" in t and PH_BOARD in t                # fast columns still pending
+    assert m["artifacts"]["fig_b3_breakdown"]["placeholders"]
+    synth_b3(res, "hw_b3_breakdown_fast.csv", "fast", 300.0)
+    out2 = tmp_path / "out2"
+    m2 = run(res, out2)
+    t2 = tex(out2, "tab_b3_breakdown")
+    assert "300.0" in t2 and "3.00$\\times$" in t2 and PH_BOARD not in t2
+    assert not m2["artifacts"]["fig_b3_breakdown"]["placeholders"]

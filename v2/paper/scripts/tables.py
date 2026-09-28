@@ -12,8 +12,8 @@ META_COLS = {"timestamp", "git_commit", "git_dirty", "vivado_version", "bitstrea
 
 CPU_KINDS = {"cpu_int8_ref": "INT8 numpy (ref.)", "cpu_fp32_numpy": "FP32 numpy",
              "cpu_ort_fp32": "ORT FP32", "cpu_ort_int8": "ORT INT8"}
-B3_PHASES = ["input_write", "status_clear", "start_done", "logit_read", "ps_dequant", "end_to_end",
-             "counter_read", "pl_compute"]
+B3_PHASES = ["input_write", "status_clear", "start_done", "start_write", "poll", "logit_read", "ps_dequant",
+             "end_to_end", "counter_read", "pl_compute"]
 
 
 class Ctx:
@@ -285,8 +285,28 @@ def _power_label(art: Artifact, entries: list[dict]) -> str:
     return " / ".join(art.label(tex_escape(l), "power summary CSV: measurement") for l in labs)
 
 
+B1_LINES = [   # (label, summary column, fmt, scale); energy/duty columns written by power_log.py
+    ("$P_\\mathrm{idle}$ (W)", "accel_p_idle_w", "f3", 1.0),
+    ("$\\Delta P$ accelerator (W)", "accel_dp_w", "f3", 1.0),
+    ("$\\Delta P$ control (W)", "control_dp_w", "f3", 1.0),
+    ("$\\Delta P$ accel.\\ $-$ control (W)", "accel_dp_net_w", "f3", 1.0),
+    ("$\\Delta P$ CPU (W)", "cpu_dp_w", "f3", 1.0),
+    ("Time/image accel.\\ (ms)", "accel_time_per_image_s", "f3", 1000.0),
+    ("Time/image control (ms)", "control_time_per_image_s", "f3", 1000.0),
+    ("Time/image CPU (ms)", "cpu_time_per_image_s", "f3", 1000.0),
+    ("$t_\\mathrm{PL}$ = TOTAL\\_CYC$/f$ (\\textmu s)", "accel_t_pl_s", "f3", 1e6),
+    ("Duty cycle $t_\\mathrm{PL}/$time/image (\\%)", "accel_duty", "f3", 100.0),
+    ("$E_\\mathrm{sys}$ accel.\\ (mJ)", "accel_energy_per_image_mj", "f3", 1.0),
+    ("$E_\\mathrm{comp}$ accel.\\ (mJ)", "accel_e_comp_mj", "f4", 1.0),
+    ("$E_\\mathrm{sys}$ accel.\\ $-$ control (mJ)", "accel_e_sys_net_mj", "f3", 1.0),
+    ("$E_\\mathrm{comp}$ accel.\\ $-$ control (mJ)", "accel_e_comp_net_mj", "f4", 1.0),
+    ("Energy/image CPU (mJ)", "cpu_energy_per_image_mj", "f3", 1.0),
+]
+
+
 def b1_power(c: Ctx) -> Artifact:
-    """B1: SOM-rail power (INA260) protocol summary, mean +- std over repeats (power_log.py)."""
+    """B1: SOM-rail power (INA260) protocol summary, mean +- std over repeats (power_log.py):
+    dP accel / control / CPU, E_sys and E_comp (+ control-subtracted variants), duty cycle."""
     art = c.art("tab_b1_power")
     ents = power_summaries(art, "hw_b1_power_ina260")
     meter = power_summaries(art, "hw_b1_power_meter")
@@ -296,43 +316,43 @@ def b1_power(c: Ctx) -> Artifact:
             by[e["net"]] = e
     mby = {e["net"]: e for e in meter}
     nets = list(NETS)
-    if not by:
-        body = [f"\\multicolumn{{{len(nets) + 1}}}{{c}}{{{art.placeholder('B1: hw_b1_power_ina260_summary*.csv (source=hw)')}}} \\\\"]
-        lab = INA_LABEL
-    else:
-        lab = _power_label(art, list(by.values()))
+    body = []
+    lab = _power_label(art, list(by.values())) if by else INA_LABEL
 
-        def line(text, fn):
-            body.append([text] + [fn(by[n]) if n in by else art.placeholder(f"B1 {n}: INA260 summary")
-                                  for n in nets])
-        body = []
-        line("Clock read back (MHz)", lambda e: art.cell(e["mean"], "clock_mhz", "f1") if e["mean"].get("clock_mhz") else "--")
-        line("$P_\\mathrm{idle}$ (W)", lambda e: pm(art, e, "accel_p_idle_w", "f3"))
-        line("$\\Delta P$ accelerator (W)", lambda e: pm(art, e, "accel_dp_w", "f3"))
-        line("$\\Delta P$ CPU (W)", lambda e: pm(art, e, "cpu_dp_w", "f3"))
-        line("Time/image accel.\\ (ms)", lambda e: pm(art, e, "accel_time_per_image_s", "f3", 1000))
-        line("Time/image CPU (ms)", lambda e: pm(art, e, "cpu_time_per_image_s", "f3", 1000))
-        line("Energy/image accel.\\ (mJ)", lambda e: pm(art, e, "accel_energy_per_image_mj", "f3"))
-        line("Energy/image CPU (mJ)", lambda e: pm(art, e, "cpu_energy_per_image_mj", "f3"))
-        line("Repeats", lambda e: art.cell(e["mean"], "n_repeats", "int"))
-        line("Sample rate achieved (Hz)", lambda e: art.cell(e["mean"], "rate_achieved_hz", "f1"))
-        line("CPU workload", lambda e: art.label(tex_escape(e["mean"].get("cpu_workload") or "--"),
-                                                  f"{e['file']}:cpu_workload"))
-        if mby:
-            body.append(f"\\multicolumn{{{len(nets) + 1}}}{{@{{}}l}}{{\\emph{{{METER_LABEL}}}}} \\\\")
-            line("$\\Delta P$ accelerator (W)", lambda e: pm(art, mby[e["net"]], "accel_dp_w", "f3")
-                 if e["net"] in mby else "--")
-            line("Energy/image accel.\\ (mJ)", lambda e: pm(art, mby[e["net"]], "accel_energy_per_image_mj", "f3")
-                 if e["net"] in mby else "--")
+    def line(text, fn):
+        body.append([text] + [fn(by[n]) if n in by else art.placeholder(f"B1 {n}: INA260 summary")
+                              for n in nets])
+    line("Clock read back (MHz)", lambda e: art.cell(e["mean"], "clock_mhz", "f1") if e["mean"].get("clock_mhz") else "--")
+    line("Host path", lambda e: art.label(tex_escape(e["mean"].get("host_path") or "--"), f"{e['file']}:host_path"))
+    for text, col, fmt, scale in B1_LINES:
+        line(text, lambda e, col=col, fmt=fmt, scale=scale: pm(art, e, col, fmt, scale))
+    line("Repeats", lambda e: art.cell(e["mean"], "n_repeats", "int"))
+    line("Sample rate achieved (Hz)", lambda e: art.cell(e["mean"], "rate_achieved_hz", "f1"))
+    line("CPU workload", lambda e: art.label(tex_escape(e["mean"].get("cpu_workload") or "--"),
+                                              f"{e['file']}:cpu_workload"))
+    if mby:
+        body.append(f"\\multicolumn{{{len(nets) + 1}}}{{@{{}}l}}{{\\emph{{{METER_LABEL}}}}} \\\\")
+        line("$\\Delta P$ accelerator (W)", lambda e: pm(art, mby[e["net"]], "accel_dp_w", "f3")
+             if e["net"] in mby else "--")
+        line("Energy/image accel.\\ (mJ)", lambda e: pm(art, mby[e["net"]], "accel_energy_per_image_mj", "f3")
+             if e["net"] in mby else "--")
+    if not by:
+        art.placeholder("B1: hw_b1_power_ina260_summary*.csv (source=hw)")
     hdr = ["Quantity & " + " & ".join(pretty_net(n) for n in nets)]
     return c.table(art, "@{}l" + "r" * len(nets) + "@{}", hdr, body,
                    f"B1 power and energy per image: {tex_escape(lab) if lab == INA_LABEL else lab}, "
                    "mean $\\pm$ std over repeats.", "tab:power",
-                   notes=["Measured on the KV260 by the on-board INA260 on the SOM rail (VCC\\_SOM): not "
-                          "accelerator-only power and not board input power. $P_\\mathrm{idle}$ = mean of the two "
-                          "idle phases bracketing each run phase; $\\Delta P = P_\\mathrm{run}-P_\\mathrm{idle}$; "
-                          "energy/image = $\\Delta P\\times$ time/image (host inference loop). Source: "
-                          "hw\\_b1\\_power\\_ina260\\_summary*.csv (power\\_log.py)."
+                   notes=["Measured on the KV260 by the on-board INA260 on the SOM rail (VCC\\_SOM, the "
+                          "SOM input): not accelerator-only power and not board input power; PL I/O (VCCO) rails "
+                          "and carrier peripherals are outside it. $P_\\mathrm{idle}$ = mean of the two "
+                          "idle phases bracketing each run phase; $\\Delta P = P_\\mathrm{run}-P_\\mathrm{idle}$. "
+                          "Control = the same host loop (input write, clear, STATUS poll paced to the accelerator's "
+                          "start-to-done time, LOGIT read, PS dequant) with the accelerator not started. "
+                          "$E_\\mathrm{sys}=\\Delta P_\\mathrm{accel}\\times$ time/image (host loop included); "
+                          "$E_\\mathrm{comp}=\\Delta P_\\mathrm{accel}\\times t_\\mathrm{PL}$, "
+                          "$t_\\mathrm{PL}$ = TOTAL\\_CYC (hardware counter) over the read-back pl\\_clk0; "
+                          "``$-$ control'' rows use $\\Delta P_\\mathrm{accel}-\\Delta P_\\mathrm{control}$. "
+                          "All computed by power\\_log.py. Source: hw\\_b1\\_power\\_ina260\\_summary*.csv."
                           + (" External meter rows: board input power, cross-check only." if mby else "")])
 
 
@@ -389,27 +409,51 @@ def b2_clock(c: Ctx) -> Artifact:
                           + (f" Meter column: {METER_LABEL}." if meter else "")])
 
 
+B3_FILES = {"safe": "hw_b3_breakdown.csv", "fast": "hw_b3_breakdown_fast.csv"}
+
+
 def b3_breakdown(c: Ctx) -> Artifact:
+    """B3: host-side phases per image, safe (per-word MMIO) vs fast (mapped numpy windows) host
+    path, median and p95 per net, + end-to-end speedup safe/fast (computed from the medians)."""
     art = c.art("tab_b3_breakdown")
-    rows = art.rows("hw_b3_breakdown.csv", hw=True) or []
-    b = latest(rows, lambda r: (r["net"], r["phase"]))
-    phases = [p for p in B3_PHASES if any(k[1] == p for k in b)] or B3_PHASES
+    b = {}
+    for hp, name in B3_FILES.items():
+        rows = art.rows(name, hw=True) or []
+        for k, r in latest(rows, lambda r: (r["net"], r["phase"])).items():
+            b[(hp,) + k] = r
+    phases = [p for p in B3_PHASES if any(k[2] == p for k in b)] or B3_PHASES
     body = []
     for p in phases:
         cells = [tex_escape(p)]
         for net in NETS:
-            r = b.get((net, p))
-            cells += ([art.cell(r, "median_us", "f1"), art.cell(r, "p95_us", "f1")] if r else
-                      [art.placeholder(f"B3 {net}: hw_b3_breakdown.csv")] * 2)
+            for hp in B3_FILES:
+                r = b.get((hp, net, p))
+                cells += ([art.cell(r, "median_us", "f1"), art.cell(r, "p95_us", "f1")] if r else
+                          [art.placeholder(f"B3 {net} {hp}: {B3_FILES[hp]}")] * 2)
         body.append(cells)
-    hdr = [r"& \multicolumn{2}{c}{LeNet-5 (\textmu s)} & \multicolumn{2}{c}{CIFAR-10 (\textmu s)} \\",
-           r"\cmidrule(lr){2-3}\cmidrule(l){4-5}",
-           r"Phase & median & p95 & median & p95"]
-    return c.table(art, "@{}lrrrr@{}", hdr, body, "B3 end-to-end breakdown per image (host side).",
-                   "tab:breakdown",
-                   notes=["Source: hw\\_b3\\_breakdown.csv (measured on KV260, Python MMIO host). "
-                          "end\\_to\\_end = input\\_write + status\\_clear + start\\_done + logit\\_read + "
-                          "ps\\_dequant; pl\\_compute = PL cycle counter."])
+    sp = ["speedup e2e (safe/fast)"]
+    for net in NETS:
+        rs, rf = b.get(("safe", net, "end_to_end")), b.get(("fast", net, "end_to_end"))
+        if rs and rf:
+            v = div(at(rs, "median_us"), at(rf, "median_us"), "safe median / fast median")
+            sp += [v.fmt(art, "f2") + "$\\times$", "", "", ""]
+        else:
+            sp += [art.placeholder(f"B3 {net}: speedup needs both host paths"), "", "", ""]
+    body.append(r"\midrule")
+    body.append(sp)
+    hdr = [r"& \multicolumn{4}{c}{LeNet-5 (\textmu s)} & \multicolumn{4}{c}{CIFAR-10 (\textmu s)} \\",
+           r"\cmidrule(lr){2-5}\cmidrule(l){6-9}",
+           r"& \multicolumn{2}{c}{safe} & \multicolumn{2}{c}{fast} & \multicolumn{2}{c}{safe} & \multicolumn{2}{c}{fast} \\",
+           r"Phase & median & p95 & median & p95 & median & p95 & median & p95"]
+    return c.table(art, "@{}l" + "r" * 8 + "@{}", hdr, body,
+                   "B3 end-to-end breakdown per image (host side), safe vs fast host path.",
+                   "tab:breakdown", wide=True,
+                   notes=["Measured on the KV260 (Python host). safe: per-word MMIO (hw\\_b3\\_breakdown.csv); "
+                          "fast: PL windows mapped once, input written with one vectorized numpy copy, LOGIT "
+                          "read with one vectorized read, tight STATUS poll (hw\\_b3\\_breakdown\\_fast.csv; used "
+                          "only after the bring-up fast-path check passed). end\\_to\\_end = input\\_write + "
+                          "status\\_clear + start\\_done + logit\\_read + ps\\_dequant; start\\_done = start\\_write "
+                          "+ poll; pl\\_compute = PL cycle counter."])
 
 
 # --------------------------------------------------------------------------------------------

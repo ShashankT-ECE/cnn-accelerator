@@ -200,3 +200,157 @@ def test_model_backend_bit_exact_if_available():
         r = dev.infer(pkg.x_act[1])
         assert np.array_equal(r.logits, pkg.golden_logits[1])
         assert r.total_cyc == pkg.model_cycles["total"]["cycles"]
+
+
+# ---- fast host path ------------------------------------------------------------------------------
+from gos_sim import SimCsrArray  # noqa: E402
+
+
+class FastFakeBackend(FakeBackend):
+    """gos_sim behind the fast path: ACT0 = the SimMem numpy array, CSR via SimCsrArray."""
+
+    def fast_windows(self):
+        ca = SimCsrArray(self.sim.csr)
+        return D.FastWindows(ca, ca.rd, ca.wr, self.sim.mems["ACT0"].array, note="test")
+
+
+def make_fast(job=None, fast_store="block", **kw):
+    sim = SimDevice(job or ok_job(), **kw)
+    return sim, D.GosDevice(FastFakeBackend(sim), timeout_s=0.2, host_path="fast",
+                            fast_store=fast_store)
+
+
+@pytest.mark.parametrize("store", D.FAST_STORES)
+def test_fast_path_same_results_as_safe(store):
+    x = (np.arange(32) * 37 % 251 - 120).astype(np.int8)
+    sim_s, safe = make()
+    sim_f, fast = make_fast(fast_store=store)
+    for dev in (safe, fast):
+        dev.load_net(Pkg())
+    rs, rf = safe.infer(x), fast.infer(x)
+    assert rf.logits.tolist() == rs.logits.tolist() == [-5, 7, 2**31 - 1]
+    assert (rf.total_cyc, rf.mac_active, rf.stall, rf.layer_cyc, rf.violation) == \
+           (rs.total_cyc, rs.mac_active, rs.stall, rs.layer_cyc, rs.violation)
+    assert np.array_equal(sim_f.mems["ACT0"].array[:8], sim_s.mems["ACT0"].array[:8])
+    assert np.array_equal(sim_f.mems["ACT0"].array[:8], x.view(np.uint32))
+    assert rf.t_start_ns >= 0 and rf.t_run_ns >= rf.t_start_ns
+    r2 = fast.infer(x)
+    assert r2.cleared and sim_f.jobs == 2          # stale done cleared on the fast path too
+
+
+def test_fast_path_errors_and_timeout():
+    code = (3 << 8) | 1
+    sim, dev = make_fast(lambda s: JobOutcome(err_code=code, total_cyc=3))
+    dev.load_net(Pkg())
+    with pytest.raises(D.GosJobError) as e:
+        dev.infer(np.zeros(32, np.int8))
+    assert e.value.err_code == code
+    sim2, dev2 = make_fast()
+    dev2.load_net(Pkg())
+    sim2.hang = True
+    with pytest.raises(D.GosTimeout):
+        dev2.infer(np.zeros(32, np.int8), timeout_s=0.02)
+
+
+@pytest.mark.parametrize("store", D.FAST_STORES)
+def test_check_fast_path_passes_and_detects_bad_window(store):
+    sim, dev = make_fast(fast_store=store)
+    chk = dev.check_fast_path()
+    assert chk["act0_words_checked"] == 3 * D.MEMS["ACT0"][1] // 4 and chk["fast_store"] == store
+
+    class Lossy(FastFakeBackend):              # a window that drops the top byte of every store
+        def fast_windows(self):
+            fw = super().fast_windows()
+            real = fw.act0
+
+            class View(np.ndarray):
+                def __setitem__(self, k, v):
+                    real[k] = np.asarray(v, dtype=np.uint32) & np.uint32(0x00FF_FFFF)
+            fw.act0 = real.view(View)
+            return fw
+    bad = D.GosDevice(Lossy(SimDevice(ok_job())), host_path="fast", fast_store=store)
+    with pytest.raises(D.GosError, match="per-word readback"):
+        bad.check_fast_path()
+    with pytest.raises(D.GosError):
+        make()[1].check_fast_path()             # safe device: no fast path to check
+
+
+def test_fast_windows_from_numpy_and_devmem(tmp_path):
+    csr = np.zeros(1024, np.uint32)
+    act = np.zeros(8, np.uint32)
+    fw = D.FastWindows.from_arrays(csr, act)
+    fw.csr_wr(1, 0xDEAD_BEEF)
+    assert csr[1] == 0xDEAD_BEEF and fw.csr_rd(1) == 0xDEAD_BEEF and type(fw.csr_rd(1)) is int
+    with pytest.raises(D.GosError):
+        D.FastWindows.from_arrays(np.zeros(4, np.uint64), act)
+    f = tmp_path / "mem"
+    f.write_bytes(bytes(8192))
+    w = D.DevMemWindow(4096, 4096, path=str(f))         # same mmap code as /dev/mem, on a file
+    w.write(8, 0x1234_5678)
+    assert w.read(8) == 0x1234_5678 and w.array.dtype == np.uint32 and w.array.size == 1024
+    w._mm.flush()
+    assert f.read_bytes()[4096 + 8:4096 + 12] == (0x1234_5678).to_bytes(4, "little")
+
+
+@pytest.mark.parametrize("fast", [False, True])
+def test_control_step_never_starts_the_core(fast):
+    sim, dev = make_fast() if fast else make()
+    dev.load_net(Pkg())
+    dev.infer(np.zeros(32, np.int8))                    # previous job: done is set
+    jobs = sim.jobs
+    logits, tc, polls = dev.control_step(np.ones(32, np.int8), spin_ns=200_000)
+    assert sim.jobs == jobs and tc == 0 and polls >= 1  # no start, counters cleared
+    assert logits.tolist() == [0, 0, 0]                 # LOGIT cleared by the soft_reset
+    assert np.array_equal(sim.mems["ACT0"].array[:8], np.ones(32, np.int8).view(np.uint32))
+    r = dev.infer(np.zeros(32, np.int8))                # normal job afterwards
+    assert r.logits.tolist() == [-5, 7, 2**31 - 1] and not r.cleared
+
+
+def test_control_step_refuses_a_running_job():
+    sim, dev = make()
+    dev.load_net(Pkg())
+    sim.hang = True
+    with pytest.raises(D.GosTimeout):
+        dev.infer(np.zeros(32, np.int8), timeout_s=0.01)
+    with pytest.raises(D.GosError):                     # busy core: STATUS != 0
+        dev.control_step(np.zeros(32, np.int8), spin_ns=1000)
+
+
+def test_mock_mmio_backend_bit_exact_both_paths():
+    data = bc.DEFAULT_DATA_DIR
+    if not (data / "lenet5" / "MANIFEST.json").is_file():
+        pytest.skip("data package not built")
+    import mock_mmio as MM
+    be = MM.MockMmioBackend(data, busy_polls=2)
+    assert be.source == bc.SOURCE_DRYRUN
+    devs = [D.GosDevice(be), D.GosDevice(be, host_path="fast"),
+            D.GosDevice(be, host_path="fast", fast_store="words32")]
+    devs[1].check_fast_path()
+    for net in bc.NETS:
+        pkg = bc.load_package(data, net)
+        for dev in devs:
+            dev.load_net(pkg)
+            for i in (0, 7):
+                r = dev.infer(pkg.x_act[i])
+                assert np.array_equal(r.logits, pkg.golden_logits[i])
+                assert r.total_cyc == pkg.model_cycles["total"]["cycles"] and r.polls == 3
+        bad = pkg.x_act[0].copy()
+        bad[0] ^= 1                                      # an input that is not in the package
+        with pytest.raises(D.GosJobError):
+            devs[1].infer(bad)
+        devs[1].recover()
+    assert be.emulation_cost_ns(reps=10)["median_ns"] > 0
+
+
+def test_model_backend_fast_path_bit_exact_if_available():
+    data = bc.DEFAULT_DATA_DIR
+    if not (data / "lenet5" / "MANIFEST.json").is_file():
+        pytest.skip("data package not built")
+    pytest.importorskip("gos_model_backend")
+    dev = D.GosDevice(D.ModelBackend(clock_mhz=200.0), host_path="fast")
+    dev.check_fast_path()
+    pkg = bc.load_package(data, "cifar10")
+    dev.load_net(pkg)
+    r = dev.infer(pkg.x_act[3])
+    assert np.array_equal(r.logits, pkg.golden_logits[3])
+    assert r.layer_cyc == [L["cycles"] for L in pkg.model_cycles["layers"]]

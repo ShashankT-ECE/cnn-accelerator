@@ -380,15 +380,20 @@ def test_session3_meter_cross_check_optional(env):
 def test_power_step_estimates_realistic(env):
     steps = {s.id: s for s in RS.build_steps(hw_cfg(env), [3])}
     est, src = RS.estimate(steps["s3.B1.lenet5"], {"timing": {}}, "pynq")
-    # 3 repeats x 4 phases x 60 s + final idle 60 s = 780 s, + setup 60 s + step overhead 30 s
-    assert est == pytest.approx(13 * 60 + RS.B1_POWER_OVERHEAD_S + RS.STEP_OVERHEAD_S)
-    assert 13 * 60 < est < 16 * 60
+    # 3 repeats x 6 phases (idle/accel/idle/control/idle/cpu) x 60 s + final idle 60 s = 1140 s,
+    # + setup 60 s + step overhead 30 s
+    assert est == pytest.approx(19 * 60 + RS.B1_POWER_OVERHEAD_S + RS.STEP_OVERHEAD_S)
+    assert 19 * 60 < est < 22 * 60
+    nc = {s.id: s for s in RS.build_steps(hw_cfg(env), [3], power_control=False)}
+    assert "--no-control" in nc["s3.B1.lenet5"].argv
+    assert RS.estimate(nc["s3.B1.lenet5"], {"timing": {}}, "pynq")[0] == pytest.approx(
+        13 * 60 + RS.B1_POWER_OVERHEAD_S + RS.STEP_OVERHEAD_S)
     est2, _ = RS.estimate(steps["s3.B2"], {"timing": {}}, "pynq")
     per_clock = 3 * 3 * 60 + RS.B2_PER_CLOCK_OVERHEAD_S
     assert est2 == pytest.approx(3 * per_clock + 300 * RS.DEFAULT_RATE_S["pynq"] + RS.STEP_OVERHEAD_S)
     q = {s.id: s for s in RS.build_steps(hw_cfg(env), [3], window_s=30.0, power_repeats=1)}
     assert RS.estimate(q["s3.B1.cifar10"], {"timing": {}}, "pynq")[0] == pytest.approx(
-        5 * 30 + RS.B1_POWER_OVERHEAD_S + RS.STEP_OVERHEAD_S)
+        7 * 30 + RS.B1_POWER_OVERHEAD_S + RS.STEP_OVERHEAD_S)
 
 
 def test_budget_defers_power_steps(env):
@@ -423,3 +428,55 @@ def test_model_output_refused_outside_dryrun(tmp_path):
 
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-q"]))
+
+
+# ---- host path / fast-path bring-up ----------------------------------------------------------
+def test_host_path_steps(env):
+    cfg = hw_cfg(env)
+    st = {s.id: s for s in RS.build_steps(cfg, [1, 2, 3])}
+    f = st["s1.fast"]
+    assert not f.required and f.argv[f.argv.index("--host-path") + 1] == "fast"
+    assert st["s2.B3"].argv[st["s2.B3"].argv.index("--host-path") + 1] == "safe"
+    b3f = st["s2.B3fast"]
+    assert b3f.requires == ("s1.fast",) and not b3f.required
+    assert b3f.expect == ("hw_b3_breakdown_fast.csv",)
+    for sid in ("s2.A1", "s2.A2A3", "s2.A4", "s3.B1.lenet5", "s3.B1.cifar10", "s3.B2"):
+        a = st[sid].argv
+        assert a[a.index("--host-path") + 1] == "safe" and st[sid].requires == (), sid
+    st = {s.id: s for s in RS.build_steps(cfg, [2, 3], host_path="fast", fast_store="words32")}
+    for sid in ("s2.A1", "s2.A2A3", "s2.A4", "s3.B1.lenet5", "s3.B1.cifar10", "s3.B2"):
+        a = st[sid].argv
+        assert a[a.index("--host-path") + 1] == "fast" and st[sid].requires == ("s1.fast",), sid
+        assert a[a.index("--fast-store") + 1] == "words32"
+    assert st["s2.B3"].argv[st["s2.B3"].argv.index("--host-path") + 1] == "safe"
+
+
+def _req_hook(env, fast_rc):
+    script = env["tmp"] / "fake_step.py"
+    script.write_text(FAKE_STEP)
+    counter, ctl = env["tmp"] / "counter.txt", env["tmp"] / "ctl.json"
+    ctl.write_text(json.dumps({"fast": {"rc": fast_rc}}))
+
+    def hook(steps, cfg):
+        mk = lambda sid, n, **kw: RS.Step(sid, int(sid[1]), n, [str(script), n, str(counter), str(ctl)],  # noqa: E731
+                                          expect=(f"hw_{n}.csv",), **kw)
+        return [mk("s1.fast", "fast", required=False),
+                mk("s2.main", "main", requires=("s1.fast",)),
+                mk("s2.info", "info", required=False, requires=("s1.fast",))]
+    return hook, counter
+
+
+def test_fast_path_steps_blocked_until_bringup_passes(env):
+    hook, counter = _req_hook(env, fast_rc=1)
+    argv = ["1,2", "--backend", "model", "--bit", str(env["bit"]), "--data-dir", str(env["data"]),
+            "--results-dir", str(env["rd"]), "--min-free-mb", "1"]
+    kw = dict(open_backend=lambda cfg: FakeBE(),
+              verify_data=lambda d: json.loads((Path(d) / "MANIFEST.json").read_text()))
+    rc = RS.main(argv, steps_hook=hook, **kw)
+    assert rc == 1 and runs(counter) == ["fast"]             # main + info never ran
+    st = state(env)
+    assert st["steps"]["s2.main"]["status"] == "blocked"
+    assert st["steps"]["s2.info"]["status"] == "blocked"
+    hook, counter = _req_hook(env, fast_rc=0)                # bring-up passes -> both run
+    rc = RS.main(argv, steps_hook=hook, **kw)
+    assert rc == 0 and runs(counter)[-3:] == ["fast", "main", "info"]

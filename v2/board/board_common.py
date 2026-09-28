@@ -223,8 +223,9 @@ def board_id_default() -> str:
 
 # ---- CLI / device ---------------------------------------------------------------------------
 def add_common_args(ap: argparse.ArgumentParser, nets: bool = True):
-    ap.add_argument("--backend", choices=("pynq", "model"), default="pynq",
-                    help="pynq = KV260 hardware (default); model = laptop dry run (dryrun_model)")
+    ap.add_argument("--backend", choices=("pynq", "model", "mock"), default="pynq",
+                    help="pynq = KV260 hardware (default); model = laptop dry run (dryrun_model); "
+                    "mock = laptop MockMMIO host-overhead backend (dryrun_model, golden logits)")
     ap.add_argument("--bit", default=None, help="<name>.bit (with .hwh beside it); default from "
                     "DEPLOY_INFO.json")
     ap.add_argument("--no-download", action="store_true",
@@ -237,6 +238,12 @@ def add_common_args(ap: argparse.ArgumentParser, nets: bool = True):
     ap.add_argument("--timeout-s", type=float, default=1.0, help="per-job STATUS poll timeout")
     ap.add_argument("--write-mode", choices=("elem", "mmio", "slice"), default="elem",
                     help="MMIO write path for memories (slice = numpy block copy, validate first)")
+    ap.add_argument("--host-path", choices=("safe", "fast"), default="safe",
+                    help="safe (default) = per-word MMIO; fast = mapped numpy windows, vectorized "
+                    "input write / LOGIT read (board: only after the s1.fast bring-up check passed)")
+    ap.add_argument("--fast-store", choices=("block", "words32"), default="block",
+                    help="fast path copy style: block = one contiguous numpy copy; words32 = "
+                    "lo/hi strided copies (32-bit element stores)")
     ap.add_argument("--clock-mhz", type=float, default=None,
                     help="model backend only: nominal clock for µs conversion")
     ap.add_argument("--board-id", default=None)
@@ -262,8 +269,13 @@ def open_device(args):
             raise SystemExit(f"ERROR: {e}") from None
     else:
         clk = args.clock_mhz or info.get("bit_clock_mhz") or 200.0
-        be = D.ModelBackend(clock_mhz=float(clk))
-    dev = D.GosDevice(be, timeout_s=args.timeout_s, write_mode=args.write_mode)
+        if args.backend == "mock":
+            be = D.MockMmioBackend(args.data_dir, clock_mhz=float(clk))
+        else:
+            be = D.ModelBackend(clock_mhz=float(clk))
+    dev = D.GosDevice(be, timeout_s=args.timeout_s, write_mode=args.write_mode,
+                      host_path=getattr(args, "host_path", "safe"),
+                      fast_store=getattr(args, "fast_store", "block"))
     return dev, be
 
 
@@ -354,6 +366,7 @@ class RunContext:
         return p
 
     def banner(self):
+        print(f"[{self.script}] host path: {self.dev.host_path_desc}")
         print(f"[{self.script}] backend={self.be.kind} source={self.source} "
               f"VERSION=0x{self.dev.version:08X} BUILD_ID={self.dev.build_id_hex} "
               f"clock={self.dev.fclk0_mhz():.3f} MHz ({self.clock_source}) "

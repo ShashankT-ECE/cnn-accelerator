@@ -144,7 +144,7 @@ def main(argv=None) -> int:
                 ctx, a.net, None, accel_fn=pl.gos_workload(dev, pkg), sensor=ina,
                 phase_s=a.window_s, repeats=a.power_repeats, rate_hz=a.rate_hz,
                 prefix=pl.PREFIX_B2, tag=f"_{a.net}_{pl.clock_tag(req)}", clock_mhz=actual,
-                accel_label=f"GosDevice.infer {a.net} (counters not read) @ {actual:.6f} MHz",
+                accel_label=f"GosDevice.infer {a.net} + TOTAL_CYC read + PS dequant ({dev.host_path_desc}) @ {actual:.6f} MHz",
                 label=f"B2 {req:g}MHz")
             mean = next(x for x in res["summary"] if x["row_kind"] == "mean")
             std = next(x for x in res["summary"] if x["row_kind"] == "std")

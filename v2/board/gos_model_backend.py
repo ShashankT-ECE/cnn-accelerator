@@ -23,7 +23,7 @@ from pathlib import Path
 import numpy as np
 
 import gos_driver as D
-from gos_sim import JobOutcome, SimDevice
+from gos_sim import JobOutcome, SimCsrArray, SimDevice
 
 _BOARD = Path(__file__).resolve().parent
 for _p in (_BOARD.parent / "model", _BOARD / "model"):
@@ -111,3 +111,11 @@ class ModelBackend(D.MmioBackend):
 
     def info(self) -> dict:
         return {"backend": self.kind, "note": "gos_golden + gos_cycle_model behind gos_sim"}
+
+    def fast_windows(self) -> D.FastWindows:
+        """Fast host path on the simulated register map: ACT0 = the SimMem numpy array (a real
+        numpy window, like pynq MMIO.array); CSR through SimCsrArray (semantics kept, cost not
+        representative)."""
+        ca = SimCsrArray(self.sim.csr)
+        return D.FastWindows(ca, ca.rd, ca.wr, self.sim.mems["ACT0"].array,
+                             note="gos_sim: ACT0 numpy array, CSR via SimCsrArray (dry run)")

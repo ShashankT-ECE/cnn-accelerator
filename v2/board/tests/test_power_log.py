@@ -362,3 +362,127 @@ def test_b2_reduced_protocol_per_clock(dry_ctx):
     assert mean["accel_dp_w"] == 0.5
     rows = read_csv(res["files"]["phases"])
     assert all(r["clock_mhz"] == "149.999000" for r in rows)
+
+
+# ---- control phase + energy two ways ----------------------------------------------------------
+def test_schedule_with_control_and_phase_counts():
+    d = {k: 1.0 for k in pl.PHASE_KINDS}
+    sch = pl.build_schedule(2, d, with_cpu=True, with_control=True)
+    assert [p["phase"] for p in sch] == ["idle_pre", "accel", "idle_mid", "control", "idle_ctl",
+                                         "cpu"] * 2 + ["idle_post"]
+    assert len(sch) == pl.n_phases(2, True, True) == 13
+    sch = pl.build_schedule(1, d, with_cpu=False, with_control=True)
+    assert [p["phase"] for p in sch] == ["idle_pre", "accel", "idle_mid", "control", "idle_post"]
+    assert pl.n_phases(3, True, False) == 13 and pl.n_phases(3, False, False) == 9
+    assert pl.n_phases(3, True, True) == 19
+    assert pl.phase_kind("control") == "control" and pl.phase_kind("idle_ctl") == "idle"
+
+
+def test_summarize_energy_two_ways_exact():
+    ph = [dict(repeat=1, phase="idle_pre", kind="idle", mean_w=1.0, duration_s=60.0, images=0),
+          dict(repeat=1, phase="accel", kind="accel", mean_w=1.5, duration_s=60.0, images=12000,
+               total_cyc_median=4000),
+          dict(repeat=1, phase="idle_mid", kind="idle", mean_w=1.0, duration_s=60.0, images=0),
+          dict(repeat=1, phase="control", kind="control", mean_w=1.125, duration_s=60.0, images=12000),
+          dict(repeat=1, phase="idle_ctl", kind="idle", mean_w=1.0, duration_s=60.0, images=0),
+          dict(repeat=1, phase="cpu", kind="cpu", mean_w=2.0, duration_s=60.0, images=600),
+          dict(repeat=1, phase="idle_post", kind="idle", mean_w=1.0, duration_s=60.0, images=0)]
+    r = pl.summarize(ph, 1, clock_mhz=200.0)[0]
+    # time/image 5 ms; t_PL = 4000 / 200 MHz = 20 us; dP 0.5 W; dP_control 0.125 W
+    assert r["accel_time_per_image_s"] == 0.005 and r["accel_dp_w"] == 0.5
+    assert r["accel_e_sys_mj"] == pytest.approx(2.5, rel=1e-12)
+    assert r["accel_t_pl_s"] == pytest.approx(20e-6, rel=1e-12)
+    assert r["accel_e_comp_mj"] == pytest.approx(0.5 * 20e-6 * 1e3, rel=1e-12)
+    assert r["accel_duty"] == pytest.approx(20e-6 / 0.005, rel=1e-12)
+    assert r["control_dp_w"] == 0.125 and r["control_p_idle_ref"] == "idle_mid#1+idle_ctl#1"
+    assert r["cpu_p_idle_ref"] == "idle_ctl#1+idle_post#1"
+    assert r["accel_dp_net_w"] == 0.375
+    assert r["accel_e_sys_net_mj"] == pytest.approx(0.375 * 0.005 * 1e3, rel=1e-12)
+    assert r["accel_e_comp_net_mj"] == pytest.approx(0.375 * 20e-6 * 1e3, rel=1e-12)
+    r0 = pl.summarize(ph, 1, clock_mhz=None)[0]              # no clock: E_comp unknown, not guessed
+    assert math.isnan(r0["accel_e_comp_mj"]) and math.isnan(r0["accel_duty"])
+
+
+class FakeDev:
+    """Just enough GosDevice for the workloads: infer / read64 / control_step with a job counter."""
+    host_path = "fast"
+    host_path_desc = "fast (test)"
+
+    def __init__(self):
+        self.jobs = 0
+        self.controls = []
+
+    def load_net(self, pkg):
+        pass
+
+    def infer(self, x, read_counters=False):
+        import numpy as np
+        self.jobs += 1
+        time.sleep(0.001)
+        return type("R", (), {"logits": np.zeros(3, np.int32), "t_run_ns": 1_000_000})()
+
+    def read64(self, off):
+        return 200_000
+
+    def control_step(self, x, spin_ns):
+        import numpy as np
+        self.controls.append(spin_ns)
+        time.sleep(spin_ns / 1e9)
+        return np.zeros(3, np.int32), 0, 5
+
+    def fclk0_mhz(self):
+        return 200.0
+
+
+class FakePkg:
+    def __init__(self):
+        import numpy as np
+        self.x_act = np.zeros((4, 8), np.int8)
+        self.dequant = {"S_a": 1.0, "S_w": [1.0, 1.0, 1.0]}
+
+
+def test_accel_and_control_workloads_pacing():
+    dev = FakeDev()
+    acc = pl.AccelWorkload(dev, FakePkg(), warmup=3)
+    assert acc.pace_ns == 1_000_000 and dev.jobs == 3
+    out = acc(time.monotonic() + 0.05)
+    assert out["images"] > 5 and out["total_cyc_median"] == 200_000 == out["total_cyc_max"]
+    ctl = pl.ControlWorkload(dev, FakePkg(), acc)
+    jobs = dev.jobs
+    c = ctl(time.monotonic() + 0.05)
+    assert dev.jobs == jobs                                   # control never starts a job
+    assert c["images"] > 5 and set(dev.controls) == {1_000_000} and c["pace_us"] == 1000.0
+
+
+def test_protocol_with_control_end_to_end(dry_ctx):
+    dev = FakeDev()
+    dry_ctx.dev = dev
+    acc = pl.AccelWorkload(dev, FakePkg(), warmup=2)
+    res = pl.run_power_protocol(dry_ctx, "lenet5", counting(200), accel_fn=acc,
+                                sensor=pl.MockSensor({"idle": 2.0, "accel": 2.5, "control": 2.125,
+                                                      "cpu": 3.0}),
+                                phase_s=0.15, repeats=2, rate_hz=100, clock_mhz=200.0, control=True)
+    phases = [p["phase"] for p in res["phases"]]
+    assert phases == ["idle_pre", "accel", "idle_mid", "control", "idle_ctl", "cpu"] * 2 + ["idle_post"]
+    for s in (x for x in res["summary"] if x["row_kind"] == "repeat"):
+        assert s["control_dp_w"] == 0.125 and s["accel_dp_w"] == 0.5
+        assert s["accel_dp_net_w"] == 0.375
+        assert s["accel_t_pl_s"] == pytest.approx(200_000 / 200e6)
+        assert s["accel_e_comp_mj"] == pytest.approx(0.5 * 1e-3 * 1e3)
+        assert s["accel_duty"] == pytest.approx(1e-3 / s["accel_time_per_image_s"])
+    summ = read_csv(res["files"]["summary"])
+    for c in ("accel_e_sys_mj", "accel_e_comp_mj", "accel_duty", "accel_dp_net_w",
+              "accel_e_comp_net_mj", "control_dp_w", "energy_rule", "control_workload"):
+        assert summ[0][c], c
+    assert summ[0]["host_path"] == "fast" and "NOT started" in summ[0]["control_workload"]
+    ph = read_csv(res["files"]["phases"])
+    ctl = [r for r in ph if r["phase"] == "control"]
+    assert ctl and all(r["pace_us"] and r["host_path"] == "fast" for r in ctl)
+    acc_rows = [r for r in ph if r["phase"] == "accel"]
+    assert all(r["total_cyc_median"] == "200000" for r in acc_rows)
+
+
+def test_control_requires_accel_workload(dry_ctx):
+    with pytest.raises(ValueError):
+        pl.run_power_protocol(dry_ctx, "lenet5", None, accel_fn=counting(10), sensor=pl.MockSensor(),
+                              phase_s=0.05, repeats=1, control=True)
