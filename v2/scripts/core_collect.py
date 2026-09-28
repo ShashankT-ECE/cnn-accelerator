@@ -92,7 +92,9 @@ def main() -> int:
                    "pred_rtl": pred, "pred_golden": gold, "pred_match": pred == gold, "label": label,
                    "model_total": int(r["model_total"]), "rtl_total": int(r["rtl_total"]),
                    "err": int(r["rtl_total"]) - int(r["model_total"]), "cycles_ok": r["cycles_ok"] == "1",
-                   "rtl_layer_cycles": r["layer_cycles"], "model_layer_cycles": r["model_layer_cycles"],
+                   # the TB prints 5 LAYER_CYC fields (0-padded for 4-layer nets); keep the net's layers only
+                   "rtl_layer_cycles": ",".join(r["layer_cycles"].split(",")[:len(G.layers)]),
+                   "model_layer_cycles": ",".join(r["model_layer_cycles"].split(",")[:len(G.layers)]),
                    "mac": int(r["mac"]), "stall": int(r["stall"])}
             ok &= row["logits_match"] and row["pred_match"] and row["cycles_ok"] and row["err"] == 0
             nrows.append(row)
