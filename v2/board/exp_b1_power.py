@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""B1 power windows: idle / fpga / cpu, for the inline 12 V meter (board-level input power).
+"""B1 OPTIONAL cross-check: idle / fpga / cpu windows for an external inline 12 V meter.
+
+PRIMARY B1/B2 power is the on-board INA260 SOM-rail logger `power_log.py` (label "SOM-rail power
+(INA260)"). This script only produces timestamped windows for the optional external meter
+(label "board input power (external meter, cross-check)"); run_sessions.py schedules it only with
+--with-meter.
 
     sudo -E python3 exp_b1_power.py --modes idle fpga cpu [--net lenet5] [--window-s 60]
                                     [--gap-s 10] [--cpu-kind cpu_int8_ref] [--cpu-threads 1]
@@ -19,7 +24,8 @@ platformstats reads) or, if absent, the `platformstats` CLI; else recorded as "u
 LABELS: the meter measures BOARD-LEVEL INPUT POWER; the INA260 value is SOM power as reported by
 the sensor. Neither is accelerator power. Energy/inference = delta-P x time is computed later
 from the meter log joined on the window timestamps — never typed by hand.
-Writes hw_b1_power.csv (one row per window) and hw_b1_power_samples.csv (every sensor sample).
+Writes hw_b1_meter_windows.csv (one row per window) and hw_b1_meter_samples.csv (every on-board
+sensor sample taken during the windows; the INA260 protocol files are power_log.py's).
 """
 from __future__ import annotations
 
@@ -60,8 +66,8 @@ FIELDS = ["mode", "window_id", "cpu_kind", "cpu_threads", "start_utc", "stop_utc
           "sensor_label", "sensor_power_mean_w", "sensor_power_median_w", "sensor_power_min_w",
           "sensor_power_max_w", "sensor_samples", "meter_label"]
 SAMPLE_FIELDS = ["mode", "window_id", "t_epoch", "t_rel_s", "sensor_power_w", "sensor_source"]
-METER_LABEL = "board-level input power (inline 12 V meter; manual log, joined by timestamps)"
-SENSOR_LABEL = "INA260 SOM power as reported on-board (not accelerator power, not board input)"
+METER_LABEL = "board input power (external meter, cross-check)"
+SENSOR_LABEL = "SOM-rail power (INA260)"
 
 
 # ---- on-board power sensor -------------------------------------------------------------------
@@ -227,6 +233,9 @@ def main(argv=None) -> int:
     ap.add_argument("--cpu-kind", default="cpu_int8_ref",
                     help="cpu/cpu_infer kind: cpu_int8_ref, cpu_fp32_numpy, cpu_ort_fp32, cpu_ort_int8")
     ap.add_argument("--cpu-threads", type=int, default=1)
+    ap.add_argument("--csv-suffix", default="",
+                    help="write hw_b1_meter_windows_<suffix>.csv / hw_b1_meter_samples_<suffix>.csv "
+                         "(a second B1 invocation must not overwrite the first)")
     a = ap.parse_args(argv)
     a.nets = [a.net]
     dev, be = bc.open_device(a)
@@ -236,7 +245,8 @@ def main(argv=None) -> int:
     if a.window_s < 30:
         print(f"NOTE: window {a.window_s} s < 30 s (EXPERIMENTS B1 asks for >= 30 s)")
     sensor = PowerSensor()
-    print(f"[B1] on-board sensor: {sensor.source}; meter: {METER_LABEL}")
+    print(f"[B1 meter cross-check] on-board sensor: {sensor.source}; meter: {METER_LABEL} "
+          "(primary B1 = power_log.py)")
     pkg = ctx.package(a.net)
     clk = dev.fclk0_mhz()
     rows, samples = [], []
@@ -247,8 +257,9 @@ def main(argv=None) -> int:
                             a.cpu_threads, clock_mhz=clk)
         rows.append(r)
         samples += s
-    ctx.csv("hw_b1_power.csv", rows, FIELDS)
-    ctx.csv("hw_b1_power_samples.csv", samples, SAMPLE_FIELDS)
+    suf = f"_{a.csv_suffix}" if a.csv_suffix else ""
+    ctx.csv(f"hw_b1_meter_windows{suf}.csv", rows, FIELDS)
+    ctx.csv(f"hw_b1_meter_samples{suf}.csv", samples, SAMPLE_FIELDS)
     return 0
 
 

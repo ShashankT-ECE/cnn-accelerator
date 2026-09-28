@@ -29,6 +29,12 @@ cd v2/model
 "$PY" retrain/check_r2.py          # r1 vs r2 acceptance record (reads the CSVs above)
 cd "$REPO_ROOT"
 
+# Paper analyses (v2/analysis, model only; import v2/model read-only). utilization.py
+# also renders v2/results/utilization_model.md (every number read back from the CSV).
+"$PY" v2/analysis/ablation.py          # schedule_ablation.csv (D7)
+"$PY" v2/analysis/projection_16x16.py  # projection_16x16.csv (projected, not implemented; not C1)
+"$PY" v2/analysis/utilization.py       # utilization_model.csv + v2/results/utilization_model.md (A4 model)
+
 after="$(sha256sum "${HW_NPZ[@]}")"
 if [[ "$before" != "$after" ]]; then
     echo "regen_results.sh: STOP — hw_requant.npz changed on regeneration:" >&2
@@ -44,18 +50,22 @@ import csv, glob, hashlib, json, subprocess
 head = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
 TRAINING_ARTIFACTS = {"v2/results/cifar10_retrain_log.csv"}
 REGEN = {"reference_accuracy", "requant_equivalence", "final_layer_check", "cycle_model",
-         "golden_crosscheck", "cifar10_r2_accuracy", "cifar10_r2_summary"}
+         "golden_crosscheck", "cifar10_r2_accuracy", "cifar10_r2_summary",
+         "schedule_ablation", "projection_16x16", "utilization_model"}
 # CSVs written by the RTL / Vivado result scripts (checked by v2/scripts/check_results.py
 # after those scripts run; they may still be from the previous commit at this point).
 OTHER_PRODUCERS = {"unit_tb": "run_unit_all.sh", "ooc_synth": "ooc_all.sh",
                    "rtl_cycles": "run_core.sh", "rtl_network": "run_core.sh",
                    "rtl_checker": "run_core.sh", "impl_shell": "vivado/build_shell.sh",
                    "impl_gos": "vivado/build_gos.sh + impl_collect.py",
-                   "rtl_netlist": "run_netlist_sim.sh"}
+                   "rtl_netlist": "run_netlist_sim.sh",
+                   "verification_stats": "scripts/verification_stats.py (after all RTL/Vivado producers)"}
+# Board rows (hw_*.csv, source=hw) come from v2/board (Sessions 1-3) and are checked by check_results.py.
 paths = sorted(glob.glob("v2/results/*.csv"))
-found = {p.split("/")[-1][:-4] for p in paths if p not in TRAINING_ARTIFACTS} - set(OTHER_PRODUCERS)
+found = {p.split("/")[-1][:-4] for p in paths if p not in TRAINING_ARTIFACTS
+         and not p.split("/")[-1].startswith("hw_")} - set(OTHER_PRODUCERS)
 assert found == REGEN, f"results CSVs not produced by any known script: {sorted(found - REGEN)}; missing {sorted(REGEN - found)}"
-paths = [p for p in paths if p.split("/")[-1][:-4] not in OTHER_PRODUCERS]
+paths = [p for p in paths if p.split("/")[-1][:-4] not in OTHER_PRODUCERS and not p.split("/")[-1].startswith("hw_")]
 for path in paths:
     rows = list(csv.DictReader(open(path)))
     if path in TRAINING_ARTIFACTS:
@@ -70,4 +80,4 @@ for path in paths:
     assert rows and not bad, f"{path}: {len(bad)} rows not clean/HEAD"
     print(f"  {path}: {len(rows)} rows, clean @ {head[:7]}")
 PYEOF
-echo "regen_results.sh: done. Commit v2/results/*.csv separately."
+echo "regen_results.sh: done. Commit v2/results/*.csv and *.md separately."

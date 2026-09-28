@@ -10,6 +10,7 @@ agreement between the analytical model, RTL simulation and the board.
 - Frozen architecture: [`docs/ARCH_SPEC.md`](docs/ARCH_SPEC.md)
 - Decisions and open conflicts: [`docs/DECISIONS.md`](docs/DECISIONS.md)
 - Experiment plan: [`docs/EXPERIMENTS.md`](docs/EXPERIMENTS.md)
+- Reproducing every result: [`REPRODUCE.md`](REPRODUCE.md)
 - Pre-V2 repo recon: [`docs/RECON_2026-09-24.md`](docs/RECON_2026-09-24.md)
 
 | Folder | Purpose |

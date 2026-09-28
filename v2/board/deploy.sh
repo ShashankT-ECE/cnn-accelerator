@@ -96,12 +96,14 @@ if [ "$PRINT" = 1 ]; then WHAT="PRINT-ONLY (nothing copied) — target"; else WH
 cat <<MSG
 
 $WHAT $R:~/$DEST (commit ${COMMIT:0:8}, dirty=$DIRTY, bit $(basename "$BIT") ${BIT_SHA:0:12}).
-On the board (ssh $R), cd ~/$DEST, then:
-  Session 1:  sudo -E python3 test_shell.py --bit bit/$(basename "$BIT") --expect-version 0x474F5302 --skip-scratch --max-fclk0 $MAXF
+On the board (ssh $R; tmux; source /etc/profile.d/pynq_venv.sh), cd ~/$DEST, then:
+  Pre-flight: sudo -E ./session.sh all --plan
+  Session 1:  sudo -E ./session.sh 1
+  Session 2:  sudo -E ./session.sh 2 [--budget-min N]
+  Session 3:  sudo -E ./session.sh 3            (B2 sweep capped at the closed clock; limit $MAXF MHz)
+  (rerun the same command to resume; --fresh after a redeploy with another bitstream)
+  By hand:    sudo -E python3 test_shell.py --bit bit/$(basename "$BIT") --expect-version 0x474F5302 --skip-scratch --max-fclk0 $MAXF
               sudo -E python3 test_core_smoke.py --bit bit/$(basename "$BIT") --max-fclk0 $MAXF
-  Session 2:  sudo -E ./run_all.sh 2>&1 | tee results/run_all_\$(date +%Y%m%d_%H%M%S).log
-  Session 3:  sudo -E python3 exp_b1_power.py --modes idle fpga cpu --net lenet5
-              sudo -E python3 exp_b2_clock.py --net lenet5
 Copy results back (laptop):
   rsync -av $R:$DEST/results/ $V2/results/
 MSG

@@ -21,6 +21,10 @@ from pathlib import Path
 V2 = Path(__file__).resolve().parents[1]
 EXEMPT = {"cifar10_retrain_log.csv"}
 SOURCE_PATHS = ("v2/rtl", "v2/vivado", "v2/model")
+# CSVs whose producer lives outside SOURCE_PATHS: those sources are compared too (only for these CSVs,
+# so older rows of other CSVs are not made stale by a folder that did not exist when they were produced).
+EXTRA_SOURCES = {"schedule_ablation.csv": ("v2/analysis",), "projection_16x16.csv": ("v2/analysis",),
+                 "utilization_model.csv": ("v2/analysis",)}
 
 
 def git(*args: str) -> subprocess.CompletedProcess:
@@ -34,20 +38,21 @@ a = ap.parse_args()
 commit = git("rev-parse", a.commit or "HEAD").stdout.strip()
 top = git("rev-parse", "--show-toplevel").stdout.strip()
 
-_same: dict[str, str] = {}   # row commit -> "" (same sources) | reason
+_same: dict[tuple, str] = {}   # (row commit, paths) -> "" (same sources) | reason
 
 
-def sources_differ(row_commit: str) -> str:
-    """'' if the row commit's v2/rtl, v2/vivado, v2/model equal <commit>'s, else a reason."""
-    if row_commit not in _same:
+def sources_differ(row_commit: str, paths: tuple = SOURCE_PATHS) -> str:
+    """'' if the row commit's source paths (default v2/rtl, v2/vivado, v2/model) equal <commit>'s, else a reason."""
+    key = (row_commit, paths)
+    if key not in _same:
         if not row_commit:
-            _same[row_commit] = "no git_commit"
+            _same[key] = "no git_commit"
         elif git("cat-file", "-e", f"{row_commit}^{{commit}}").returncode != 0:
-            _same[row_commit] = f"unknown commit {row_commit[:8]}"
+            _same[key] = f"unknown commit {row_commit[:8]}"
         else:
-            r = subprocess.run(["git", "-C", top, "diff", "--quiet", row_commit, commit, "--", *SOURCE_PATHS])
-            _same[row_commit] = "" if r.returncode == 0 else f"sources differ @ {row_commit[:8]}"
-    return _same[row_commit]
+            r = subprocess.run(["git", "-C", top, "diff", "--quiet", row_commit, commit, "--", *paths])
+            _same[key] = "" if r.returncode == 0 else f"sources differ @ {row_commit[:8]}"
+    return _same[key]
 
 
 ok = True
@@ -58,7 +63,8 @@ for p in sorted((V2 / "results").glob("*.csv")):
     rows = list(csv.DictReader(p.open()))
     bad = []
     for i, r in enumerate(rows):
-        why = "git_dirty" if r.get("git_dirty") != "False" else sources_differ(r.get("git_commit", ""))
+        why = "git_dirty" if r.get("git_dirty") != "False" else sources_differ(
+            r.get("git_commit", ""), SOURCE_PATHS + EXTRA_SOURCES.get(p.name, ()))
         if why:
             bad.append((i, r, why))
     commits = sorted({r.get("git_commit", "")[:7] for r in rows})
@@ -71,6 +77,7 @@ for p in sorted((V2 / "results").glob("*.csv")):
         print(f"      row {i + 2}: {why}  {ident}")
     if len(bad) > 5 and not a.verbose:
         print(f"      ... {len(bad) - 5} more (--verbose)")
-print(f"check_results: sources compared against {commit[:8]} ({', '.join(SOURCE_PATHS)})")
+print(f"check_results: sources compared against {commit[:8]} ({', '.join(SOURCE_PATHS)}; "
+      f"+v2/analysis for {', '.join(sorted(EXTRA_SOURCES))})")
 print("check_results:", "ALL CLEAN" if ok else "FAILURES (stale/dirty rows above)")
 sys.exit(0 if ok else 1)

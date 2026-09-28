@@ -429,6 +429,28 @@ def rtl_cycles_for(pkg: Package) -> dict:
     return out
 
 
+CLOCK_TOL_MHZ = 0.5          # read-back vs closed-clock tolerance (PLL rounding, e.g. 199.998001)
+B2_BASE_CLOCKS = (100.0, 150.0, 200.0)      # EXPERIMENTS.md B2
+B2_EXTRA_CLOCKS = (250.0, 300.0)            # only if the deployed bitstream closed timing there
+
+
+def b2_sweep_clocks(closed_mhz: float, tol: float = CLOCK_TOL_MHZ) -> list[float]:
+    """B2 sweep = {100, 150, 200} ∪ {250 if closed >= 250} ∪ {300 if closed >= 300}, each capped
+    at the bitstream's closed pl_clk0 (a nominal point within tol of the closed clock is requested
+    AT the closed clock, e.g. 249.997498 instead of 250; points above it are dropped)."""
+    closed = float(closed_mhz)
+    out = []
+    for c in B2_BASE_CLOCKS + B2_EXTRA_CLOCKS:
+        if c in B2_EXTRA_CLOCKS and closed < c - tol:
+            continue
+        if c > closed + tol:
+            continue
+        v = round(min(c, closed), 6)
+        if v not in out:
+            out.append(v)
+    return out
+
+
 def one(s):
     """The single value of a set, or '' (with 'varies' flagged by the caller)."""
     return next(iter(s)) if len(s) == 1 else ""

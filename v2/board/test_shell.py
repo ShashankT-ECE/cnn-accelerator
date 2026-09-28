@@ -4,6 +4,11 @@
     sudo -E python3 test_shell.py [--bit gos_shell.bit] [--expect-version 0x474F5300]
                                   [--seed 1] [--skip-scratch] [--mems ACT0,ACT1,WGT,QPARAM]
                                   [--set-fclk0 MHZ]
+    python3 test_shell.py --backend model --expect-version 0x474F5302 --skip-scratch   # dry run
+
+--backend model (laptop dry run): the same register/memory accesses go to the simulated register
+map (gos_sim via gos_model_backend.ModelBackend); pl_clk0 is the nominal --clock-mhz. It checks
+the script, not the hardware ("DRY RUN" is printed).
 
 <name>.bit and <name>.hwh must sit side by side (same basename). Checks, in order:
   1. load the overlay; print pl_clk0 as configured by PYNQ (Clocks.fclk0_mhz) — PYNQ programs the
@@ -74,6 +79,27 @@ def test_mem(MMIO, name, rng):
     return True
 
 
+def _model_env(clock_mhz):
+    """(MMIO, Overlay, Clocks) look-alikes over gos_model_backend.ModelBackend (laptop only)."""
+    import gos_driver as D
+    be = D.ModelBackend(clock_mhz=clock_mhz)
+    by_base = {CSR_BASE: be.csr, **{b: be.mems[n] for n, (b, _) in MEMS.items()}}
+
+    def mmio(base, size):
+        return by_base[base]
+
+    class _Ov:
+        ip_dict = {}
+
+        def __init__(self, bit):
+            pass
+
+    class _Clocks:
+        pass
+    _Clocks.fclk0_mhz = be.fclk0_mhz()
+    return mmio, _Ov, _Clocks
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--bit", default="gos_shell.bit")
@@ -84,11 +110,17 @@ def main():
     ap.add_argument("--mems", default="ACT0,ACT1,WGT,QPARAM")
     ap.add_argument("--set-fclk0", type=float, default=None, help="set pl_clk0 (MHz) after loading")
     ap.add_argument("--max-fclk0", type=float, default=200.5)
+    ap.add_argument("--backend", choices=("pynq", "model"), default="pynq")
+    ap.add_argument("--clock-mhz", type=float, default=200.0, help="model backend: nominal pl_clk0")
     a = ap.parse_args()
     versions = a.expect_version or [0x474F5300]
 
-    from pynq import MMIO, Overlay
-    from pynq.ps import Clocks
+    if a.backend == "model":
+        MMIO, Overlay, Clocks = _model_env(a.clock_mhz)
+        print("test_shell: DRY RUN (model backend, simulated register map) - not a hardware check")
+    else:
+        from pynq import MMIO, Overlay
+        from pynq.ps import Clocks
 
     ok = True
     print(f"test_shell: loading {a.bit}")

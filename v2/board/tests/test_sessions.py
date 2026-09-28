@@ -1,0 +1,425 @@
+"""run_sessions.py: resume / interrupted rerun / budget deferral / pre-flight / B2 sweep list.
+
+No hardware and no real experiment: the orchestrator runs tiny fake step scripts (tmp_path) and
+talks to a fake backend (VERSION / BUILD_ID / pl_clk0 only). Everything writes under tmp dirs
+named 'dryrun' (the model-output rule)."""
+import hashlib
+import json
+import sys
+import textwrap
+from pathlib import Path
+
+import pytest
+
+import board_common as bc
+import run_sessions as RS
+
+BUILD = "c88e71a0"
+CLOSED = 199.998001
+
+
+# ---- fixtures ----------------------------------------------------------------------------------
+class FakeCsr:
+    def __init__(self, version, build_id):
+        self.regs = {RS.OFF_VERSION: version, RS.OFF_BUILD_ID: build_id}
+
+    def read(self, off):
+        return self.regs[off]
+
+
+class FakeBE:
+    def __init__(self, version=RS.VERSION_CORE, build_id=int(BUILD, 16), clk=CLOSED, bit_sha256=""):
+        self.csr = FakeCsr(version, build_id)
+        self.clk = clk
+        self.bit_sha256 = bit_sha256
+
+    def fclk0_mhz(self):
+        return self.clk
+
+
+def sha(p: Path) -> str:
+    return hashlib.sha256(p.read_bytes()).hexdigest()
+
+
+@pytest.fixture
+def env(tmp_path, monkeypatch):
+    """Fake build dir (bit/hwh/sha256/summary.json), data package, results dir, deploy info."""
+    build = tmp_path / "build"
+    build.mkdir()
+    bit = build / "gos_200.bit"
+    bit.write_bytes(b"fake bitstream")
+    (build / "gos_200.hwh").write_text("<hwh/>")
+    (build / "gos_200.bit.sha256").write_text(f"{sha(bit)}  gos_200.bit\n")
+    (build / "summary.json").write_text(json.dumps({
+        "build_id": BUILD, "pl_clk0_mhz_actual": CLOSED, "wns_ns": 0.29, "whs_ns": 0.01,
+        "failing_setup_endpoints": 0, "failing_hold_endpoints": 0, "vivado_version": "2023.1"}))
+    data = tmp_path / "data"
+    nets = {}
+    for net in bc.NETS:
+        (data / net).mkdir(parents=True)
+        m = data / net / "MANIFEST.json"
+        m.write_text(json.dumps({"git_dirty": False, "n_images": 10000, "net": net}))
+        nets[net] = {"manifest_sha256": sha(m)}
+    (data / "PACKAGE.json").write_text(json.dumps({"nets": nets, "git_commit": "abc",
+                                                   "git_dirty": False}))
+    rd = tmp_path / "dryrun"
+    monkeypatch.setattr(RS.bc, "deploy_info", lambda: {"commit": "abc", "dirty": False,
+                                                        "origin": "test"})
+    return {"tmp": tmp_path, "bit": bit, "data": data, "rd": rd}
+
+
+FAKE_STEP = textwrap.dedent("""
+    import json, pathlib, sys, time
+    a = sys.argv[1:]
+    out = pathlib.Path(a[a.index("--out-dir") + 1])
+    name, counter, ctl = a[0], pathlib.Path(a[1]), pathlib.Path(a[2])
+    c = json.loads(ctl.read_text()) if ctl.is_file() else {}
+    with counter.open("a") as f:
+        f.write(name + "\\n")
+    (out / f"hw_{name}.csv").write_text(f"source,x\\ndryrun_model,{name}\\n")
+    print("fake step", name, flush=True)
+    time.sleep(c.get(name, {}).get("sleep", 0))
+    sys.exit(c.get(name, {}).get("rc", 0))
+""")
+
+
+def fake_steps(env, names=("a", "b"), images=None):
+    script = env["tmp"] / "fake_step.py"
+    script.write_text(FAKE_STEP)
+    counter, ctl = env["tmp"] / "counter.txt", env["tmp"] / "ctl.json"
+    images = images or {}
+
+    def hook(steps, cfg):
+        return [RS.Step(f"s2.{n}", 2, f"fake {n}", [str(script), n, str(counter), str(ctl)],
+                        images=images.get(n, 10), expect=(f"hw_{n}.csv",)) for n in names]
+    return hook, counter, ctl
+
+
+def run(env, *args, hook=None, be=None, sessions="2"):
+    argv = [sessions, "--backend", "model", "--bit", str(env["bit"]), "--data-dir", str(env["data"]),
+            "--results-dir", str(env["rd"]), "--min-free-mb", "1", "--no-bringup-check", *args]
+    return RS.main(argv, open_backend=lambda cfg: be or FakeBE(),
+                   verify_data=lambda d: json.loads((Path(d) / "MANIFEST.json").read_text()),
+                   steps_hook=hook)
+
+
+def runs(counter: Path) -> list:
+    return counter.read_text().split() if counter.is_file() else []
+
+
+def state(env) -> dict:
+    return json.loads((env["rd"] / RS.STATE_NAME).read_text())
+
+
+# ---- resume ------------------------------------------------------------------------------------
+def test_resume_skips_verified_steps(env):
+    hook, counter, _ = fake_steps(env)
+    assert run(env, hook=hook) == 0
+    assert runs(counter) == ["a", "b"]
+    st = state(env)
+    assert st["steps"]["s2.a"]["status"] == "ok"
+    assert st["steps"]["s2.a"]["outputs"]["hw_a.csv"] == sha(env["rd"] / "hw_a.csv")
+    assert st["provenance"]["build_id_hw"] == BUILD and st["provenance"]["bit_sha256"] == sha(env["bit"])
+    assert not (env["rd"] / ".staging").exists()
+    assert run(env, hook=hook) == 0               # second run: everything verified -> skipped
+    assert runs(counter) == ["a", "b"]
+
+
+def test_tampered_output_is_rerun_and_old_file_archived(env):
+    hook, counter, _ = fake_steps(env)
+    assert run(env, hook=hook) == 0
+    (env["rd"] / "hw_b.csv").write_text("edited by hand\n")
+    assert run(env, hook=hook) == 0
+    assert runs(counter) == ["a", "b", "b"]
+    arch = list((env["rd"] / "archive").rglob("hw_b.csv"))
+    assert arch and arch[0].read_text() == "edited by hand\n"      # archived, not deleted
+    assert "dryrun_model,b" in (env["rd"] / "hw_b.csv").read_text()
+
+
+def test_timed_out_step_not_promoted_then_rerun_from_scratch(env):
+    hook, counter, ctl = fake_steps(env)
+    ctl.write_text(json.dumps({"b": {"sleep": 30}}))
+    assert run(env, "--step-timeout-min", "0.03", hook=hook) == 1
+    st = state(env)
+    assert st["steps"]["s2.a"]["status"] == "ok"
+    assert st["steps"]["s2.b"]["status"] == "timeout"
+    assert not (env["rd"] / "hw_b.csv").exists()                   # partial output not promoted
+    assert list((env["rd"] / "archive").glob("*_s2.b_timeout/hw_b.csv"))
+    ctl.write_text("{}")
+    assert run(env, hook=hook) == 0
+    assert runs(counter) == ["a", "b", "b"]                        # a skipped, b rerun
+    assert state(env)["steps"]["s2.b"]["status"] == "ok"
+
+
+def test_hard_killed_step_left_running_is_rerun(env):
+    hook, counter, _ = fake_steps(env)
+    assert run(env, hook=hook) == 0
+    st = state(env)                                  # simulate a power cut during step b
+    st["steps"]["s2.b"]["status"] = "running"
+    (env["rd"] / RS.STATE_NAME).write_text(json.dumps(st))
+    stg = env["rd"] / ".staging" / "s2.b"
+    stg.mkdir(parents=True)
+    (stg / "hw_b.csv").write_text("half written")
+    assert run(env, hook=hook) == 0
+    assert runs(counter) == ["a", "b", "b"]
+    assert any(p.read_text() == "half written" for p in (env["rd"] / "archive").rglob("hw_b.csv"))
+
+
+def test_failed_step_outputs_kept_and_rerun(env):
+    hook, counter, ctl = fake_steps(env)
+    ctl.write_text(json.dumps({"a": {"rc": 1}}))
+    assert run(env, hook=hook) == 1
+    assert state(env)["steps"]["s2.a"]["status"] == "failed"
+    assert (env["rd"] / "hw_a.csv").exists()          # a FAIL result is still data (e.g. A1 mismatch)
+    ctl.write_text("{}")
+    assert run(env, hook=hook) == 0
+    assert runs(counter) == ["a", "b", "a"]
+
+
+def test_fresh_archives_everything(env):
+    hook, counter, _ = fake_steps(env)
+    assert run(env, hook=hook) == 0
+    assert run(env, "--fresh", hook=hook) == 0
+    assert runs(counter) == ["a", "b", "a", "b"]
+    fresh = list((env["rd"] / "archive").glob("*_fresh"))
+    assert fresh and (fresh[0] / RS.STATE_NAME).is_file() and (fresh[0] / "hw_a.csv").is_file()
+    assert state(env)["timing"]["s2.a"]["duration_s"] >= 0          # durations carried over
+
+
+def test_provenance_change_refuses_resume(env):
+    hook, counter, _ = fake_steps(env)
+    assert run(env, hook=hook) == 0
+    st_before = state(env)
+    rc = run(env, hook=hook, be=FakeBE(clk=CLOSED - 0.4))            # within tol: same provenance
+    assert rc == 0
+    s = json.loads((env["bit"].parent / "summary.json").read_text())
+    s["build_id"] = "deadbeef"
+    (env["bit"].parent / "summary.json").write_text(json.dumps(s))
+    assert run(env, hook=hook, be=FakeBE(build_id=0xDEADBEEF)) == 4
+    assert state(env)["provenance"] == st_before["provenance"]
+
+
+def test_sessions_2_3_need_bringup_recorded(env):
+    hook, _, _ = fake_steps(env)
+    argv = ["2", "--backend", "model", "--bit", str(env["bit"]), "--data-dir", str(env["data"]),
+            "--results-dir", str(env["rd"]), "--min-free-mb", "1"]
+    rc = RS.main(argv, open_backend=lambda cfg: FakeBE(),
+                 verify_data=lambda d: json.loads((Path(d) / "MANIFEST.json").read_text()),
+                 steps_hook=hook)
+    assert rc == 4
+
+
+# ---- budget ------------------------------------------------------------------------------------
+def test_budget_defers_steps_that_do_not_fit(env):
+    # a: 10 images; b: 100k images x assumed 6 ms = 600 s > 1 min budget
+    hook, counter, _ = fake_steps(env, images={"b": 100000})
+    assert run(env, "--budget-min", "1", hook=hook) == 5              # incomplete
+    assert runs(counter) == ["a"]
+    st = state(env)
+    assert st["steps"]["s2.b"]["status"] == "deferred"
+    assert st["steps"]["s2.b"]["deferred_estimate_s"] > 60
+    assert run(env, "--budget-min", "30", hook=hook) == 0             # next run picks it up
+    assert runs(counter) == ["a", "b"]
+
+
+def test_estimate_uses_previous_duration_then_learned_rate():
+    st = RS.Step("s2.x", 2, "x", ["x.py"], images=1000)
+    s = {"timing": {}}
+    est, src = RS.estimate(st, s, "pynq")
+    assert src.startswith("assumed") and est == pytest.approx(1000 * RS.DEFAULT_RATE_S["pynq"] + 30)
+    s["timing"]["s2.y"] = {"backend": "pynq", "rate_s": 0.05, "params_key": "[]", "duration_s": 1}
+    est, src = RS.estimate(st, s, "pynq")
+    assert src.startswith("learned") and est == pytest.approx(1000 * 0.05 + 30)
+    s["timing"]["s2.x"] = {"backend": "pynq", "params_key": st.params_key, "duration_s": 100.0}
+    est, src = RS.estimate(st, s, "pynq")
+    assert src == "previous run" and est == pytest.approx(110.0)
+
+
+# ---- pre-flight --------------------------------------------------------------------------------
+def hw_cfg(env, **deploy):
+    bit = env["bit"]
+    info = {"origin": "DEPLOY_INFO.json", "commit": "abc", "dirty": False, "bit": str(bit),
+            "bit_sha256": sha(bit), "hwh_sha256": sha(bit.with_suffix(".hwh")), "build_id": BUILD,
+            "bit_clock_mhz": CLOSED, "data_package_sha256": sha(env["data"] / "PACKAGE.json"),
+            "data_git_dirty": False}
+    info.update(deploy)
+    return RS.Config(backend="pynq", board_dir=env["tmp"], results_dir=env["rd"],
+                     data_dir=env["data"], deploy=info, bit=bit, min_free_mb=1)
+
+
+def pf(cfg, be):
+    return RS.preflight(cfg, open_backend=lambda c: be,
+                        verify_data=lambda d: json.loads((Path(d) / "MANIFEST.json").read_text()),
+                        say=lambda m: None)
+
+
+def test_preflight_passes_on_consistent_deploy(env):
+    prov = pf(hw_cfg(env), FakeBE(bit_sha256=sha(env["bit"])))
+    assert prov["build_id_hw"] == BUILD and prov["source"] == bc.SOURCE_HW
+    assert prov["closed_clock_mhz"] == CLOSED
+
+
+@pytest.mark.parametrize("case, cfg_kw, be_kw, needle", [
+    ("wrong BUILD_ID", {}, {"build_id": 0x12345678}, "BUILD_ID register 12345678"),
+    ("wrong VERSION (shell bit)", {}, {"version": 0x474F5300}, "VERSION 0x474F5300"),
+    ("DEPLOY_INFO bit sha", {"bit_sha256": "0" * 64}, {}, "DEPLOY_INFO bit_sha256"),
+    ("clock above closed", {}, {"clk": 250.0}, "ABOVE the timing-closed clock"),
+    ("clock below closed for main runs", {}, {"clk": 150.0}, "for the main runs"),
+    ("data package sha", {"data_package_sha256": "f" * 64}, {}, "data_package_sha256"),
+    ("dirty scripts", {"dirty": True}, {}, "dirty tree"),
+    ("no DEPLOY_INFO", {"origin": "none"}, {}, "DEPLOY_INFO.json missing"),
+])
+def test_preflight_failures(env, case, cfg_kw, be_kw, needle):
+    with pytest.raises(RS.PreflightError) as e:
+        pf(hw_cfg(env, **cfg_kw), FakeBE(**be_kw))
+    assert needle in str(e.value), (case, str(e.value))
+
+
+def test_preflight_shipped_sha256_mismatch(env):
+    Path(str(env["bit"]) + ".sha256").write_text("ab" * 32 + "  gos_200.bit\n")
+    with pytest.raises(RS.PreflightError, match="shipped gos_200.bit.sha256"):
+        pf(hw_cfg(env), FakeBE())
+
+
+def test_preflight_timing_not_met(env):
+    s = json.loads((env["bit"].parent / "summary.json").read_text())
+    s["wns_ns"] = -0.1
+    (env["bit"].parent / "summary.json").write_text(json.dumps(s))
+    with pytest.raises(RS.PreflightError, match="timing met"):
+        pf(hw_cfg(env), FakeBE())
+
+
+def test_preflight_session1_allows_lower_clock_and_dirty_with_flag(env):
+    cfg = hw_cfg(env, dirty=True)
+    cfg.require_clock_equal = False
+    cfg.allow_dirty = True
+    prov = pf(cfg, FakeBE(clk=100.0))
+    assert prov["scripts_dirty"] and any("INVALID for the paper" in w for w in prov["warnings"])
+
+
+def test_preflight_failure_runs_nothing(env):
+    hook, counter, _ = fake_steps(env)
+    assert run(env, hook=hook, be=FakeBE(build_id=1)) == 3
+    assert runs(counter) == [] and not (env["rd"] / RS.STATE_NAME).exists()
+
+
+def test_dry_run_preflight_says_dry_run(env):
+    lines = []
+    cfg = RS.Config(backend="model", board_dir=env["tmp"], results_dir=env["rd"],
+                    data_dir=env["data"], deploy={"origin": "dry", "commit": "abc", "dirty": False,
+                                                   "build_id": BUILD, "bit_clock_mhz": CLOSED},
+                    bit=env["bit"], min_free_mb=1)
+    RS.preflight(cfg, open_backend=lambda c: FakeBE(), say=lines.append,
+                 verify_data=lambda d: json.loads((Path(d) / "MANIFEST.json").read_text()))
+    assert all("DRY RUN" in ln for ln in lines if "preflight" in ln)
+
+
+# ---- B2 sweep ---------------------------------------------------------------------------------
+@pytest.mark.parametrize("closed, expect", [
+    (199.998001, [100.0, 150.0, 199.998001]),
+    (249.997498, [100.0, 150.0, 200.0, 249.997498]),
+    (250.0, [100.0, 150.0, 200.0, 250.0]),
+    (240.0, [100.0, 150.0, 200.0]),
+    (299.997, [100.0, 150.0, 200.0, 250.0, 299.997]),
+    (300.0, [100.0, 150.0, 200.0, 250.0, 300.0]),
+    (150.0, [100.0, 150.0]),
+])
+def test_b2_sweep_clocks(closed, expect):
+    got = bc.b2_sweep_clocks(closed)
+    assert got == expect
+    assert max(got) <= closed
+
+
+def test_b2_step_uses_sweep_and_closed_clock(env):
+    cfg = hw_cfg(env, bit_clock_mhz=249.997498)
+    steps = {s.id: s for s in RS.build_steps(cfg, [3])}
+    argv = steps["s3.B2"].argv
+    i = argv.index("--clocks")
+    assert argv[i + 1:argv.index("--max-mhz")] == ["100.000000", "150.000000", "200.000000",
+                                                   "249.997498"]
+    assert argv[argv.index("--max-mhz") + 1] == "249.997498"
+    assert argv[argv.index("--power-repeats") + 1] == "3" and "--with-meter" not in argv
+    exp = steps["s3.B2"].expect
+    assert "hw_b2_clock.csv" in exp
+    for tag in ("100mhz", "150mhz", "200mhz", "250mhz"):
+        for k in ("samples", "phases", "summary"):
+            assert f"hw_b2_power_ina260_{k}_lenet5_{tag}.csv" in exp
+    assert "mock" not in argv                                      # hw: real sensor only
+
+
+def test_session3_power_steps_ina260_primary(env):
+    cfg = hw_cfg(env)
+    steps = RS.build_steps(cfg, [3])
+    assert [s.id for s in steps] == ["s3.B1.lenet5", "s3.B1.cifar10", "s3.B2"]   # meter off
+    for s, net in zip(steps, ("lenet5", "cifar10")):
+        a = s.argv
+        assert a[0] == RS.POWER_HOOK_SCRIPT and "--protocol" in a and "--bit" in a
+        assert a[a.index("--net") + 1] == net and a[a.index("--tag") + 1] == f"_{net}"
+        assert a[a.index("--cpu-kind") + 1] == "cpu_int8_ref"
+        assert a[a.index("--cpu-threads") + 1] == "1"
+        assert a[a.index("--repeats") + 1] == "3" and a[a.index("--phase-s") + 1] == "60"
+        assert "mock" not in a and s.out_flag == "--out-dir"
+        assert set(s.expect) == {f"hw_b1_power_ina260_{k}_{net}.csv"
+                                 for k in ("samples", "phases", "summary")}
+        assert RS.POWER_LABEL in s.title
+    dry = RS.Config(backend="model", board_dir=env["tmp"], results_dir=env["rd"],
+                    data_dir=env["data"], deploy={"bit_clock_mhz": CLOSED}, bit=env["bit"])
+    for s in RS.build_steps(dry, [3], window_s=2.0):
+        assert s.argv[s.argv.index("--sensor") + 1] == "mock"
+
+
+def test_session3_meter_cross_check_optional(env):
+    steps = {s.id: s for s in RS.build_steps(hw_cfg(env), [3], with_meter=True)}
+    assert {"s3.B1meter", "s3.B1meter_cpu4"} <= set(steps)
+    assert "--csv-suffix" in steps["s3.B1meter_cpu4"].argv         # never overwrites the first set
+    assert steps["s3.B1meter"].expect == ("hw_b1_meter_windows.csv",)
+    assert "board input power (external meter, cross-check)" in steps["s3.B1meter"].title
+    assert "--with-meter" in steps["s3.B2"].argv
+
+
+def test_power_step_estimates_realistic(env):
+    steps = {s.id: s for s in RS.build_steps(hw_cfg(env), [3])}
+    est, src = RS.estimate(steps["s3.B1.lenet5"], {"timing": {}}, "pynq")
+    # 3 repeats x 4 phases x 60 s + final idle 60 s = 780 s, + setup 60 s + step overhead 30 s
+    assert est == pytest.approx(13 * 60 + RS.B1_POWER_OVERHEAD_S + RS.STEP_OVERHEAD_S)
+    assert 13 * 60 < est < 16 * 60
+    est2, _ = RS.estimate(steps["s3.B2"], {"timing": {}}, "pynq")
+    per_clock = 3 * 3 * 60 + RS.B2_PER_CLOCK_OVERHEAD_S
+    assert est2 == pytest.approx(3 * per_clock + 300 * RS.DEFAULT_RATE_S["pynq"] + RS.STEP_OVERHEAD_S)
+    q = {s.id: s for s in RS.build_steps(hw_cfg(env), [3], window_s=30.0, power_repeats=1)}
+    assert RS.estimate(q["s3.B1.cifar10"], {"timing": {}}, "pynq")[0] == pytest.approx(
+        5 * 30 + RS.B1_POWER_OVERHEAD_S + RS.STEP_OVERHEAD_S)
+
+
+def test_budget_defers_power_steps(env):
+    counter = env["tmp"] / "never.txt"
+
+    def hook(steps, cfg):   # the real Session 3 steps, but pointed at a script that must not run
+        for s in steps:
+            s.argv = [str(env["tmp"] / "must_not_run.py"), *s.argv[1:]]
+        return steps
+    (env["tmp"] / "must_not_run.py").write_text(f"open({str(counter)!r}, 'a').write('ran')\n")
+    rc = run(env, "--budget-min", "10", "--window-s", "60", hook=hook, sessions="3")
+    assert rc == 5 and not counter.exists()
+    st = state(env)
+    for sid in ("s3.B1.lenet5", "s3.B1.cifar10", "s3.B2"):
+        assert st["steps"][sid]["status"] == "deferred"
+        assert st["steps"][sid]["deferred_estimate_s"] > 600
+
+
+def test_power_constants_match_power_log():
+    import power_log as pl
+    import exp_b1_power as b1
+    assert RS.POWER_LABEL == pl.LABEL == b1.SENSOR_LABEL
+    assert RS.METER_LABEL == b1.METER_LABEL
+    for c in (100.0, 150.0, 199.998001, 249.997498, 299.997):
+        assert RS.clock_tag(c) == pl.clock_tag(c)
+
+
+def test_model_output_refused_outside_dryrun(tmp_path):
+    with pytest.raises(SystemExit):
+        RS.main(["1", "--backend", "model", "--results-dir", str(tmp_path / "results")])
+
+
+if __name__ == "__main__":
+    sys.exit(pytest.main([__file__, "-q"]))

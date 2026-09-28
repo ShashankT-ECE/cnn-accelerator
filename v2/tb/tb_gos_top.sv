@@ -118,7 +118,7 @@ module tb_gos_top;
   endtask
 
   task automatic run_net(input string net, input int nl, input int img);
-    int in_end, lim;
+    int in_end, lim, lbad;
     logic [31:0] exp_logit [0:15];
     logic [31:0] exp_cyc [0:15];
     logic [63:0] tot, mac, stl;
@@ -133,8 +133,10 @@ module tb_gos_top;
     do begin axi_rd(12'h004, rv, rr); lim--; end while (rv[0] && lim > 0);
     chk(rv[2:0] == 3'b010, $sformatf("%s STATUS after run = %b", net, rv[2:0]));
     $readmemh($sformatf("%s/%s/net/img%0d/logit16.hex", vec, net, img), exp_logit);
+    lbad = 0;
     for (int i = 0; i < 16; i++) begin
       axi_rd(12'h080 + 4 * i, rv, rr);
+      if (!(rv == exp_logit[i] && rr == 2'b00)) lbad++;
       chk(rv == exp_logit[i] && rr == 2'b00, $sformatf("%s LOGIT[%0d] %h exp %h", net, i, rv, exp_logit[i]));
     end
     $readmemh($sformatf("%s/%s/net/expect_cyc.hex", vec, net), exp_cyc);
@@ -150,7 +152,7 @@ module tb_gos_top;
     chk(stl == 0, $sformatf("%s STALL %0d", net, stl));
     axi_rd(12'h00C, rv, rr); chk(rv == 0, $sformatf("%s ERR_CODE %h", net, rv));
     axi_rd(12'h028, rv, rr); chk(rv == 0, $sformatf("%s PS_BUSY_VIOLATION %h", net, rv));
-    $display("RESULT kind=top net=%s img=%0d total=%0d model_total=%0d", net, img, tot, exp_cyc[nl]);
+    $display("RESULT kind=top net=%s img=%0d logits_ok=%0d total=%0d model_total=%0d", net, img, lbad == 0, tot, exp_cyc[nl]);
   endtask
 
   initial begin

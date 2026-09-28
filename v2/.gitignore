@@ -8,4 +8,8 @@ xsim.dir/
 .Xil/
 vivado/out/
 results/dryrun/
+# Board session runner bookkeeping copied back from the KV260 (not paper data; logs kept on disk)
+results/archive/
+results/logs/
+results/.staging/
 board/data/
