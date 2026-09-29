@@ -195,10 +195,14 @@ fi
 run_set "$SIM" "$RUN" "$IPS" "$LIMIT" "$FORCE" "${NETS[@]}"
 
 # ---------------------------------------------------------------- 5. collect
-CSV="$RUN/rtl_full10k.csv"
-if [[ "$DIRTY" == False && $LIMIT -eq 10000 ]]; then CSV="$V2/results/rtl_full10k.csv"; fi
+CSV="$RUN/rtl_full10k.csv"; ARCH=()
+if [[ "$DIRTY" == False && $LIMIT -eq 10000 ]]; then
+    CSV="$V2/results/rtl_full10k.csv"
+    # compressed text logs of this run (sha256 recorded in the CSV); earlier archives stay as a record
+    ARCH=(--archive "$V2/results/rtl_full10k_logs_$(basename "$(dirname "$RUN")").tar.xz")
+fi
 "$PY" "$FS/collect_full10k.py" collect --run-dir "$RUN" --data-dir "$DATA" --nets "${NETS[@]}" \
-    --csv "$CSV" --shard-csv "$RUN/shards.csv"
+    --csv "$CSV" --shard-csv "$RUN/shards.csv" "${ARCH[@]}"
 rc=$?
 echo "run_full10k.sh: $([[ $rc -eq 0 ]] && echo ALL EXACT || echo FAILURES) ($(( $(date +%s) - T_START )) s this invocation)"
 exit $rc

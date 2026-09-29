@@ -22,6 +22,10 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
+import io
+import lzma
+import tarfile
 import json
 import re
 import sys
@@ -37,7 +41,45 @@ N_LOGITS = 16
 FIELDS = ["images", "images_expected", "logits_bitexact", "pred_match", "cycles_exact",
           "all_exact", "first_mismatch_img", "n_mismatch", "rtl_correct", "golden_correct",
           "simulator", "simulator_version", "shards", "shards_complete", "wall_s",
-          "shard_seconds_sum", "model_total_cyc", "data_commit", "run_dir", "all_ok"]
+          "shard_seconds_sum", "model_total_cyc", "data_commit", "run_dir", "all_ok",
+          "logs_archive", "logs_archive_sha256", "record_archives"]
+
+# Text logs kept in the archive (compiled simulator objects under build/obj are excluded).
+ARCHIVE_SUFFIXES = (".log", ".txt", ".csv", ".json")
+ARCHIVE_NAMES = ("status", "BUILD_OK")
+
+
+def archive_members(run_dir: Path) -> list[Path]:
+    """Every text log of a run directory (shard run.log/status, plan, shards.csv, xval, build logs)."""
+    out = []
+    for f in sorted(run_dir.rglob("*")):
+        if not f.is_file() or "obj" in f.relative_to(run_dir).parts:
+            continue
+        if f.suffix in ARCHIVE_SUFFIXES or f.name in ARCHIVE_NAMES:
+            out.append(f)
+    return out
+
+
+def write_archive(run_dir: Path, out: Path) -> str:
+    """Deterministic .tar.xz of the run's text logs (sorted names, fixed mtime/owner); returns sha256."""
+    run_dir, out = Path(run_dir), Path(out)
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w", format=tarfile.PAX_FORMAT) as tf:
+        for f in archive_members(run_dir):
+            data = f.read_bytes()
+            ti = tarfile.TarInfo(f"{run_dir.parent.name}/{run_dir.name}/{f.relative_to(run_dir)}")
+            ti.size, ti.mtime, ti.mode, ti.uid, ti.gid, ti.uname, ti.gname = len(data), 0, 0o644, 0, 0, "", ""
+            tf.addfile(ti, io.BytesIO(data))
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_bytes(lzma.compress(buf.getvalue(), preset=9))
+    return hashlib.sha256(out.read_bytes()).hexdigest()
+
+
+def record_archives(out: Path) -> str:
+    """'name:sha256;...' of the other rtl_full10k_logs_*.tar.xz next to `out` (earlier runs kept as a record)."""
+    out = Path(out)
+    others = sorted(p for p in out.parent.glob("rtl_full10k_logs_*.tar.xz") if p.name != out.name)
+    return ";".join(f"{p.name}:{hashlib.sha256(p.read_bytes()).hexdigest()}" for p in others)
 
 
 # --------------------------------------------------------------------------- parsing
@@ -288,9 +330,6 @@ def cmd_collect(a) -> int:
               f"wall {r['wall_s']} s [RTL sim]")
         if r["mismatch_imgs"]:
             print(f"    mismatching images (first 20): {r['mismatch_imgs'][:20]}")
-    csv_path = Path(a.csv) if a.csv else RESULTS_DIR / "rtl_full10k.csv"
-    write_results_csv(csv_path, rows, FIELDS)
-    print(f"wrote {csv_path}")
     if a.shard_csv:
         p = Path(a.shard_csv)
         p.parent.mkdir(parents=True, exist_ok=True)
@@ -299,6 +338,17 @@ def cmd_collect(a) -> int:
             w.writeheader()
             w.writerows(shard_rows)
         print(f"wrote {p}")
+    arch = {"logs_archive": "", "logs_archive_sha256": "", "record_archives": ""}
+    if a.archive:          # after shards.csv so the archive contains it
+        ap_ = Path(a.archive)
+        arch = {"logs_archive": ap_.name, "logs_archive_sha256": write_archive(run_dir.parent, ap_),
+                "record_archives": record_archives(ap_)}
+        print(f"wrote {ap_} ({ap_.stat().st_size} B, sha256 {arch['logs_archive_sha256']})")
+    for r in rows:
+        r.update(arch)
+    csv_path = Path(a.csv) if a.csv else RESULTS_DIR / "rtl_full10k.csv"
+    write_results_csv(csv_path, rows, FIELDS)
+    print(f"wrote {csv_path}")
     print(f"collect_full10k: {'ALL OK' if ok else 'FAILURES / INCOMPLETE'}")
     return 0 if ok else 1
 
@@ -323,7 +373,16 @@ def main(argv=None) -> int:
     k.add_argument("--nets", nargs="+", required=True)
     k.add_argument("--csv", default="", help="default v2/results/rtl_full10k.csv")
     k.add_argument("--shard-csv", default="")
+    k.add_argument("--archive", default="",
+                   help="also write a .tar.xz of the run's text logs here (sha256 into the CSV)")
+    r = sub.add_parser("archive", help="archive an existing run's text logs (e.g. an earlier run as a record)")
+    r.add_argument("--run-dir", required=True, help="<runs>/<commit>/<sim> directory")
+    r.add_argument("--out", required=True)
     a = ap.parse_args(argv)
+    if a.cmd == "archive":
+        sha = write_archive(Path(a.run_dir).parent, Path(a.out))
+        print(f"wrote {a.out} (sha256 {sha})")
+        return 0
     return {"check-shard": cmd_check_shard, "xval": cmd_xval, "collect": cmd_collect}[a.cmd](a)
 
 

@@ -250,3 +250,28 @@ def test_collect_cli(tmp_path):
     assert cf.main(["collect", "--run-dir", str(run), "--data-dir", str(data), "--nets", "lenet5",
                     "--csv", str(out)]) == 1
     assert list(csv.DictReader(out.open()))[0]["all_ok"] == "False"
+
+
+# ---- log archive ------------------------------------------------------------------------------
+def test_archive_deterministic_excludes_obj_and_lists_records(tmp_path):
+    import tarfile
+    run = tmp_path / "runs" / "abc123" / "verilator"
+    (run / "lenet5" / "shard_00000_00500").mkdir(parents=True)
+    (run / "lenet5" / "shard_00000_00500" / "run.log").write_text("RESULT img=0\nSHARD_DONE\n")
+    (run / "lenet5" / "shard_00000_00500" / "status").write_text("0 1 2\n")
+    (run / "build" / "obj").mkdir(parents=True)
+    (run / "build" / "obj" / "Vtb.o").write_bytes(b"\0" * 64)
+    (run / "build" / "build.log").write_text("ok\n")
+    (run / "shards.csv").write_text("net\nlenet5\n")
+    out1, out2 = tmp_path / "res" / "rtl_full10k_logs_abc123.tar.xz", tmp_path / "a2.tar.xz"
+    h1 = cf.write_archive(run.parent, out1)
+    h2 = cf.write_archive(run.parent, out2)
+    assert h1 == h2                                    # deterministic bytes
+    with tarfile.open(out1, "r:xz") as tf:
+        names = tf.getnames()
+    assert "runs/abc123/verilator/lenet5/shard_00000_00500/run.log" in names
+    assert "runs/abc123/verilator/shards.csv" in names and not any("/obj/" in n for n in names)
+    old = tmp_path / "res" / "rtl_full10k_logs_old999.tar.xz"
+    old.write_bytes(b"x")
+    rec = cf.record_archives(out1)
+    assert rec.startswith("rtl_full10k_logs_old999.tar.xz:") and "abc123" not in rec
