@@ -11,6 +11,11 @@ hatched "board data pending" placeholders; the switch to real data is automatic.
 reads v2/results/dryrun/ (never paper data) and watermarks every output "DRY RUN -- NOT DATA".
 Writes generated/MANIFEST.json: per artifact, the input CSVs (sha256), rows used, their
 git_commits, sources, placeholders, consistency checks and every registered number's origin.
+
+Extra artifacts: if scripts/tables_extra.py exists, tables_extra.make(tctx, failures) is called
+(one guarded import) with the same table context tables.Ctx (see its docstring: store, out,
+booktabs, dryrun, art(), table(), emit(), board_label, fctx = the figures.FCtx) and must return a
+list of paperlib.Artifact (or one Artifact); failures it appends are reported like the others.
 """
 from __future__ import annotations
 
@@ -50,6 +55,7 @@ def main(argv=None) -> int:
             failures.append({"artifact": fn.__name__, "error": f"{type(e).__name__}: {e}",
                              "trace": traceback.format_exc()})
     fctx = figures.FCtx(store, out, dryrun=a.dryrun)
+    tctx.fctx = fctx
     figures.style()
     for fn, kw in [(figures.fig_a3, {"wide": False}), (figures.fig_a3, {"wide": True}), (figures.fig_a4, {}),
                    (figures.fig_b2, {}), (figures.fig_b3, {})]:
@@ -57,6 +63,18 @@ def main(argv=None) -> int:
             arts.append(fn(fctx, **kw))
         except Exception as e:
             failures.append({"artifact": fn.__name__, "error": f"{type(e).__name__}: {e}",
+                             "trace": traceback.format_exc()})
+
+    try:
+        import tables_extra  # noqa: PLC0415 - optional module (publication extras, other owner)
+    except ImportError:
+        tables_extra = None
+    if tables_extra is not None:
+        try:
+            got = tables_extra.make(tctx, failures)
+            arts.extend(got if isinstance(got, (list, tuple)) else [got])
+        except Exception as e:
+            failures.append({"artifact": "tables_extra.make", "error": f"{type(e).__name__}: {e}",
                              "trace": traceback.format_exc()})
 
     manifest = {

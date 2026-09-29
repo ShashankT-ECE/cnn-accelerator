@@ -8,8 +8,8 @@
     python3 power_log.py --protocol --backend model --phase-s 2    # dry run -> results/dryrun/
 
 LABEL: every number is "SOM-rail power (INA260)" — the SOM rail (VCC_SOM) as reported by the
-on-board INA260. It is NOT accelerator-only power and NOT board input power. An external inline
-12 V meter is optional and only a cross-check (EXPERIMENTS.md B1).
+on-board INA260. It is NOT accelerator-only power and NOT board input power. It is the only power
+measurement of the V2 board sessions (EXPERIMENTS.md B1).
 
 Sensor backends (--sensor auto tries a-c in order on the board; a dry run uses d only):
   a hwmon          /sys/class/hwmon/*/name starting with "ina260": power1_input (µW),
@@ -28,6 +28,11 @@ Sensor backends (--sensor auto tries a-c in order on the board; a dry run uses d
 
 Protocol (per repeat, default 3 repeats, all durations configurable; B1 default with control):
     idle_pre -> accel -> idle_mid -> control -> idle_ctl -> cpu   ... then one idle_post
+    (--order fixed, the default of build_schedule). --order random --order-seed S (what
+    run_sessions.py uses): in every repeat the run phases accel / control / cpu come in a seeded
+    random permutation (each still bracketed by idle phases; the idle phases keep their positional
+    names idle_pre / idle_mid / idle_ctl), so a slow drift does not always hit the same kind;
+    the order and seed are recorded in the phase and summary rows (phase_order, order_seed).
     (60 s phases: 6R+1 = 19 phases = 19 min per net; --no-control: idle_pre/accel/idle_mid/cpu,
     4R+1 = 13 min; B2 per clock: idle_pre/accel/idle_mid only)
 Every phase prints START / STOP banners (same style as exp_b1_power.py). Workloads are callables
@@ -52,7 +57,9 @@ control) + idle_pre r+1, or idle_post after the last repeat). This cancels a lin
 idle level. If only one bracketing idle exists it is used alone (recorded in p_idle_ref).
     dP = P_run - P_idle;  time/image = phase duration / images;
     energy/image = dP x time/image (J and mJ)                          (every run kind)
-Accelerator energy two ways (all computed here, per repeat; f = clock_mhz = pl_clk0 read back):
+Accelerator energy two ways (all computed here, per repeat; f = f_used = the calibrated f_meas
+(exp_fclk_cal.py, passed down by run_sessions.py) when it was measured at this read-back clock,
+else the pl_clk0 read back; f_readback_mhz / f_used_mhz / f_used_source recorded):
     E_sys  = dP_accel x time/image (host loop included)       accel_e_sys_mj (= energy_per_image)
     t_PL   = TOTAL_CYC / f  (TOTAL_CYC = hardware counter, median over the phase's images)
     E_comp = dP_accel x t_PL (compute-only)                   accel_e_comp_mj
@@ -705,7 +712,26 @@ def cpu_workload(runner, xs, warmup: int = 1):
 
 # ---- protocol ----------------------------------------------------------------------------------
 def build_schedule(repeats: int, durations: dict, with_cpu: bool = True,
-                   final_idle: bool = True, with_control: bool = False) -> list[dict]:
+                   final_idle: bool = True, with_control: bool = False,
+                   order_seed: int | None = None) -> list[dict]:
+    """Phase list. order_seed None = the fixed order; else the run phases of every repeat in a
+    seeded random permutation, each bracketed by idle phases."""
+    if order_seed is not None:
+        import random
+        rng = random.Random(order_seed)
+        runs = ["accel"] + (["control"] if with_control else []) + (["cpu"] if with_cpu else [])
+        idle_names = ["idle_pre", "idle_mid", "idle_ctl"]
+        sch = []
+        for r in range(1, repeats + 1):
+            perm = runs[:]
+            rng.shuffle(perm)
+            for j, kind in enumerate(perm):
+                sch.append({"repeat": r, "phase": idle_names[j], "kind": "idle",
+                            "dur": durations["idle"]})
+                sch.append({"repeat": r, "phase": kind, "kind": kind, "dur": durations[kind]})
+        # the last run phase needs its closing idle (always appended in random order)
+        sch.append({"repeat": repeats, "phase": "idle_post", "kind": "idle", "dur": durations["idle"]})
+        return sch
     sch = []
     for r in range(1, repeats + 1):
         sch.append({"repeat": r, "phase": "idle_pre", "kind": "idle", "dur": durations["idle"]})
@@ -803,14 +829,15 @@ PHASE_FIELDS = SENSOR_FIELDS + ["repeat", "phase", "kind", "workload", "start_ut
                                 "phase_s", "images", "power_mean_w", "power_std_w", "n_samples",
                                 "phase_rate_hz", "phase_max_gap_s", "host_path", "total_cyc_median",
                                 "total_cyc_min", "total_cyc_max", "start_done_median_us",
-                                "pace_us", "pace_source"]
+                                "pace_us", "pace_source", "phase_order", "order_seed"]
 SUMMARY_FIELDS = SENSOR_FIELDS + ["row_kind", "repeat", "n_repeats", "p_idle_rule", "energy_rule",
                                   "host_path", "accel_p_idle_ref", "control_p_idle_ref",
                                   "cpu_p_idle_ref", "accel_workload", "control_workload",
-                                  "cpu_workload"] + NUM_SUMMARY
+                                  "cpu_workload", "phase_order", "order_seed",
+                                  *bc.CLOCK_COLS] + NUM_SUMMARY
 P_IDLE_RULE = "mean of the phase means of the two idle phases bracketing the run phase"
-ENERGY_RULE = ("E_sys = dP_accel x time/image; E_comp = dP_accel x TOTAL_CYC/f (f = clock_mhz "
-               "read back, TOTAL_CYC median of the phase); duty = (TOTAL_CYC/f)/(time/image); "
+ENERGY_RULE = ("E_sys = dP_accel x time/image; E_comp = dP_accel x TOTAL_CYC/f (f = f_used_mhz: "
+               "calibrated f_meas at this clock, else the clock read back, TOTAL_CYC median of the phase); duty = (TOTAL_CYC/f)/(time/image); "
                "_net: dP_accel - dP_control")
 
 
@@ -841,7 +868,8 @@ class SensorOnlyContext:
                 "num_inferences": num_inferences, "build_id_hw": "",
                 "board_hostname": self.hostname, "clock_source": "not read (sensor only)",
                 "scripts_commit": self.scripts_commit, "data_manifest_sha256": "",
-                "data_git_commit": "", "data_git_dirty": "", "backend": "sensor_only"}
+                "data_git_commit": "", "data_git_dirty": "", "backend": "sensor_only",
+                **bc.env_meta(self.source, self.dirty)}
 
 
 def _check_source(ctx, sensor: Sensor):
@@ -891,7 +919,8 @@ def run_power_protocol(ctx, net: str, cpu_fn=None, *, accel_fn=None, sensor="aut
                        final_idle: bool = True, prefix: str = PREFIX_B1, tag: str = "",
                        clock_mhz=None, accel_label: str = "", cpu_label: str = "",
                        label: str = "B1", sensor_kw: dict | None = None, control: bool = False,
-                       control_fn=None, control_label: str = "") -> dict:
+                       control_fn=None, control_label: str = "",
+                       order_seed: int | None = None) -> dict:
     """Run the SOM-rail power protocol and write the three CSVs. Returns a summary dict.
 
     ctx       board_common.RunContext (or SensorOnlyContext): provenance, source, out_dir
@@ -935,11 +964,23 @@ def run_power_protocol(ctx, net: str, cpu_fn=None, *, accel_fn=None, sensor="aut
     if clock_mhz is None and getattr(ctx, "dev", None) is not None:
         clock_mhz = ctx.dev.fclk0_mhz()
     clk = f"{clock_mhz:.6f}" if isinstance(clock_mhz, float) else clock_mhz
+    # clock for t_PL / E_comp: the calibrated f_meas at this clock, else the read-back clock
+    if hasattr(ctx, "clock_cols") and clock_mhz not in (None, ""):
+        ccols = ctx.clock_cols(float(clock_mhz))
+        f_comp = float(ccols["f_used_mhz"])
+    else:
+        ccols = {"f_readback_mhz": clk if clk is not None else "", "f_used_mhz": clk if clk is not None else "",
+                 "f_used_source": "f_readback (no calibration)" if clk not in (None, "") else ""}
+        f_comp = clock_mhz
     work = {"idle": idle_until, "accel": accel_fn, "cpu": cpu_fn, "control": control_fn}
     wl_name = {"idle": "none (sleep)", "accel": accel_label or "accel callable",
                "cpu": cpu_label or "cpu callable", "control": control_label or "control callable"}
     sch = build_schedule(repeats, dur, with_cpu=cpu_fn is not None, final_idle=final_idle,
-                         with_control=with_control)
+                         with_control=with_control, order_seed=order_seed)
+    order_txt = " | ".join(",".join(p["kind"] for p in sch if p["repeat"] == r and p["kind"] != "idle")
+                           for r in range(1, repeats + 1))
+    order_cols = {"phase_order": ("fixed: " if order_seed is None else "random: ") + order_txt,
+                  "order_seed": "" if order_seed is None else order_seed}
     tot = sum(p["dur"] for p in sch)
     print(f"[{label} power] {LABEL} on {RAIL}; sensor {sensor.describe()}; rate {rate_hz:g} Hz; "
           f"{len(sch)} phases, {tot:.0f} s; source={ctx.source}")
@@ -979,11 +1020,11 @@ def run_power_protocol(ctx, net: str, cpu_fn=None, *, accel_fn=None, sensor="aut
                  phase_s=f"{st['duration_s']:.3f}", images=w["images"],
                  power_mean_w=_f(st["mean_w"]), power_std_w=_f(st["std_w"]), n_samples=st["n"],
                  phase_rate_hz=_f(st["rate_hz"], 3), phase_max_gap_s=_f(st["max_gap_s"], 4),
-                 host_path=host_path if w["kind"] in ("accel", "control") else "",
+                 host_path=host_path if w["kind"] in ("accel", "control") else "", **order_cols,
                  **{k: (_f(v, 3) if isinstance(v, float) else v) for k, v in ex.items()
                     if k in PHASE_FIELDS})
         prow.append(r)
-    summ = summarize(phases, repeats, clock_mhz)
+    summ = summarize(phases, repeats, f_comp)
     srows = []
     for s in summ:
         imgs = sum(int(s.get(f"{k}_images", 0) or 0) for k in RUN_KINDS) \
@@ -995,7 +1036,7 @@ def run_power_protocol(ctx, net: str, cpu_fn=None, *, accel_fn=None, sensor="aut
                  control_p_idle_ref=s.get("control_p_idle_ref", ""),
                  cpu_p_idle_ref=s.get("cpu_p_idle_ref", ""), accel_workload=wl_name["accel"],
                  control_workload=wl_name["control"] if with_control else "",
-                 cpu_workload=wl_name["cpu"] if cpu_fn is not None else "")
+                 cpu_workload=wl_name["cpu"] if cpu_fn is not None else "", **order_cols, **ccols)
         for k in NUM_SUMMARY:
             if k in s:
                 v = s[k]
@@ -1090,6 +1131,9 @@ def main(argv=None) -> int:
     ap.add_argument("--no-control", action="store_true",
                     help="omit the control phases (host loop without starting the accelerator)")
     ap.add_argument("--repeats", type=int, default=DEFAULT_REPEATS)
+    ap.add_argument("--order", choices=("fixed", "random"), default="fixed",
+                    help="run-phase order per repeat (random: seeded permutation, recorded)")
+    ap.add_argument("--order-seed", type=int, default=None, help="with --order random (recorded)")
     ap.add_argument("--no-final-idle", action="store_true")
     ap.add_argument("--cpu-kind", default="cpu_int8_ref",
                     help="cpu/cpu_infer kind, or 'none' to skip the CPU phases")
@@ -1154,7 +1198,10 @@ def main(argv=None) -> int:
                            phase_s=a.phase_s, repeats=a.repeats, rate_hz=a.rate_hz,
                            final_idle=not a.no_final_idle, prefix=a.prefix,
                            tag=a.tag if a.tag is not None else f"_{a.net}",
-                           cpu_label=cpu_label, sensor_kw=mock_kw, control=not a.no_control)
+                           cpu_label=cpu_label, sensor_kw=mock_kw, control=not a.no_control,
+                           order_seed=(None if a.order == "fixed" else
+                                       (a.order_seed if a.order_seed is not None else
+                                        __import__("stats").new_seed())))
     except SensorUnavailable as e:
         print(f"ERROR: {e}", file=sys.stderr)
         return 3

@@ -194,8 +194,22 @@ def impl_variants(art: Artifact) -> list[dict]:
 # --------------------------------------------------------------------------------------------
 # B1 / B2 SOM-rail power (INA260), v2/board/power_log.py summary files
 # --------------------------------------------------------------------------------------------
-INA_LABEL = "SOM-rail power (INA260)"      # power_log.LABEL; checked against the CSV column
-METER_LABEL = "board input power (external meter, cross-check)"
+INA_LABEL = "SOM-rail power (INA260)"      # power_log.LABEL; checked against the CSV column; the only
+                                           # power source of the board sessions
+
+
+def ci(art: Artifact, row: dict, med: str, lo: str, hi: str, fmt: str, scale: float = 1.0) -> str:
+    """'median [lo, hi]' (95 % CI) text from one CSV row; just the median if the CI columns are
+    absent or empty (e.g. rows written before the CI columns existed)."""
+    def one(col):
+        return V(fnum(row[col]) * scale, f"{_rel(Path(row['_file']))}:{row['_line']}:{col}"
+                 + (f"*{scale:g}" if scale != 1 else "")).fmt(art, fmt)
+    if not row.get(med):
+        return "--"
+    txt = one(med)
+    if row.get(lo) not in (None, "") and row.get(hi) not in (None, ""):
+        txt += " [" + one(lo) + ", " + one(hi) + "]"
+    return txt
 
 
 def power_summaries(art: Artifact, prefix: str) -> list[dict]:

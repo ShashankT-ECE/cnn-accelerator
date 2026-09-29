@@ -6,7 +6,9 @@ Honesty contract (v2/CLAUDE.md, EXPERIMENTS.md "CSV rule", DECISIONS D9/D16):
     (file, row, column / formula) through Artifact.num(); check_tex_provenance() refuses a
     table that contains a numeric token that was not registered;
   * rows with git_dirty != False are rejected (cifar10_retrain_log.csv exempt, D9);
-  * board rows are accepted only with source == hw (cpu_board for the CPU baseline);
+  * board rows are accepted only with source == hw (cpu_board for the CPU baseline) and, when the
+    row carries a paper_grade column (board runs through run_sessions.py), paper_grade == True
+    (environment pre-flight passed: governor fixed, process pinned, no package manager running);
   * v2/results/dryrun/ is read only with --dryrun, and everything produced then is
     watermarked "DRY RUN -- NOT DATA" and written to generated/dryrun/.
 """
@@ -53,6 +55,7 @@ STATIC_TEXT = [
     "sha256", "RAMB36", "RAMB18", "BRAM36", "BRAM18", "DSP48E2", "fp32", "int8",
     "A1", "A2", "A3", "A4", "A5", "A6", "B1", "B2", "B3", "C1", "C2", "INA260", "p95", "p5",
     "12 V", "pl\\_clk0", "pl_clk0", "xck26-sfvc784-2LV-c", "e2e", "r2",
+    "95PCT CI", "p99",
 ]
 
 
@@ -109,6 +112,8 @@ class Store:
             allowed = DRYRUN_SOURCES if self.dryrun else HW_SOURCES
             if src not in allowed:
                 return f"source={src!r} not accepted as board data"
+            if not self.dryrun and "paper_grade" in r and str(r["paper_grade"]).strip() != "True":
+                return f"paper_grade={r['paper_grade']!r} (environment pre-flight not passed)"
         elif src in HW_SOURCES | DRYRUN_SOURCES:
             return f"source={src!r} in a non-board file"
         return ""

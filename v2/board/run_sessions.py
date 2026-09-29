@@ -1,48 +1,78 @@
 #!/usr/bin/env python3
 """V2 board sessions orchestrator: one command per session, resumable, time-budgeted, pre-flighted.
 
-    sudo -E ./session.sh 1|2|3|all [--budget-min N] [--resume|--fresh] [--quick] [--plan]
+    sudo -E ./session.sh 1|2|3|all [--session-index 1|2|3] [--budget-min N] [--resume|--fresh]
+                                    [--quick] [--plan]
     ./session.sh all --backend model --allow-dirty          # laptop dry run -> v2/results/dryrun/
 
 Sessions (v2/board/README.md):
-  1  bring-up       test_shell (--skip-scratch), test_core_smoke (+ informational --write-mode slice,
-                    + informational s1.fast = fast host path bring-up check)
-  2  A1-A4, B3, CPU A1 accuracy, A2/A3 cycles, A4 utilization, B3 breakdown (safe host path) + B3
-                    fast host path (informational, needs s1.fast OK), CPU baselines (A5)
-  3  B1, B2         B1 INA260 SOM-rail power protocol per net (power_log.py: idle/accel/idle/control/
-                    idle/cpu x3 + final idle; --no-power-control: idle/accel/idle/cpu x3 + idle),
-                    B2 clock sweep (cycles == model + INA260 idle/accel/idle per clock);
-                    --with-meter adds the optional external-meter cross-check windows (exp_b1_power.py)
+  1  bring-up       [clock fallback: 300 MHz build, else 250 MHz] test_shell (--skip-scratch),
+                    test_core_smoke (+ informational --write-mode slice, + informational s1.fast =
+                    fast host path bring-up check), s1.fcal = PL clock calibration (f_meas)
+  2  A1-A4, B3, CPU s2.fcal, A2/A3 cycles, A1 accuracy, B3 latency breakdown (interleaved safe /
+                    fast host path / CPU), CPU baselines (A5), DPU baseline (only if
+                    dpu/dpu_session.py exists), A4 utilization
+  3  B1, B2         s3.fcal, B1 INA260 SOM-rail power protocol per net (idle/accel/idle/control/
+                    idle/cpu x3 + final idle, run phases in a seeded random order per repeat), B2
+                    clock sweep, (+ extra steps, e.g. soak)
+Power: the on-board INA260 ("SOM-rail power (INA260)") is the ONLY power source.
 
-Host path (--host-path, default safe): A1-A4, B1 and B2 use it. fast needs s1.fast (fast-path
-bring-up check) recorded OK in the same state, else those steps are BLOCKED (failure, nothing run;
-rerun with --host-path safe). s2.B3 always measures the safe path and s2.B3fast the fast path.
+PRIORITY (steps run in this order; the time budget therefore defers the tail first):
+  bring-up, f_meas calibration, then A3, A1, latency (A2 + B3), baselines (CPU, DPU), energy (B1),
+  sweep (B2), soak, A4. Session 1 always first; otherwise the order is global across sessions.
+EXTRA STEPS: if session_extra_steps.py is importable, session_extra_steps.extra_steps(opts) ->
+  list[dict] (id, session, group, cmd, outputs, est_s, timeout_s, requires, params; optional
+  title, out_flag (default "--out-dir"; the orchestrator appends `out_flag <staging dir>`),
+  required, kind, images) become normal resumable steps slotted into their group; an extra step
+  with the id of a built-in one replaces it. `opts` (extra_opts()) is a SimpleNamespace with:
+  backend, dry, board_dir, data_dir, results_dir, bit, closed_mhz, clock_tol, deploy, allow_dirty,
+  quick, sessions, session_index, write_mode, host_path, fast_store, board_id, window_s, gap_s,
+  power_repeats, b2_power_repeats, power_rate_hz, b2_images, order_seed, python, clock_choice
+  (path of the clock_fallback decision JSON), sensor_args (["--sensor", "mock"] in a dry run).
+CLOCK FALLBACK: with several deployed bitstreams (DEPLOY_INFO "bits", highest clock first) and
+  clock_fallback.py importable, Session 1 calls clock_fallback.choose(ctx, bits, run_smoke) with
+  bits = [{"bit", "clock_mhz"}] and run_smoke(entry) = pre-flight of that bitstream + core smoke
+  (test_core_smoke.py) on it; the chosen bitstream is recorded in the state provenance
+  (bit_choice) and <results>/hw_clock_choice.json, and every later step / session uses it.
+  ctx = SimpleNamespace(say, dry, cfg, results_dir, board_dir).
 
-Every invocation first runs the PRE-FLIGHT (fails loudly, exit 3): DEPLOY_INFO present; .bit/.hwh
-SHA256 vs DEPLOY_INFO and the shipped .bit.sha256; summary.json build id / closed clock / timing
-met; VERSION == 0x474F5302; BUILD_ID register == DEPLOY_INFO build_id; pl_clk0 read back <= the
-closed clock (+tol) and, for sessions 2/3, equal to it (within tol); every data-package SHA256
-(MANIFEST.json) and the PACKAGE.json chain; free disk; clean-tree flags (--allow-dirty marks
-rows git_dirty=True, invalid for the paper). With --backend model everything is the ModelBackend
-equivalent and every line says DRY RUN.
+ENVIRONMENT PRE-FLIGHT (board_env.py; recorded in the state provenance and, through $GOS_RUN_ENV,
+in every results row: session_index, paper_grade, env_step, cpu_governor, cpu_freq_khz,
+cpu_affinity, die_temp_start_c):
+  * no package manager running (apt, apt-get, dpkg, unattended-upgrades, packagekitd, ...;
+    offenders listed) -> else FAIL;
+  * cpufreq: governor 'performance' + scaling_min = scaling_max = --cpu-freq-khz (default the
+    highest available) on every policy, scaling_cur_freq read back == target -> else FAIL;
+    restored to the saved values when the orchestrator exits;
+  * pinning: the orchestrator runs on the housekeeping cores, every step process is pinned to
+    --meas-cores (default 3) with sched_setaffinity (= taskset) and read back -> else FAIL;
+    the CPU baseline step runs on --cpun-cores (0-3) and pins its 1-thread workers to
+    --cpu1-cores (3) and multi-thread workers to --cpun-cores;
+  * die temperature (Zynq MPSoC AMS via iio, else hwmon) at the start and end of every step
+    (non-fatal: "unavailable" recorded).
+  FAILs abort (exit 3) unless --allow-non-paper-grade, which turns them into warnings and marks
+  every row paper_grade=False (so do --allow-dirty and every dry run). Dry runs use a FAKE sysfs/
+  proc tree under <results>/.dryrun_env (DRY RUN on every line); the laptop's cpufreq is never
+  touched.
+MEASURED PL CLOCK: sN.fcal (exp_fclk_cal.py) measures f_meas per session; later steps get it in
+  $GOS_RUN_ENV and convert every µs value with it (f_readback kept alongside).
+SESSION INDEX (3-session repeatability): --session-index K tags every row; results of K = 1 go to
+  <results>/, of K >= 2 to <results>/rep<K>/; aggregate_sessions.py combines them.
 
-State: <results>/session_state.json records the provenance (backend, BUILD_ID, bit SHA256, closed
-and read-back clock, data package, scripts commit) and every step (status, command, duration,
-output files + SHA256, log). On rerun (default --resume) a step is skipped only if it finished OK
-with the same parameters and all its outputs (and log) still verify; otherwise it is rerun FROM
-SCRATCH (no per-image-chunk resume: one CSV = one uninterrupted run = one bitstream + clock).
-A provenance change (other bitstream / BUILD_ID / clock / data / scripts commit) refuses to resume
-(exit 4): start over with --fresh. --fresh and replaced outputs are ARCHIVED into
-<results>/archive/<timestamp>_<why>/, never deleted.
+Pre-flight (fails loudly, exit 3) also checks: DEPLOY_INFO present; .bit/.hwh SHA256 vs
+DEPLOY_INFO and the shipped .bit.sha256; summary.json build id / closed clock / timing met;
+VERSION == 0x474F5302; BUILD_ID register == DEPLOY_INFO build_id; pl_clk0 read back <= the closed
+clock (+tol) and, for sessions 2/3, equal to it (within tol); every data-package SHA256; free disk;
+clean-tree flags (--allow-dirty marks rows git_dirty=True, invalid for the paper).
 
-Steps write into <results>/.staging/<step>/ and are promoted into <results>/ only when the step
-process exits (interrupted / timed-out steps never leave partial files among the results; their
-staging is archived). Budget: --budget-min; each step's duration is estimated (previous recorded
-duration of the same step and parameters, else a per-image rate learned in this state, else the
-default table below, labelled "assumed") and a step that would not fit in the remaining budget is
-DEFERRED (reported, recorded; the next run picks it up). Every step has a hard timeout
-(--step-timeout-min, default max(5 min, 3 x estimate + 2 min), capped by the remaining budget):
-SIGINT (scripts restore pl_clk0 in their finally blocks), then SIGTERM, then SIGKILL.
+State: <results>/session_state.json records the provenance and every step (status, command,
+duration, outputs + SHA256, log, pinning read-back, die temperature start/end). On rerun (default
+--resume) a step is skipped only if it finished OK with the same parameters and all its outputs
+still verify; otherwise it is rerun FROM SCRATCH. A provenance change (bitstream / BUILD_ID / clock
+/ data / scripts commit / session index / paper grade / CPU frequency) refuses to resume (exit 4):
+--fresh. --fresh and replaced outputs are ARCHIVED into <results>/archive/<ts>_<why>/, never
+deleted. Steps write into <results>/.staging/<step>/ and are promoted when the step exits.
+Budget: --budget-min; a step whose estimate does not fit is DEFERRED. Hard per-step timeout.
 
 Exit: 0 all requested steps OK; 1 a step failed; 2 usage; 3 pre-flight failed; 4 provenance
 changed / bring-up missing / lock held; 5 incomplete (deferred / not run); 130 interrupted.
@@ -50,6 +80,7 @@ changed / bring-up missing / lock held; 5 incomplete (deferred / not run); 130 i
 from __future__ import annotations
 
 import argparse
+import csv
 import datetime as _dt
 import fcntl
 import json
@@ -60,19 +91,20 @@ import subprocess
 import sys
 import threading
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
+from types import SimpleNamespace
 
 import board_common as bc
+import board_env as benv
+import stats
 
 STATE_NAME = "session_state.json"
 STATE_VERSION = 1
 VERSION_CORE = 0x474F5302
 OFF_VERSION, OFF_BUILD_ID = 0x0F8, 0x0FC        # FORMATS.md CSR map (= gos_driver)
+CHOICE_FILE = "hw_clock_choice.json"            # = clock_fallback.CHOICE_FILE
 
-# Default per-inference wall time (s/image) and fixed costs used before anything was measured in
-# this state. pynq values are ASSUMPTIONS (Python MMIO bound; README), replaced by the recorded
-# durations after the first run; model values were measured by the laptop dry run.
 DEFAULT_RATE_S = {"pynq": 0.02, "model": 0.006}
 DEFAULT_FIXED_S = {  # kind -> backend -> seconds
     "bringup": {"pynq": 120.0, "model": 30.0},
@@ -82,6 +114,14 @@ DEFAULT_FIXED_S = {  # kind -> backend -> seconds
 STEP_OVERHEAD_S = 30.0          # overlay load, package verify, net loads
 KILL_GRACE_S = (20.0, 5.0)      # SIGINT -> SIGTERM, SIGTERM -> SIGKILL
 RESULT_PATTERNS = ("hw_*.csv", "hw_*.npz", "hw_*.json")
+
+# Priority (EXPERIMENTS.md "Measurement rigor"): infrastructure first, then these groups.
+GROUP_ORDER = ("A3", "A1", "latency", "baselines", "energy", "sweep", "soak", "A4")
+INFRA_RANK = {"bringup": -2, "fcal": -1}
+
+DEFAULT_MEAS_CORES = "3"
+DEFAULT_CPU1_CORES = "3"
+DEFAULT_CPUN_CORES = "0-3"
 
 
 class PreflightError(RuntimeError):
@@ -114,10 +154,41 @@ class Step:
     expect: tuple = ()              # outputs that must exist after a successful run
     required: bool = True
     requires: tuple = ()            # step ids that must be recorded ok before this step runs
+    group: str = ""                 # priority group (GROUP_ORDER / INFRA_RANK)
+    est_s: float | None = None      # explicit estimate (extra steps)
+    timeout_s: float | None = None  # explicit hard timeout (extra steps)
+    params: dict = field(default_factory=dict)   # extra resume-key parameters
+    cores: str = "meas"             # meas | cpun: which core set the step process is pinned to
+    cond_argv: tuple = ()           # ((step id, [args]), ...): args appended only if that step is OK
 
     @property
     def params_key(self) -> str:
+        if self.params:
+            return json.dumps({"argv": self.argv, "params": self.params}, sort_keys=True)
         return json.dumps(self.argv)
+
+
+def resolve_step(step: Step, state: dict) -> Step:
+    """Append the conditional arguments whose prerequisite step is recorded OK."""
+    if not step.cond_argv:
+        return step
+    extra = []
+    for sid, args in step.cond_argv:
+        if state.get("steps", {}).get(sid, {}).get("status") == "ok":
+            extra += list(args)
+    return replace(step, argv=[*step.argv, *extra], cond_argv=())
+
+
+def group_rank(g: str) -> int:
+    if g in INFRA_RANK:
+        return INFRA_RANK[g]
+    return GROUP_ORDER.index(g) if g in GROUP_ORDER else len(GROUP_ORDER)
+
+
+def prioritize(steps: list[Step]) -> list[Step]:
+    """Session 1 first; then global priority by group; stable within a group."""
+    return [s for _, s in sorted(enumerate(steps), key=lambda t: (
+        0 if t[1].session == 1 else 1, group_rank(t[1].group), t[0]))]
 
 
 @dataclass
@@ -152,11 +223,29 @@ def n_images(data_dir: Path, net: str) -> int:
         return 10000
 
 
+def dpu_session_path(board_dir: Path) -> Path | None:
+    """v2/dpu/dpu_session.py (other owner): ~/gos/dpu/ on the board, v2/dpu/ in the repo."""
+    for p in (Path(board_dir) / "dpu" / "dpu_session.py", Path(board_dir).parent / "dpu" / "dpu_session.py"):
+        if p.is_file():
+            return p
+    return None
+
+
+def _b2_extra_outputs() -> tuple:
+    try:
+        import session_extra_steps as sx
+        return tuple(getattr(sx, "B2_EXTRA_OUTPUTS", ()))
+    except ImportError:
+        return ()
+
+
 def build_steps(cfg: Config, sessions, quick: bool = False, window_s: float = 60.0,
                 gap_s: float = 10.0, write_mode: str = "elem", b2_images: int = 100,
                 board_id: str | None = None, power_repeats: int = 3, b2_power_repeats: int = 3,
-                power_rate_hz: float = 10.0, with_meter: bool = False, host_path: str = "safe",
-                fast_store: str = "block", power_control: bool = True) -> list[Step]:
+                power_rate_hz: float = 10.0, host_path: str = "safe",
+                fast_store: str = "block", power_control: bool = True, order_seed: int = 1,
+                fcal_s: float | None = None, cpu1_cores: str = DEFAULT_CPU1_CORES,
+                cpun_cores: str = DEFAULT_CPUN_CORES, b3_cpu: bool = True) -> list[Step]:
     be, dd = cfg.backend, str(cfg.data_dir)
     closed = cfg.closed_mhz
     maxf = f"{closed + cfg.clock_tol:.6f}"
@@ -176,7 +265,17 @@ def build_steps(cfg: Config, sessions, quick: bool = False, window_s: float = 60
     n_all = sum(n_images(cfg.data_dir, n) for n in nets)
     lim = 200 if quick else None
     n_lim = sum(min(lim, n_images(cfg.data_dir, n)) for n in nets) if lim else n_all
+    fcal_s = fcal_s if fcal_s is not None else (1.0 if cfg.dry else (4.0 if quick else 8.0))
     steps: list[Step] = []
+
+    def fcal(s: int) -> Step:
+        return Step(f"s{s}.fcal", s, f"PL clock calibration: f_meas (cycle counter vs "
+                    f"CLOCK_MONOTONIC_RAW, {fcal_s:g} s)",
+                    ["exp_fclk_cal.py", *dev, *wm, *dirty, "--seconds", f"{fcal_s:g}", "--tag",
+                     f"_s{s}", "--seed", str(order_seed + 100 * s)],
+                    kind="fixed", fixed_s=fcal_s + 10.0, expect=(f"hw_fclk_cal_s{s}.csv",),
+                    group="fcal")
+
     if 1 in sessions:
         shell = ["test_shell.py", "--bit", str(cfg.bit), "--expect-version", f"0x{VERSION_CORE:08X}",
                  "--skip-scratch", "--max-fclk0", maxf]
@@ -184,69 +283,74 @@ def build_steps(cfg: Config, sessions, quick: bool = False, window_s: float = 60
             shell += ["--backend", "model", "--clock-mhz", f"{closed:.6f}"]
         steps += [
             Step("s1.shell", 1, "shell/memory smoke (test_shell --skip-scratch)", shell,
-                 kind="bringup", out_flag=None),
+                 kind="bringup", out_flag=None, group="bringup"),
             Step("s1.smoke", 1, "core smoke (VERSION/BUILD_ID, LeNet+CIFAR bit/cycle-exact, refused job)",
-                 ["test_core_smoke.py", *dev, "--max-fclk0", maxf], kind="bringup", out_flag=None),
+                 ["test_core_smoke.py", *dev, "--max-fclk0", maxf], kind="bringup", out_flag=None,
+                 group="bringup"),
             Step("s1.smoke_slice", 1, "core smoke with --write-mode slice (informational)",
                  ["test_core_smoke.py", *dev, "--max-fclk0", maxf, "--write-mode", "slice"],
-                 kind="bringup", out_flag=None, required=False),
+                 kind="bringup", out_flag=None, required=False, group="bringup"),
             Step("s1.fast", 1, "fast host path bring-up check (ACT0 fast write + per-word readback, "
                  "CSR block reads; core smoke on the fast path) (informational)",
                  ["test_core_smoke.py", *dev, "--max-fclk0", maxf, "--host-path", "fast", *fs],
-                 kind="bringup", out_flag=None, required=False),
+                 kind="bringup", out_flag=None, required=False, group="bringup"),
+            fcal(1),
         ]
     if 2 in sessions:
         lim_a = ["--limit", str(lim)] if lim else []
         a4_lim = lim or 1000
         b3_n = 200 if quick else 1000
+        cpu_ok = (cfg.board_dir / "cpu" / "cpu_infer.py").is_file() and b3_cpu
+        b3 = ["exp_b3_breakdown.py", *dev, *wm, *dirty, "--n", str(b3_n), "--conditions", "safe",
+              *(["cpu"] if cpu_ok else []), *fs, "--seed", str(order_seed + 2)]
         steps += [
-            Step("s2.A1", 2, "A1 accuracy", ["exp_a1_accuracy.py", *dev, *wm, *hp, *dirty, *lim_a],
-                 images=n_lim, expect=("hw_a1_accuracy.csv",), requires=need),
+            fcal(2),
             Step("s2.A2A3", 2, "A2/A3 cycles", ["exp_a2_a3_cycles.py", *dev, *wm, *hp, *dirty,
                                                 *lim_a],
-                 images=n_lim, expect=("hw_a2_a3_cycles.csv",), requires=need),
-            Step("s2.A4", 2, "A4 utilization", ["exp_a4_util.py", *dev, *wm, *hp, *dirty,
-                                                "--limit", str(a4_lim)],
-                 images=sum(min(a4_lim, n_images(cfg.data_dir, n)) for n in nets),
-                 expect=("hw_a4_util.csv",), requires=need),
-            Step("s2.B3", 2, "B3 breakdown (safe host path)",
-                 ["exp_b3_breakdown.py", *dev, *wm, *dirty, "--n", str(b3_n), "--host-path", "safe"],
-                 images=len(nets) * (b3_n + 50), expect=("hw_b3_breakdown.csv",)),
-            Step("s2.B3fast", 2, "B3 breakdown (fast host path; informational, needs s1.fast)",
-                 ["exp_b3_breakdown.py", *dev, *wm, *dirty, "--n", str(b3_n), "--host-path", "fast",
-                  *fs], images=len(nets) * (b3_n + 50), expect=("hw_b3_breakdown_fast.csv",),
-                 required=False, requires=("s1.fast",)),
+                 images=n_lim, expect=("hw_a2_a3_cycles.csv",), requires=need, group="A3"),
+            Step("s2.A1", 2, "A1 accuracy", ["exp_a1_accuracy.py", *dev, *wm, *hp, *dirty, *lim_a],
+                 images=n_lim, expect=("hw_a1_accuracy.csv",), requires=need, group="A1"),
+            Step("s2.B3", 2, "B3 latency breakdown, interleaved conditions (safe host path"
+                 + (", CPU cpu_int8_ref x1" if cpu_ok else "") + "; + fast host path if s1.fast OK)",
+                 b3, images=len(nets) * (b3_n + 100) * (3 if cpu_ok else 2),
+                 expect=("hw_b3_breakdown.csv",) + (("hw_b3_breakdown_cpu.csv",) if cpu_ok else ()),
+                 group="latency", cond_argv=(("s1.fast", ["--conditions-add", "fast"]),)),
         ]
         cpu = ["cpu/run_cpu_baselines.py", "--data-dir", dd, "--tag",
-               "laptop" if cfg.dry else "board", *(["--quick"] if quick else []), *dirty]
+               "laptop" if cfg.dry else "board", *(["--quick"] if quick else []), *dirty,
+               "--pin-1t", cpu1_cores, "--pin-nt", cpun_cores]
         if (cfg.board_dir / "cpu" / "run_cpu_baselines.py").is_file():
             steps.append(Step("s2.CPU", 2, "CPU baselines (A5)", cpu,
-                              kind="cpu_quick" if quick else "cpu", expect=("hw_cpu_baseline.csv",)))
+                              kind="cpu_quick" if quick else "cpu", expect=("hw_cpu_baseline.csv",),
+                              group="baselines", cores="cpun"))
+        dpu = dpu_session_path(cfg.board_dir)
+        if dpu is not None:
+            argv = [str(dpu), "--data-dir", dd, "--phase-s", f"{window_s:g}", "--repeats",
+                    str(power_repeats), *dirty]
+            if cfg.dry:
+                argv += ["--dry-run", "--limit", "200"]
+                pk = dpu.parent / "build" / "package"
+                if pk.is_dir():
+                    argv += ["--pkg-dir", str(pk)]
+            steps.append(Step("s2.DPU", 2, f"DPU baseline ({dpu.name}, other owner; informational)",
+                              argv, kind="fixed",
+                              fixed_s=(120.0 if cfg.dry else 3 * power_repeats * 2 * window_s + 1200.0),
+                              required=False, group="baselines"))
+        steps.append(Step("s2.A4", 2, "A4 utilization", ["exp_a4_util.py", *dev, *wm, *hp, *dirty,
+                                                         "--limit", str(a4_lim)],
+                          images=sum(min(a4_lim, n_images(cfg.data_dir, n)) for n in nets),
+                          expect=("hw_a4_util.csv",), requires=need, group="A4"))
     if 3 in sessions:
         w = ["--window-s", f"{window_s:g}", "--gap-s", f"{gap_s:g}"]
         clocks = bc.b2_sweep_clocks(closed, cfg.clock_tol)
-        # B1 primary: INA260 SOM-rail protocol, one step per net
+        steps.append(fcal(3))
         steps += power_hook_steps(cfg, dev, dirty, window_s, power_repeats, power_rate_hz,
-                                  [*wm, *hp], control=power_control, requires=need)
-        if with_meter:      # optional cross-check with the external inline 12 V meter
-            steps += [
-                Step("s3.B1meter", 3, f"B1 cross-check windows idle/fpga/cpu (LeNet-5): {METER_LABEL}",
-                     ["exp_b1_power.py", *dev, *wm, *dirty, "--modes", "idle", "fpga", "cpu",
-                      "--net", "lenet5", *w], kind="fixed", fixed_s=3 * window_s + 2 * gap_s + 15,
-                     expect=("hw_b1_meter_windows.csv",)),
-                Step("s3.B1meter_cpu4", 3, f"B1 cross-check window cpu int8 x4 threads (CIFAR-10): "
-                     f"{METER_LABEL}",
-                     ["exp_b1_power.py", *dev, *wm, *dirty, "--modes", "cpu", "--cpu-kind",
-                      "cpu_int8_ref", "--cpu-threads", "4", "--net", "cifar10", *w,
-                      "--csv-suffix", "cpu4_cifar10"], kind="fixed", fixed_s=window_s + 15,
-                     expect=("hw_b1_meter_windows_cpu4_cifar10.csv",)),
-            ]
+                                  [*wm, *hp], control=power_control, requires=need,
+                                  order_seed=order_seed)
         b2_net = "lenet5"
         b2_power = [f"hw_b2_power_ina260_{k}_{b2_net}_{clock_tag(c)}.csv"
                     for c in clocks for k in ("samples", "phases", "summary")]
         per_clock = 3 * b2_power_repeats * window_s + B2_PER_CLOCK_OVERHEAD_S
-        if with_meter:
-            per_clock += window_s + gap_s
         steps.append(
             Step("s3.B2", 3, f"B2 clock sweep {clocks} MHz (closed {closed}): cycles == model + "
                  f"{POWER_LABEL} idle/accel/idle x{b2_power_repeats} per clock",
@@ -254,29 +358,20 @@ def build_steps(cfg: Config, sessions, quick: bool = False, window_s: float = 60
                   *[f"{c:.6f}" for c in clocks], "--max-mhz", f"{closed:.6f}",
                   *hp, "--images", str(b2_images), *w, "--power-repeats", str(b2_power_repeats),
                   "--rate-hz", f"{power_rate_hz:g}",
-                  *(["--sensor", "mock"] if cfg.dry else []),
-                  *(["--with-meter"] if with_meter else [])], kind="infer",
+                  *(["--sensor", "mock"] if cfg.dry else [])], kind="infer",
                  images=len(clocks) * b2_images, fixed_s=len(clocks) * per_clock,
-                 expect=("hw_b2_clock.csv", *b2_power), requires=need))
+                 expect=("hw_b2_clock.csv", *b2_power, *_b2_extra_outputs()), requires=need,
+                 group="sweep"))
     return steps
 
 
 # ==== POWER HOOK (Session 3) ====================================================================
-# B1 PRIMARY = the INA260 SOM-rail power protocol (power_log.py), one step per net:
-#   python3 power_log.py --backend {pynq,model} --data-dir D (--bit B | --clock-mhz C) [--allow-dirty]
-#       --write-mode M --host-path P --fast-store S --protocol --net <net> --tag _<net> --phase-s W
-#       --repeats R --rate-hz H --cpu-kind cpu_int8_ref --cpu-threads 1 [--no-control]
-#       [dry run: --sensor mock] --out-dir <staging dir>
-# Phases per repeat idle/accel/idle/control/idle/cpu (W s each) x R + one final idle -> 6R+1
-# phases (19 x 60 s = 19 min per net at the defaults); --no-power-control: idle/accel/idle/cpu,
-# 4R+1. Control = the same host loop with the accelerator not started (power_log.py docstring).
-# CPU phases = the INT8 numpy reference (cpu_int8_ref), 1 thread: the same INT8 arithmetic as the
-# accelerator and A5's single-thread configuration, so dP_cpu is a like-for-like single-core
-# software baseline on the same rail (4-thread CPU power only via the optional meter step).
-# Rows are labelled "SOM-rail power (INA260)"; model backend -> mock sensor, dryrun_model rows.
+# B1 = the INA260 SOM-rail power protocol (power_log.py), one step per net; the ONLY power source.
+# Phases per repeat idle + {accel, control, cpu} each bracketed by idle phases, the three run
+# phases in a seeded random order per repeat (--order random --order-seed S, recorded), x R + one
+# final idle -> 6R+1 phases (--no-power-control: 4R+1). CPU phases = cpu_int8_ref, 1 thread.
 POWER_HOOK_SCRIPT = "power_log.py"
 POWER_LABEL = "SOM-rail power (INA260)"          # = power_log.LABEL
-METER_LABEL = "board input power (external meter, cross-check)"   # = exp_b1_power.METER_LABEL
 B1_CPU_KIND, B1_CPU_THREADS = "cpu_int8_ref", 1
 B1_POWER_OVERHEAD_S = 60.0     # package verify + load_net + CPU runner build + warm-ups
 B2_PER_CLOCK_OVERHEAD_S = 20.0  # set clock, soft_reset, reload + readback, sensor probe, CSVs
@@ -293,24 +388,83 @@ def power_phases(repeats: int, control: bool = True) -> int:
 
 def power_hook_steps(cfg: Config, dev: list, dirty: list, window_s: float, repeats: int = 3,
                      rate_hz: float = 10.0, wm: list | None = None, control: bool = True,
-                     requires: tuple = ()) -> list[Step]:
+                     requires: tuple = (), order_seed: int = 1) -> list[Step]:
     extra = ["--sensor", "mock"] if cfg.dry else []
     out = []
-    for net in bc.NETS:
+    for i, net in enumerate(bc.NETS):
         tag = f"_{net}"
         out.append(Step(
             f"s3.B1.{net}", 3, f"B1 {POWER_LABEL} protocol {net} "
-            f"({'idle/accel/idle/control/idle/cpu' if control else 'idle/accel/idle/cpu'} "
+            f"({'accel/control/cpu' if control else 'accel/cpu'} bracketed by idle, random order, "
             f"x{repeats} + idle, {window_s:g} s phases, CPU {B1_CPU_KIND} x{B1_CPU_THREADS})",
             [POWER_HOOK_SCRIPT, *dev, *(wm or []), *dirty, "--protocol", "--net", net, "--tag", tag,
              "--phase-s", f"{window_s:g}", "--repeats", str(repeats), "--rate-hz", f"{rate_hz:g}",
              "--cpu-kind", B1_CPU_KIND, "--cpu-threads", str(B1_CPU_THREADS),
+             "--order", "random", "--order-seed", str(order_seed + 10 + i),
              *([] if control else ["--no-control"]), *extra],
             kind="fixed", fixed_s=power_phases(repeats, control) * window_s + B1_POWER_OVERHEAD_S,
-            requires=requires,
+            requires=requires, group="energy",
             expect=tuple(f"hw_b1_power_ina260_{k}{tag}.csv" for k in ("samples", "phases", "summary"))))
     return out
 # ==== end POWER HOOK ============================================================================
+
+
+# ---- extra steps (session_extra_steps.py, other owner) -----------------------------------------
+def extra_opts(cfg: Config, a, sessions, window_s, gap_s, order_seed) -> SimpleNamespace:
+    return SimpleNamespace(
+        backend=cfg.backend, dry=cfg.dry, board_dir=cfg.board_dir, data_dir=str(cfg.data_dir),
+        results_dir=str(cfg.results_dir), bit=str(cfg.bit), closed_mhz=cfg.closed_mhz,
+        clock_tol=cfg.clock_tol, deploy=cfg.deploy, allow_dirty=cfg.allow_dirty, quick=a.quick,
+        sessions=list(sessions), session_index=a.session_index, write_mode=a.write_mode,
+        host_path=a.host_path, fast_store=a.fast_store, board_id=a.board_id, window_s=window_s,
+        gap_s=gap_s, power_repeats=a.power_repeats, b2_power_repeats=a.b2_power_repeats,
+        power_rate_hz=a.power_rate_hz, b2_images=a.b2_images, order_seed=order_seed,
+        python=cfg.python, clock_choice=str(cfg.results_dir / CHOICE_FILE),
+        sensor_args=["--sensor", "mock"] if cfg.dry else [],
+        **({"soak_block_s": 10.0} if cfg.dry else {}))   # dry-run soak (60 s): both nets alternate
+
+
+def step_from_dict(d: dict) -> Step:
+    g = d.get("group", "")
+    return Step(id=str(d["id"]), session=int(d["session"]), title=str(d.get("title") or d["id"]),
+                argv=[str(x) for x in d["cmd"]], kind=d.get("kind", "fixed"),
+                images=int(d.get("images") or 0), fixed_s=float(d.get("est_s") or 0.0),
+                out_flag=d.get("out_flag", "--out-dir"), expect=tuple(d.get("outputs", ())),
+                required=bool(d.get("required", True)), requires=tuple(d.get("requires", ())),
+                group=g, est_s=float(d["est_s"]) if d.get("est_s") is not None else None,
+                timeout_s=float(d["timeout_s"]) if d.get("timeout_s") is not None else None,
+                params=dict(d.get("params") or {}))
+
+
+def merge_extra_steps(steps: list[Step], opts, sessions, say=print) -> list[Step]:
+    """Import session_extra_steps (absent -> unchanged) and merge its steps (same id replaces)."""
+    try:
+        import session_extra_steps as sx
+    except ImportError:
+        say("[session] extra steps: session_extra_steps.py not present (none added)")
+        return steps
+    try:
+        extra = [step_from_dict(d) for d in sx.extra_steps(opts)]
+    except Exception as e:  # noqa: BLE001 - a broken extra module must not break the sessions
+        say(f"[session] extra steps: session_extra_steps.extra_steps failed: {type(e).__name__}: {e}"
+            " (none added)")
+        return steps
+    by = {s.id: i for i, s in enumerate(steps)}
+    out = list(steps)
+    added = []
+    for s in extra:
+        if s.session not in sessions:
+            continue
+        if s.group not in GROUP_ORDER:
+            say(f"[session] extra step {s.id}: unknown group {s.group!r}; scheduled last")
+        if s.id in by:
+            out[by[s.id]] = s
+            added.append(f"{s.id} (replaces built-in)")
+        else:
+            out.append(s)
+            added.append(s.id)
+    say(f"[session] extra steps from session_extra_steps.py: {added or 'none for these sessions'}")
+    return out
 
 
 # ---- state -----------------------------------------------------------------------------------
@@ -326,12 +480,12 @@ def load_state(path: Path) -> dict | None:
 def save_state(path: Path, state: dict):
     state["updated_utc"] = utc_now()
     tmp = path.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(state, indent=1, sort_keys=False) + "\n")
+    tmp.write_text(json.dumps(state, indent=1, sort_keys=False, default=str) + "\n")
     os.replace(tmp, path)
 
 
 PROV_KEYS = ("backend", "build_id_hw", "bit_sha256", "closed_clock_mhz", "data_package_sha256",
-             "scripts_commit", "scripts_dirty")
+             "scripts_commit", "scripts_dirty", "session_index", "paper_grade", "cpu_freq_khz")
 
 
 def provenance_diff(old: dict, new: dict, tol: float) -> list[str]:
@@ -383,7 +537,8 @@ def archive_everything(results_dir: Path, label: str, keep=()) -> Archiver:
 
 def new_state(prov: dict, timing: dict | None = None) -> dict:
     return {"version": STATE_VERSION, "created_utc": utc_now(), "updated_utc": "",
-            "provenance": prov, "steps": {}, "invocations": [], "timing": timing or {}}
+            "provenance": prov, "steps": {}, "invocations": [], "timing": timing or {},
+            "order_seed": stats.new_seed()}
 
 
 def verify_step(step: Step, rec: dict | None, results_dir: Path) -> tuple[bool, str]:
@@ -417,6 +572,8 @@ def estimate(step: Step, state: dict, backend: str) -> tuple[float, str]:
     t = state.get("timing", {}).get(step.id)
     if t and t.get("params_key") == step.params_key and t.get("backend") == backend:
         return 1.1 * float(t["duration_s"]), "previous run"
+    if step.est_s is not None:
+        return float(step.est_s), "step estimate (extra step)"
     if step.kind in DEFAULT_FIXED_S:
         if t and t.get("backend") == backend:
             return 1.1 * float(t["duration_s"]), "previous run (other params)"
@@ -448,7 +605,8 @@ def read_summary(bit: Path) -> dict | None:
 
 def preflight(cfg: Config, open_backend=open_backend_default, verify_data=bc.verify_manifest,
               say=print) -> dict:
-    """All checks; prints each; raises PreflightError listing every failure. Returns provenance."""
+    """All device/bitstream/data checks; prints each; raises PreflightError listing every failure.
+    Returns provenance."""
     tag = "DRY RUN " if cfg.dry else ""
     fails, warns = [], []
 
@@ -464,14 +622,13 @@ def preflight(cfg: Config, open_backend=open_backend_default, verify_data=bc.ver
         warns.append(msg)
 
     info = cfg.deploy
-    say(f"[{tag}preflight] backend={cfg.backend} deploy info: {info.get('origin')}")
+    say(f"[{tag}preflight] backend={cfg.backend} bitstream={cfg.bit} deploy info: {info.get('origin')}")
     if cfg.dry:
         say(f"  [{tag}preflight] DRY RUN: ModelBackend equivalents; VERSION/BUILD_ID/pl_clk0 are the "
             "simulated register map / nominal clock (set from the deploy info), NOT hardware.")
     elif info.get("origin") != "DEPLOY_INFO.json":
         bad("DEPLOY_INFO.json missing next to the scripts: deploy with deploy.sh (hardware rows need it)")
 
-    # -- bitstream files ----------------------------------------------------------------
     bit_sha = hwh_sha = ""
     bit = cfg.bit
     hwh = bit.with_suffix(".hwh")
@@ -501,7 +658,6 @@ def preflight(cfg: Config, open_backend=open_backend_default, verify_data=bc.ver
             (ok if info["hwh_sha256"] == hwh_sha else bad)(
                 f"{hwh.name} SHA256 {hwh_sha[:16]} == DEPLOY_INFO hwh_sha256")
 
-    # -- closed clock / timing -------------------------------------------------------------
     closed = cfg.closed_mhz
     if closed is None:
         bad("closed pl_clk0 unknown (DEPLOY_INFO bit_clock_mhz / summary.json pl_clk0_mhz_actual)")
@@ -523,7 +679,6 @@ def preflight(cfg: Config, open_backend=open_backend_default, verify_data=bc.ver
         else:
             (ok if float(wns) >= 0 else bad)(f"DEPLOY_INFO timing_wns_ns {wns} >= 0")
 
-    # -- device: VERSION, BUILD_ID, clock read-back -------------------------------------------
     version = build_id = clk = None
     be_bit_sha = ""
     try:
@@ -556,7 +711,6 @@ def preflight(cfg: Config, open_backend=open_backend_default, verify_data=bc.ver
                 f"pl_clk0 {clk:.6f} MHz == closed clock {closed:.6f} MHz (±{cfg.clock_tol}) for "
                 "the main runs")
 
-    # -- data package ------------------------------------------------------------------------
     pkg_path = cfg.data_dir / "PACKAGE.json"
     pkg_sha, man_sha, dirty_data = "", {}, []
     if not pkg_path.is_file():
@@ -585,13 +739,11 @@ def preflight(cfg: Config, open_backend=open_backend_default, verify_data=bc.ver
             except (bc.ManifestError, OSError, ValueError) as e:
                 bad(f"{net}: data package: {e}")
 
-    # -- disk --------------------------------------------------------------------------------
     cfg.results_dir.mkdir(parents=True, exist_ok=True)
     free_mb = shutil.disk_usage(cfg.results_dir).free / 2**20
     (ok if free_mb >= cfg.min_free_mb else bad)(
         f"free disk at {cfg.results_dir}: {free_mb:.0f} MB >= {cfg.min_free_mb:.0f} MB")
 
-    # -- clean tree --------------------------------------------------------------------------
     sdirty = bool(info.get("dirty", True))
     ddirty = bool(dirty_data) or bool(info.get("data_git_dirty", False))
     if sdirty or ddirty:
@@ -609,6 +761,7 @@ def preflight(cfg: Config, open_backend=open_backend_default, verify_data=bc.ver
             "build_id_hw": None if build_id is None else f"{build_id:08x}",
             "build_id_deploy": info.get("build_id"), "bit": str(bit), "bit_sha256": bit_sha,
             "hwh_sha256": hwh_sha, "closed_clock_mhz": closed, "clock_readback_mhz": clk,
+            "clock_requested_mhz": info.get("bit_clock_requested_mhz"),
             "data_package_sha256": pkg_sha, "manifest_sha256": man_sha,
             "scripts_commit": info.get("commit", ""), "scripts_dirty": sdirty,
             "data_dirty": ddirty, "allow_dirty": cfg.allow_dirty,
@@ -617,6 +770,143 @@ def preflight(cfg: Config, open_backend=open_backend_default, verify_data=bc.ver
         raise PreflightError(f"{tag}PRE-FLIGHT FAILED ({len(fails)}):\n  - " + "\n  - ".join(fails))
     say(f"[{tag}preflight] PASSED ({len(warns)} warnings)")
     return prov
+
+
+# ---- environment pre-flight ---------------------------------------------------------------------
+@dataclass
+class EnvPaths:
+    sysfs_root: str = benv.SYSFS_CPU
+    proc_root: str = benv.PROC
+    iio_root: str = benv.IIO
+    hwmon_root: str = benv.HWMON
+    fake: bool = False
+
+
+def dryrun_env_paths(rd: Path) -> EnvPaths:
+    root = rd / ".dryrun_env"
+    if root.exists():
+        shutil.rmtree(root)
+    p = benv.make_fake_tree(root)
+    return EnvPaths(**p, fake=True)
+
+
+def env_preflight(paths: EnvPaths, *, dry: bool, plan: bool, allow_non_paper: bool,
+                  allow_dirty: bool, meas_cores: str, cpu1_cores: str, cpun_cores: str,
+                  cpu_freq_khz: int | None, say=print) -> tuple[dict, benv.CpuFreqControl]:
+    """Package managers, governor + fixed frequency, pinning, die temperature. Raises
+    PreflightError on a paper-grade FAIL (unless allow_non_paper). Returns (env provenance,
+    the cpufreq controller holding the saved settings for restore())."""
+    tag = "DRY RUN " if dry else ""
+    fails, warns = [], []
+    downgrade = allow_non_paper or dry
+
+    def ok(msg):
+        say(f"  [{tag}env] OK    {msg}")
+
+    def fail(msg):
+        if downgrade:
+            say(f"  [{tag}env] WARN  {msg} — {'dry run' if dry else '--allow-non-paper-grade'}: "
+                "rows are NOT paper-grade")
+            warns.append(msg)
+        else:
+            say(f"  [{tag}env] FAIL  {msg}")
+            fails.append(msg)
+
+    def warn(msg):
+        say(f"  [{tag}env] WARN  {msg}")
+        warns.append(msg)
+
+    say(f"[{tag}env] measurement environment pre-flight"
+        + (f" on a FAKE sysfs/proc tree ({Path(paths.sysfs_root).parents[3]}) — DRY RUN, the laptop's "
+           "cpufreq is not touched" if paths.fake else ""))
+    # package managers
+    busy = benv.pkg_manager_busy(paths.proc_root)
+    if busy:
+        fail("package manager running: " + "; ".join(f"pid {b['pid']} {b['comm']} ({b['cmdline']})"
+                                                     for b in busy)
+             + " — wait or `sudo systemctl stop unattended-upgrades packagekit`")
+    else:
+        ok("no apt/dpkg/unattended-upgrades/packagekitd process running")
+    # governor + frequency
+    ctl = benv.CpuFreqControl(root=paths.sysfs_root, fake=paths.fake)
+    before = ctl.snapshot()
+    gov_res = {"ok": None, "target_khz": ctl.target_khz(cpu_freq_khz), "errors": [], "readback": {}}
+    if plan:
+        say(f"  [{tag}env] --plan: governor not changed; now "
+            f"{ {k: v['scaling_governor'] for k, v in before['policies'].items()} }, "
+            f"cur kHz {before['cpu_cur_freq_khz']}; would fix {gov_res['target_khz']} kHz")
+    else:
+        gov_res = ctl.apply(cpu_freq_khz, settle=(lambda: benv.fake_kernel_settle(paths.sysfs_root))
+                            if paths.fake else None)
+        if gov_res["ok"]:
+            ok(f"cpufreq: governor performance, fixed {gov_res['target_khz']} kHz on every policy; "
+               f"scaling_cur_freq read back {gov_res['readback']['cpu_cur_freq_khz']} (restored on exit)")
+        else:
+            fail("cpufreq governor/frequency: " + "; ".join(gov_res["errors"]))
+    # pinning
+    avail = benv.available_cores()
+    pins = {}
+    for name, spec in (("meas", meas_cores), ("cpu1", cpu1_cores), ("cpun", cpun_cores)):
+        c = benv.parse_cores(spec)
+        if not c or not c <= avail:
+            fail(f"--{name}-cores {spec!r} not a subset of the available cores {benv.cores_str(avail)}")
+        pins[name] = benv.cores_str(c)
+    hk = (avail - benv.parse_cores(meas_cores)) or avail
+    orig_aff = benv.affinity_of(0)
+    pin_self = benv.pin(0, hk)
+    pin_self["original"] = orig_aff
+    if pin_self["ok"]:
+        ok(f"orchestrator pinned to housekeeping cores {pin_self['readback']}; steps -> {pins['meas']}, "
+           f"CPU baseline -> {pins['cpun']} (1-thread workers {pins['cpu1']})")
+    else:
+        fail(f"pinning (sched_setaffinity = taskset): {pin_self['error']}")
+    # temperature
+    t = benv.read_die_temp(paths.iio_root, paths.hwmon_root)
+    if t["max_c"] is None:
+        warn("die temperature unavailable (no AMS iio / hwmon node): recorded as 'unavailable'")
+    else:
+        ok(f"die temperature {t['max_c']:.1f} °C max ({t['source']}: {t['channels_c']})"
+           + (" [FAKE]" if paths.fake else ""))
+    paper = not dry and not allow_dirty and not allow_non_paper and not fails
+    env = {"paper_grade": paper, "pkg_manager_offenders": busy, "cpufreq_before": before,
+           "cpufreq_apply": {k: v for k, v in gov_res.items()},
+           "cpu_freq_khz": gov_res.get("target_khz"), "cpu_governor": "performance" if gov_res["ok"] else
+           ",".join(sorted({v["scaling_governor"] or "" for v in before["policies"].values()})),
+           "meas_cores": pins.get("meas"), "cpu1_cores": pins.get("cpu1"), "cpun_cores": pins.get("cpun"),
+           "housekeeping_cores": benv.cores_str(hk), "orchestrator_pin": pin_self,
+           "die_temp": t, "fake_tree": paths.fake, "paths": vars(paths), "warnings": warns,
+           "allow_non_paper_grade": allow_non_paper}
+    if fails:
+        raise PreflightError(f"{tag}ENVIRONMENT PRE-FLIGHT FAILED ({len(fails)}; override only with "
+                             "--allow-non-paper-grade, rows then NOT paper-grade):\n  - "
+                             + "\n  - ".join(fails))
+    say(f"[{tag}env] {'PAPER-GRADE' if paper else 'NOT paper-grade'} environment "
+        f"({len(warns)} warnings)")
+    return env, ctl
+
+
+# ---- f_meas ------------------------------------------------------------------------------------
+def fmeas_for(state: dict, rd: Path, session: int) -> dict:
+    """f_meas fields for $GOS_RUN_ENV: the calibration of this session if OK, else the latest OK
+    calibration in the state; {} if none."""
+    cands = []
+    for sid, rec in state.get("steps", {}).items():
+        if sid.endswith(".fcal") and rec.get("status") == "ok":
+            cands.append((sid == f"s{session}.fcal", rec.get("finished_utc", ""), sid, rec))
+    for _, _, sid, rec in sorted(cands, reverse=True):
+        name = next((n for n in rec.get("outputs", {}) if n.startswith("hw_fclk_cal") and n.endswith(".csv")), None)
+        if not name or not (rd / name).is_file():
+            continue
+        with (rd / name).open() as f:
+            rows = list(csv.DictReader(f))
+        if not rows or not rows[-1].get("f_meas_mhz"):
+            continue
+        r = rows[-1]
+        return {"f_meas_mhz": float(r["f_meas_mhz"]), "f_meas_ci_lo_mhz": r.get("f_meas_ci_lo_mhz", ""),
+                "f_meas_ci_hi_mhz": r.get("f_meas_ci_hi_mhz", ""),
+                "f_meas_readback_mhz": float(r["f_readback_mhz"]),
+                "f_meas_source": r.get("f_meas_source", ""), "f_meas_step": sid}
+    return {}
 
 
 # ---- step execution ---------------------------------------------------------------------------
@@ -637,8 +927,15 @@ def _kill_group(p: subprocess.Popen, say):
             continue
 
 
+def _env_log(rd: Path, rec: dict):
+    (rd / "logs").mkdir(exist_ok=True)
+    with (rd / "logs" / "env_log.jsonl").open("a") as f:
+        f.write(json.dumps(rec, default=str) + "\n")
+
+
 def run_step(step: Step, cfg: Config, state: dict, state_path: Path, timeout_s: float, say,
-             lock_fd: int | None = None) -> dict:
+             lock_fd: int | None = None, run_env: dict | None = None, cores=None,
+             env_paths: EnvPaths | None = None, strict_pin: bool = False) -> dict:
     rd = cfg.results_dir
     staging = rd / ".staging" / step.id
     prev = state["steps"].get(step.id)
@@ -654,25 +951,42 @@ def run_step(step: Step, cfg: Config, state: dict, state_path: Path, timeout_s: 
         say(f"  archived previous/partial files of {step.id} -> {ar.root.relative_to(rd)}: {ar.moved}")
     staging.mkdir(parents=True)
     (rd / "logs").mkdir(exist_ok=True)
-    cmd = [cfg.python, str(cfg.board_dir / step.argv[0]), *step.argv[1:]]
+    a0 = step.argv[0]
+    if a0.endswith(".py"):
+        cmd = [cfg.python, str(cfg.board_dir / a0), *step.argv[1:]]
+    else:
+        cmd = [a0 if os.path.isabs(a0) else str(cfg.board_dir / a0), *step.argv[1:]]
     if step.out_flag:
         cmd += [step.out_flag, str(staging)]
-    rec = {"status": "running", "title": step.title, "session": step.session,
+    temp0 = benv.read_die_temp(env_paths.iio_root, env_paths.hwmon_root) if env_paths else {}
+    renv = dict(run_env or {})
+    renv.update(step_id=step.id, die_temp_start_c=temp0.get("max_c") if temp0.get("max_c") is not None
+                else "unavailable")
+    rec = {"status": "running", "title": step.title, "session": step.session, "group": step.group,
            "params_key": step.params_key, "cmd": cmd, "started_utc": utc_now(),
            "timeout_s": round(timeout_s, 1), "provenance": state["provenance"], "outputs": {},
-           "log": log_rel, "required": step.required}
+           "log": log_rel, "required": step.required, "die_temp_start": temp0,
+           "run_env": renv}
     state["steps"][step.id] = rec
     save_state(state_path, state)
     say(f"  $ {' '.join(cmd)}")
     t0 = time.monotonic()
     status, rc = "failed", None
+    want = benv.parse_cores(cores) if cores else set()
+    preexec = (lambda: os.sched_setaffinity(0, want)) if want else None
     with (rd / log_rel).open("w") as log:
-        log.write(f"# {step.id} {step.title}\n# {utc_now()} cmd: {cmd}\n")
+        log.write(f"# {step.id} {step.title}\n# {utc_now()} cmd: {cmd}\n# run env: {json.dumps(renv, default=str)}\n")
         log.flush()
         p = subprocess.Popen(cmd, cwd=str(cfg.board_dir), stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT, text=True, bufsize=1,
                              start_new_session=True, pass_fds=(lock_fd,) if lock_fd else (),
-                             env=dict(os.environ, PYTHONUNBUFFERED="1"))
+                             preexec_fn=preexec,
+                             env=dict(os.environ, PYTHONUNBUFFERED="1",
+                                      **{bc.RUN_ENV_VAR: json.dumps(renv, default=str)}))
+        aff = benv.affinity_of(p.pid) if want else ""
+        rec["affinity"] = {"requested": benv.cores_str(want), "readback": aff,
+                           "ok": True if not want else (None if not aff and p.poll() is not None
+                                                        else aff == benv.cores_str(want))}
 
         def pump():
             for line in p.stdout:
@@ -683,13 +997,19 @@ def run_step(step: Step, cfg: Config, state: dict, state_path: Path, timeout_s: 
         th = threading.Thread(target=pump, daemon=True)
         th.start()
         try:
-            try:
-                rc = p.wait(timeout=timeout_s)
-                status = "ok" if rc == 0 else "failed"
-            except subprocess.TimeoutExpired:
-                say(f"  TIMEOUT: {step.id} exceeded {timeout_s:.0f} s")
+            if want and rec["affinity"]["ok"] is False and p.poll() is None and strict_pin:
+                say(f"  PINNING FAILED for {step.id}: {rec['affinity']} — stopping the step")
                 _kill_group(p, say)
-                rc, status = p.returncode, "timeout"
+                rc, status = p.returncode, "failed"
+                rec["note"] = f"pinning failed {rec['affinity']}"
+            else:
+                try:
+                    rc = p.wait(timeout=timeout_s)
+                    status = "ok" if rc == 0 else "failed"
+                except subprocess.TimeoutExpired:
+                    say(f"  TIMEOUT: {step.id} exceeded {timeout_s:.0f} s")
+                    _kill_group(p, say)
+                    rc, status = p.returncode, "timeout"
         except (KeyboardInterrupt, Interrupted):
             say(f"  INTERRUPTED: stopping {step.id}")
             _kill_group(p, say)
@@ -697,7 +1017,15 @@ def run_step(step: Step, cfg: Config, state: dict, state_path: Path, timeout_s: 
         th.join(timeout=10)
         log.write(f"# exit {rc} status {status} after {time.monotonic() - t0:.1f} s\n")
     dur = time.monotonic() - t0
-    rec.update(finished_utc=utc_now(), duration_s=round(dur, 3), exit_code=rc)
+    temp1 = benv.read_die_temp(env_paths.iio_root, env_paths.hwmon_root) if env_paths else {}
+    rec.update(finished_utc=utc_now(), duration_s=round(dur, 3), exit_code=rc, die_temp_end=temp1)
+    _env_log(rd, {"step": step.id, "start_utc": rec["started_utc"], "end_utc": rec["finished_utc"],
+                  "die_temp_start": temp0, "die_temp_end": temp1, "affinity": rec["affinity"],
+                  "paper_grade": renv.get("paper_grade"), "session_index": renv.get("session_index")})
+    if temp0 or temp1:
+        say(f"  die temperature {step.id}: start {temp0.get('max_c', 'n/a')} °C, end "
+            f"{temp1.get('max_c', 'n/a')} °C ({temp1.get('source', '')}); pinned "
+            f"{rec['affinity']['readback'] or '-'}")
     if status in ("timeout", "interrupted"):
         ar2 = Archiver(rd, f"{step.id}_{status}")
         for f in sorted(staging.rglob("*")):
@@ -751,17 +1079,30 @@ def _rmdir_empty(d: Path):
         pass
 
 
-# ---- main --------------------------------------------------------------------------------------
-def deploy_info_for(backend: str, bit_arg: str | None, board_dir: Path, data_dir: Path) -> tuple[dict, Path]:
-    """(deploy info, bit path). Hardware: DEPLOY_INFO.json (required). Dry run: a laptop
-    equivalent from the bitstream's summary.json + git (clearly labelled)."""
-    info = bc.deploy_info()
+# ---- deploy info / bitstreams ----------------------------------------------------------------------
+DEPLOY_BIT_KEYS = ("bit", "hwh", "bit_sha256", "hwh_sha256", "build_id", "vivado_version",
+                   "bit_clock_mhz", "bit_clock_requested_mhz", "timing_wns_ns")
+
+
+def deploy_info_for(backend: str, bit_arg: str | None, board_dir: Path, data_dir: Path,
+                    info: dict | None = None) -> tuple[dict, Path]:
+    """(deploy info, bit path) for ONE bitstream. Hardware: DEPLOY_INFO.json (required; with a
+    "bits" list the matching entry's fields override the top level). Dry run: a laptop equivalent
+    from the bitstream's summary.json + git (clearly labelled)."""
+    info = bc.deploy_info() if info is None else info
     if backend == "pynq":
         rel = bit_arg or info.get("bit")
         if not rel:
             return info, board_dir / "bit" / "MISSING.bit"
         bit = Path(rel)
-        return info, bit if bit.is_absolute() else (board_dir / bit)
+        bit = bit if bit.is_absolute() else (board_dir / bit)
+        d = dict(info)
+        for e in info.get("bits", []) or []:
+            eb = Path(e.get("bit", ""))
+            eb = eb if eb.is_absolute() else board_dir / eb
+            if eb.resolve() == bit.resolve():
+                d.update({k: e[k] for k in DEPLOY_BIT_KEYS if k in e})
+        return d, bit
     bit = Path(bit_arg) if bit_arg else (Path(info["bit"]) if info.get("bit") else None)
     if bit is None:
         raise SystemExit("dry run: no bitstream known; pass --bit v2/vivado/out/<build>/<name>.bit")
@@ -772,6 +1113,7 @@ def deploy_info_for(backend: str, bit_arg: str | None, board_dir: Path, data_dir
              build_id=s.get("build_id", info.get("build_id", "")),
              vivado_version=s.get("vivado_version", ""),
              bit_clock_mhz=s.get("pl_clk0_mhz_actual", info.get("bit_clock_mhz")),
+             bit_clock_requested_mhz=s.get("pl_clk0_mhz_requested"),
              timing_wns_ns=s.get("wns_ns"))
     if (data_dir / "PACKAGE.json").is_file():
         p = json.loads((data_dir / "PACKAGE.json").read_text())
@@ -779,6 +1121,25 @@ def deploy_info_for(backend: str, bit_arg: str | None, board_dir: Path, data_dir
     return d, bit
 
 
+def bit_candidates(a, board_dir: Path, info: dict) -> list[str]:
+    """Bitstreams, highest closed clock first. Explicit --bit = that one only."""
+    if a.bit:
+        return [a.bit]
+    if a.backend == "pynq":
+        bits = [e["bit"] for e in (info.get("bits") or []) if e.get("bit")]
+        return bits or ([info["bit"]] if info.get("bit") else [])
+    if a.fallback_bits:
+        return list(a.fallback_bits)
+    out = []
+    if bc.IN_REPO:
+        for name in ("gos_300", "gos_250"):
+            p = board_dir.parent / "vivado" / "out" / name / f"{name}.bit"
+            if p.is_file():
+                out.append(str(p))
+    return out or ([info["bit"]] if info.get("bit") else [])
+
+
+# ---- main --------------------------------------------------------------------------------------
 def parse_sessions(s: str) -> list[int]:
     if s == "all":
         return [1, 2, 3]
@@ -797,6 +1158,8 @@ def make_parser() -> argparse.ArgumentParser:
     g = ap.add_mutually_exclusive_group()
     g.add_argument("--resume", action="store_true", help="(default) skip verified completed steps")
     g.add_argument("--fresh", action="store_true", help="archive state + outputs, start over")
+    ap.add_argument("--session-index", type=int, choices=(1, 2, 3), default=1,
+                    help="repeatability campaign index (rows tagged; K >= 2 -> <results>/rep<K>/)")
     ap.add_argument("--budget-min", type=float, default=None, help="time budget for this invocation")
     ap.add_argument("--step-timeout-min", type=float, default=None,
                     help="hard per-step timeout (default max(5, 3 x estimate + 2) min)")
@@ -805,27 +1168,46 @@ def make_parser() -> argparse.ArgumentParser:
     ap.add_argument("--plan", action="store_true", help="pre-flight + print the plan, run nothing")
     ap.add_argument("--steps", nargs="+", default=None, help="only these step ids (e.g. s2.A1)")
     ap.add_argument("--allow-dirty", action="store_true")
-    ap.add_argument("--bit", default=None, help="hw: default DEPLOY_INFO bit; dry run: a built .bit "
-                    "(its summary.json gives the closed clock), default the laptop gos_200 build")
+    ap.add_argument("--allow-non-paper-grade", action="store_true",
+                    help="environment pre-flight FAILs (governor, pinning, package manager) become "
+                    "warnings; every row is marked paper_grade=False")
+    ap.add_argument("--bit", default=None, help="one bitstream only (no clock fallback); hw default: "
+                    "DEPLOY_INFO bits (300 then 250 MHz build)")
+    ap.add_argument("--fallback-bits", nargs="+", default=None,
+                    help="dry run: candidate bitstreams, highest first (default gos_300 + gos_250)")
+    ap.add_argument("--dryrun-fail-smoke-mhz", type=float, default=None, help=argparse.SUPPRESS)
     ap.add_argument("--data-dir", default=str(bc.DEFAULT_DATA_DIR))
     ap.add_argument("--results-dir", default=None,
                     help="default results/ (hw) or results/dryrun/ (model)")
     ap.add_argument("--window-s", type=float, default=None,
-                    help="B1/B2 INA260 phase and meter window (default 60; --quick 30; model 2)")
-    ap.add_argument("--gap-s", type=float, default=None, help="B1/B2 gap (default 10; model 1)")
+                    help="B1/B2 INA260 phase length (default 60; --quick 30; model 2)")
+    ap.add_argument("--gap-s", type=float, default=None, help="B2 gap (default 10; model 1)")
+    ap.add_argument("--fcal-s", type=float, default=None,
+                    help="PL clock calibration wall time per session (default 8; --quick 4; model 1)")
     ap.add_argument("--b2-images", type=int, default=100)
     ap.add_argument("--power-repeats", type=int, default=3, help="B1 INA260 protocol repeats")
     ap.add_argument("--b2-power-repeats", type=int, default=3,
                     help="B2 INA260 idle/accel/idle repeats per clock")
     ap.add_argument("--power-rate-hz", type=float, default=10.0, help="INA260 sample rate request")
-    ap.add_argument("--with-meter", action="store_true",
-                    help="also run the optional external-meter cross-check windows (B1 + B2)")
     ap.add_argument("--write-mode", choices=("elem", "mmio", "slice"), default="elem")
     ap.add_argument("--host-path", choices=("safe", "fast"), default="safe",
-                    help="host path of A1-A4/B1/B2 (fast only after s1.fast passed; B3 runs both)")
+                    help="host path of A1-A4/B1/B2 (fast only after s1.fast passed; B3 interleaves both)")
     ap.add_argument("--fast-store", choices=("block", "words32"), default="block")
     ap.add_argument("--no-power-control", action="store_true",
                     help="B1 without the control phases (4R+1 instead of 6R+1 phases)")
+    ap.add_argument("--no-b3-cpu", action="store_true", help="B3 without the interleaved CPU condition")
+    ap.add_argument("--meas-cores", default=DEFAULT_MEAS_CORES,
+                    help="cores every step process is pinned to (default 3)")
+    ap.add_argument("--cpu1-cores", default=DEFAULT_CPU1_CORES,
+                    help="CPU baseline 1-thread workers (default 3)")
+    ap.add_argument("--cpun-cores", default=DEFAULT_CPUN_CORES,
+                    help="CPU baseline step + multi-thread workers (default 0-3)")
+    ap.add_argument("--cpu-freq-khz", type=int, default=None,
+                    help="fixed CPU frequency (default: the highest available)")
+    ap.add_argument("--sysfs-root", default=None, help=argparse.SUPPRESS)
+    ap.add_argument("--proc-root", default=None, help=argparse.SUPPRESS)
+    ap.add_argument("--iio-root", default=None, help=argparse.SUPPRESS)
+    ap.add_argument("--hwmon-root", default=None, help=argparse.SUPPRESS)
     ap.add_argument("--board-id", default=None)
     ap.add_argument("--clock-tol-mhz", type=float, default=bc.CLOCK_TOL_MHZ)
     ap.add_argument("--min-free-mb", type=float, default=1000.0)
@@ -834,18 +1216,24 @@ def make_parser() -> argparse.ArgumentParser:
     return ap
 
 
+def results_dir_for(source: str, results_dir, index: int) -> Path:
+    root = bc.resolve_out_dir(source, results_dir).resolve()
+    if index > 1:
+        return bc.resolve_out_dir(source, str(root / f"rep{index}")).resolve()
+    return root
+
+
 def main(argv=None, open_backend=open_backend_default, verify_data=bc.verify_manifest,
          steps_hook=None) -> int:
     a = make_parser().parse_args(argv)
     board_dir = bc.BOARD_DIR
     data_dir = Path(a.data_dir).resolve()
     source = bc.SOURCE_DRYRUN if a.backend == "model" else bc.SOURCE_HW
-    rd = bc.resolve_out_dir(source, a.results_dir).resolve()
+    rd = results_dir_for(source, a.results_dir, a.session_index)
     dry = a.backend == "model"
     window_s = a.window_s if a.window_s is not None else (2.0 if dry else (30.0 if a.quick else 60.0))
     gap_s = a.gap_s if a.gap_s is not None else (1.0 if dry else 10.0)
 
-    # one orchestrator (and its orphaned step) per results dir
     lock_f = open(rd / ".session.lock", "w")
     try:
         fcntl.flock(lock_f, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -865,52 +1253,159 @@ def main(argv=None, open_backend=open_backend_default, verify_data=bc.verify_man
     def on_signal(signum, frame):
         raise Interrupted(signal.Signals(signum).name)
     old = {s: signal.signal(s, on_signal) for s in (signal.SIGTERM, signal.SIGHUP)}
+    holder = {}
     try:
         return _main(a, board_dir, data_dir, rd, window_s, gap_s, say, lock_f.fileno(),
-                     open_backend, verify_data, steps_hook, sess_log)
+                     open_backend, verify_data, steps_hook, sess_log, holder)
     except (KeyboardInterrupt, Interrupted) as e:
         say(f"[session] INTERRUPTED ({type(e).__name__} {e}); state saved; rerun the same command to resume")
         return 130
     finally:
+        env_prov = holder.get("env") or {}
+        orig = (env_prov.get("orchestrator_pin") or {}).get("original")
+        if orig:
+            benv.pin(0, orig)                    # the orchestrator's own affinity back
+        ctl = holder.get("cpufreq")
+        if ctl is not None and ctl.applied:
+            errs = ctl.restore()
+            say(f"[session] {'DRY RUN (fake tree) ' if ctl.fake else ''}cpufreq restored to the saved "
+                f"governor/min/max" + (f" — ERRORS {errs}" if errs else ""))
         for s, h in old.items():
             signal.signal(s, h)
         slog.close()
         lock_f.close()
 
 
+def _smoke_runner(a, cfg0: Config, board_dir, data_dir, rd, open_backend, verify_data, say,
+                  info, meas_cores):
+    """run_smoke(entry) for clock_fallback.choose: pre-flight of that bitstream + core smoke."""
+    def run(entry: dict) -> bool:
+        d, bit = deploy_info_for(a.backend, str(entry["bit"]), board_dir, data_dir, info)
+        cfg = replace(cfg0, deploy=d, bit=bit, require_clock_equal=False)
+        try:
+            preflight(cfg, open_backend, verify_data, lambda m: say("    " + m))
+        except PreflightError as e:
+            say(f"    [fallback] pre-flight of {bit.name} failed: {e}")
+            return False
+        if (dry := cfg.dry) and a.dryrun_fail_smoke_mhz is not None and \
+                abs(float(entry["clock_mhz"]) - a.dryrun_fail_smoke_mhz) <= 1.0:
+            say(f"    [fallback] DRY RUN: SIMULATED smoke failure at {entry['clock_mhz']} MHz "
+                "(--dryrun-fail-smoke-mhz)")
+            return False
+        dev = ["--backend", a.backend, "--data-dir", str(data_dir)]
+        dev += ["--clock-mhz", f"{cfg.closed_mhz:.6f}"] if dry else ["--bit", str(bit)]
+        cmd = [cfg.python, str(board_dir / "test_core_smoke.py"), *dev,
+               "--max-fclk0", f"{cfg.closed_mhz + cfg.clock_tol:.6f}"]
+        logp = rd / "logs" / f"fallback_smoke_{clock_tag(cfg.closed_mhz)}.log"
+        logp.parent.mkdir(exist_ok=True)
+        cores = benv.parse_cores(meas_cores)
+        with logp.open("w") as log:
+            p = subprocess.run(cmd, cwd=str(board_dir), stdout=log, stderr=subprocess.STDOUT,
+                               timeout=600, preexec_fn=(lambda: os.sched_setaffinity(0, cores)))
+        say(f"    [fallback] smoke {bit.name}: exit {p.returncode} (log {logp.relative_to(rd)})")
+        return p.returncode == 0
+    return run
+
+
 def _main(a, board_dir, data_dir, rd, window_s, gap_s, say, lock_fd, open_backend, verify_data,
-          steps_hook, sess_log) -> int:
+          steps_hook, sess_log, holder) -> int:
     dry = a.backend == "model"
     tag = "DRY RUN " if dry else ""
     t_start = time.monotonic()
-    info, bit = deploy_info_for(a.backend, a.bit, board_dir, data_dir)
-    cfg = Config(backend=a.backend, board_dir=board_dir, results_dir=rd, data_dir=data_dir,
-                 deploy=info, bit=bit, allow_dirty=a.allow_dirty, clock_tol=a.clock_tol_mhz,
-                 min_free_mb=a.min_free_mb, require_clock_equal=any(s >= 2 for s in a.sessions))
-    say(f"[session] {tag}sessions {a.sessions} backend={a.backend} results={rd} "
-        f"budget={a.budget_min} min quick={a.quick} {utc_now()}")
+    info = bc.deploy_info()
+    say(f"[session] {tag}sessions {a.sessions} session_index {a.session_index} backend={a.backend} "
+        f"results={rd} budget={a.budget_min} min quick={a.quick} {utc_now()}")
     if dry:
         say("[session] DRY RUN: every number is model output (source=dryrun_model), NOT a hardware "
             "measurement; outputs only under results/dryrun/.")
     state_path = rd / STATE_NAME
     old_state = load_state(state_path)
-    timing = (old_state or {}).get("timing", {})     # durations survive --fresh (not results)
+    timing = (old_state or {}).get("timing", {})
 
+    # -- environment pre-flight (before anything touches the board) -----------------------------
+    if dry and not a.sysfs_root:
+        paths = dryrun_env_paths(rd)
+    else:
+        paths = EnvPaths(sysfs_root=a.sysfs_root or benv.SYSFS_CPU, proc_root=a.proc_root or benv.PROC,
+                         iio_root=a.iio_root or benv.IIO, hwmon_root=a.hwmon_root or benv.HWMON,
+                         fake=False)
+    try:
+        envp, ctl = env_preflight(paths, dry=dry, plan=a.plan, allow_non_paper=a.allow_non_paper_grade,
+                                  allow_dirty=a.allow_dirty, meas_cores=a.meas_cores,
+                                  cpu1_cores=a.cpu1_cores, cpun_cores=a.cpun_cores,
+                                  cpu_freq_khz=a.cpu_freq_khz, say=say)
+        holder["cpufreq"] = ctl
+        holder["env"] = envp
+    except PreflightError as e:
+        say(str(e))
+        say("[session] nothing was run.")
+        return 3
+
+    # -- bitstream: recorded choice / clock fallback / single --------------------------------
+    cands = bit_candidates(a, board_dir, info)
+    if not cands:
+        raise SystemExit("no bitstream known (DEPLOY_INFO bits / --bit)")
+    entries = []
+    for b in cands:
+        d, bp = deploy_info_for(a.backend, b, board_dir, data_dir, info)
+        entries.append({"bit": bp, "clock_mhz": d.get("bit_clock_mhz"), "deploy": d})
+    entries.sort(key=lambda e: -(float(e["clock_mhz"]) if e["clock_mhz"] is not None else 0.0))
+    rec_choice = None if (old_state is None or a.fresh) else old_state["provenance"].get("bit_choice")
+    chosen = entries[0]
+    choice = {"ok": True, "bit": str(chosen["bit"]), "clock_mhz": chosen["clock_mhz"],
+              "fell_back": False, "attempts": [],
+              "reason": "single bitstream" if len(entries) == 1 else "primary (highest clock)"}
+    if rec_choice and rec_choice.get("bit"):
+        m = [e for e in entries if str(e["bit"]) == str(rec_choice["bit"])]
+        if m:
+            chosen, choice = m[0], rec_choice
+            say(f"[session] bitstream: recorded choice {chosen['bit']} ({rec_choice.get('reason')})")
+    elif len(entries) > 1 and 1 in a.sessions and not a.plan:
+        cfg0 = Config(backend=a.backend, board_dir=board_dir, results_dir=rd, data_dir=data_dir,
+                      deploy=entries[0]["deploy"], bit=entries[0]["bit"], allow_dirty=a.allow_dirty,
+                      clock_tol=a.clock_tol_mhz, min_free_mb=a.min_free_mb)
+        try:
+            import clock_fallback as cf
+        except ImportError:
+            cf = None
+            choice["reason"] = "clock_fallback.py absent: primary (highest clock) bitstream, no fallback"
+            say(f"[session] {choice['reason']}")
+        if cf is not None:
+            say(f"[session] {tag}clock fallback over {[e['clock_mhz'] for e in entries]} MHz "
+                "(clock_fallback.choose: pre-flight + core smoke per bitstream)")
+            ctx = SimpleNamespace(say=say, dry=dry, cfg=cfg0, results_dir=rd, board_dir=board_dir)
+            res = cf.choose(ctx, [{"bit": str(e["bit"]), "clock_mhz": float(e["clock_mhz"])}
+                                  for e in entries],
+                            _smoke_runner(a, cfg0, board_dir, data_dir, rd, open_backend, verify_data,
+                                          say, info, envp["meas_cores"]))
+            if not res.get("ok", res.get("bit") is not None) or not res.get("bit"):
+                say(f"[session] CLOCK FALLBACK FAILED: {res.get('reason')} — nothing else run")
+                return 3
+            chosen = next(e for e in entries if str(e["bit"]) == str(res["bit"]))
+            choice = res
+    cfg = Config(backend=a.backend, board_dir=board_dir, results_dir=rd, data_dir=data_dir,
+                 deploy=chosen["deploy"], bit=chosen["bit"], allow_dirty=a.allow_dirty,
+                 clock_tol=a.clock_tol_mhz, min_free_mb=a.min_free_mb,
+                 require_clock_equal=any(s >= 2 for s in a.sessions))
     try:
         prov = preflight(cfg, open_backend, verify_data, say)
     except PreflightError as e:
         say(str(e))
         say("[session] nothing was run.")
         return 3
+    prov.update(session_index=a.session_index, paper_grade=envp["paper_grade"],
+                cpu_freq_khz=envp["cpu_freq_khz"], bit_choice=choice, env=envp)
 
     if old_state is not None and not a.fresh:
         diff = provenance_diff(old_state["provenance"], prov, cfg.clock_tol)
         if diff:
             say("[session] REFUSED to resume: provenance differs from " + str(state_path) + ":\n  - "
                 + "\n  - ".join(diff) + "\n  Results of one state must come from one bitstream, "
-                "clock, data package and scripts commit. Use --fresh (old outputs are archived).")
+                "clock, data package, scripts commit, session index and environment. Use --fresh "
+                "(old outputs are archived).")
             return 4
         state = old_state
+        state["env_last"] = envp
         say(f"[session] resuming state {state_path.name} (created {state['created_utc']}); "
             "provenance identical")
     else:
@@ -918,26 +1413,38 @@ def _main(a, board_dir, data_dir, rd, window_s, gap_s, say, lock_fd, open_backen
         if a.plan:
             say(f"[session] --plan: would archive existing results ({why}) and start a new state")
         elif state_path.exists() or any(rd.glob("hw_*")) or (rd / ".staging").exists():
-            ar = archive_everything(rd, why, keep=[sess_log])
+            keep = [sess_log, *(rd / "logs").glob("fallback_smoke_*.log")]
+            ar = archive_everything(rd, why, keep=keep)
             if ar.moved:
                 say(f"[session] {why}: archived {len(ar.moved)} entries -> {ar.root.relative_to(rd)}")
         state = new_state(prov, timing)
+    state.setdefault("order_seed", stats.new_seed())
     if not a.plan:
         state["invocations"].append({"utc": utc_now(), "args": vars(a),
                                      "session_log": str(sess_log.relative_to(rd)),
                                      "preflight": prov})
         save_state(state_path, state)
+        if len(entries) > 1 or choice.get("attempts"):
+            (rd / CHOICE_FILE).write_text(json.dumps(choice, indent=1, default=str) + "\n")
+    say(f"[session] bitstream for every step: {cfg.bit} (closed {cfg.closed_mhz} MHz; "
+        f"{choice.get('reason')})")
 
+    seed = int(state["order_seed"])
     steps = build_steps(cfg, a.sessions, a.quick, window_s, gap_s, a.write_mode, a.b2_images,
                         a.board_id, a.power_repeats, a.b2_power_repeats, a.power_rate_hz,
-                        a.with_meter, a.host_path, a.fast_store, not a.no_power_control)
+                        a.host_path, a.fast_store, not a.no_power_control, order_seed=seed,
+                        fcal_s=a.fcal_s, cpu1_cores=envp["cpu1_cores"], cpun_cores=envp["cpun_cores"],
+                        b3_cpu=not a.no_b3_cpu)
+    steps = merge_extra_steps(steps, extra_opts(cfg, a, a.sessions, window_s, gap_s, seed),
+                              a.sessions, say)
+    steps = prioritize(steps)
     say(f"[session] host path for A1-A4/B1/B2: {a.host_path}"
         + (f" (store {a.fast_store}; requires s1.fast OK)" if a.host_path == "fast" else
-           " (default; s2.B3fast measures the fast path if s1.fast passed)"))
+           " (default; B3 adds the fast path, interleaved, if s1.fast passed)"))
     if 3 in a.sessions:
-        say(f"[session] Session 3 power: primary {POWER_LABEL} via {POWER_HOOK_SCRIPT} "
-            f"(B1 per net, B2 per clock); external meter cross-check "
-            + ("ON (--with-meter)" if a.with_meter else "off (enable with --with-meter)"))
+        say(f"[session] Session 3 power: {POWER_LABEL} via {POWER_HOOK_SCRIPT} (B1 per net, B2 per "
+            "clock); the INA260 is the only power source")
+    say(f"[session] priority: bring-up, f_meas calibration, {', '.join(GROUP_ORDER)}; seed {seed}")
     if steps_hook:
         steps = steps_hook(steps, cfg)
     if a.steps:
@@ -955,18 +1462,28 @@ def _main(a, board_dir, data_dir, rd, window_s, gap_s, say, lock_fd, open_backen
                 "session 1 first (same bitstream), or --no-bringup-check.")
             return 4
 
+    base_env = {"session_index": a.session_index, "paper_grade": envp["paper_grade"],
+                "cpu_governor": envp["cpu_governor"], "cpu_freq_khz": envp["cpu_freq_khz"],
+                "f_req_mhz": cfg.deploy.get("bit_clock_requested_mhz") or "",
+                "note": ("paper-grade environment" if envp["paper_grade"] else
+                         "NOT paper-grade: " + "; ".join(
+                             (["dry run"] if dry else []) + (["--allow-dirty"] if a.allow_dirty else [])
+                             + (["--allow-non-paper-grade"] if a.allow_non_paper_grade else [])
+                             + envp["warnings"])[:400])}
     budget_s = None if a.budget_min is None else 60.0 * a.budget_min
     report, any_fail, blocked, incomplete = [], False, False, False
-    say(f"[session] plan ({len(steps)} steps):")
-    for st in steps:
+    say(f"[session] plan ({len(steps)} steps, priority order):")
+    for st0 in steps:
+        st = resolve_step(st0, state)
         est, src = estimate(st, state, a.backend)
         done, why = verify_step(st, state["steps"].get(st.id), rd)
-        say(f"  {st.id:15} est {est / 60:7.1f} min ({src}); {'DONE, skip' if done else 'run'} ({why})"
-            f" — {st.title}")
+        say(f"  {st.id:16} [{st.group or '-':9}] est {est / 60:7.1f} min ({src}); "
+            f"{'DONE, skip' if done else 'run'} ({why}) — {st.title}")
     if a.plan:
         return 0
 
-    for st in steps:
+    for st0 in steps:
+        st = resolve_step(st0, state)
         rec = state["steps"].get(st.id)
         done, why = verify_step(st, rec, rd)
         est, src = estimate(st, state, a.backend)
@@ -980,8 +1497,7 @@ def _main(a, board_dir, data_dir, rd, window_s, gap_s, say, lock_fd, open_backen
             continue
         unmet = [q for q in st.requires if state["steps"].get(q, {}).get("status") != "ok"]
         if unmet and not a.no_bringup_check:
-            why = (f"prerequisite {unmet} not recorded OK in this state (fast host path not "
-                   "validated at bring-up)")
+            why = f"prerequisite {unmet} not recorded OK in this state"
             say(f"\n[session] BLOCKED {st.id}: {why}"
                 + ("; rerun with --host-path safe" if st.required else " (informational step)"))
             state["steps"].setdefault(st.id, {}).update(status="blocked", blocked_utc=utc_now(),
@@ -994,8 +1510,8 @@ def _main(a, board_dir, data_dir, rd, window_s, gap_s, say, lock_fd, open_backen
         elapsed = time.monotonic() - t_start
         remaining = None if budget_s is None else budget_s - elapsed
         if remaining is not None and est > remaining:
-            say(f"\n[session] DEFER {st.id}: estimate {est / 60:.1f} min ({src}) > remaining budget "
-                f"{remaining / 60:.1f} min")
+            say(f"\n[session] DEFER {st.id} [{st.group}]: estimate {est / 60:.1f} min ({src}) > "
+                f"remaining budget {remaining / 60:.1f} min")
             state["steps"].setdefault(st.id, {}).update(
                 status="deferred", deferred_utc=utc_now(), deferred_estimate_s=round(est, 1))
             save_state(state_path, state)
@@ -1004,6 +1520,8 @@ def _main(a, board_dir, data_dir, rd, window_s, gap_s, say, lock_fd, open_backen
             continue
         if a.step_timeout_min is not None:
             timeout = 60.0 * a.step_timeout_min
+        elif st.timeout_s is not None:
+            timeout = st.timeout_s
         else:
             timeout = max(300.0, 3.0 * est + 120.0)
         if remaining is not None:
@@ -1012,7 +1530,10 @@ def _main(a, board_dir, data_dir, rd, window_s, gap_s, say, lock_fd, open_backen
             f"timeout {timeout / 60:.1f} min | {utc_now()} =====")
         if rec and rec.get("status") in ("running", "interrupted", "timeout"):
             say(f"  previous attempt {rec.get('status')} ({rec.get('started_utc')}): rerun from scratch")
-        r = run_step(st, cfg, state, state_path, timeout, say, lock_fd)
+        renv = dict(base_env, **fmeas_for(state, rd, st.session))
+        cores = envp["cpun_cores"] if st.cores == "cpun" else envp["meas_cores"]
+        r = run_step(st, cfg, state, state_path, timeout, say, lock_fd, run_env=renv, cores=cores,
+                     env_paths=paths, strict_pin=envp["paper_grade"])
         say(f"[session] ===== {st.id}: {r['status'].upper()} (exit {r.get('exit_code')}, "
             f"{r['duration_s']:.1f} s; {len(r['outputs'])} outputs) =====")
         report.append((st.id, r["status"], r["duration_s"], est, r.get("note", "")))
@@ -1024,10 +1545,11 @@ def _main(a, board_dir, data_dir, rd, window_s, gap_s, say, lock_fd, open_backen
             else:
                 say(f"  ({st.id} is informational: not counted as a failure)")
 
-    say(f"\n[session] {tag}SUMMARY ({(time.monotonic() - t_start) / 60:.1f} min, results {rd})")
-    say(f"  {'step':15} {'status':16} {'dur_s':>9} {'est_s':>9}  note")
+    say(f"\n[session] {tag}SUMMARY ({(time.monotonic() - t_start) / 60:.1f} min, results {rd}, "
+        f"session_index {a.session_index}, paper_grade {envp['paper_grade']})")
+    say(f"  {'step':16} {'status':16} {'dur_s':>9} {'est_s':>9}  note")
     for sid, status, dur, est, note in report:
-        say(f"  {sid:15} {status:16} {('' if dur is None else f'{dur:.1f}'):>9} {est:9.0f}  {note}")
+        say(f"  {sid:16} {status:16} {('' if dur is None else f'{dur:.1f}'):>9} {est:9.0f}  {note}")
     deferred = [x[0] for x in report if x[1] == "DEFERRED"]
     if deferred:
         say(f"  deferred (rerun the same command to continue): {deferred}")

@@ -5,10 +5,9 @@
 #   sudo -E ./run_all.sh [session.sh options]        ==  sudo -E ./session.sh 2 [options]
 #   ./run_all.sh --backend model --allow-dirty       # laptop dry run -> v2/results/dryrun/
 #
-# B1 / B2 power are NOT part of Session 2: they live in Session 3 (`./session.sh 3`), primary =
-# on-board INA260 SOM-rail power via power_log.py; the external meter is an optional cross-check
-# (--with-meter). The old run_all.sh options --limit / --skip-cpu no longer exist (use --quick,
-# --steps, --budget-min; `./session.sh --help`).
+# B1 / B2 power are NOT part of Session 2: they live in Session 3 (`./session.sh 3`), measured
+# only with the on-board INA260 SOM-rail logger (power_log.py). The old run_all.sh options
+# --limit / --skip-cpu no longer exist (use --quick, --steps, --budget-min; `./session.sh --help`).
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 echo "run_all.sh is superseded: forwarding to ./session.sh 2 $*"

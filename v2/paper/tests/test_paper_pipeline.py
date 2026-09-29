@@ -330,11 +330,12 @@ def test_b1_b2_use_ina260_summaries(res, tmp_path):
     assert "9.990" not in b1 and "external meter" not in b1         # sensorcheck ignored; no meter rows
     assert PH_BOARD in b1                                           # CIFAR-10 column still pending
     assert "hw" in m["artifacts"]["fig_b2_clock"]["sources"]
-    # meter rows appear only when a meter summary exists
+    # no external meter: a stray meter summary file is never read
     synth_ina(res, "hw_b1_power_meter_summary_lenet5.csv", "lenet5", "199.998001", 0.5)
     out2 = tmp_path / "out2"
-    run(res, out2)
-    assert "board input power (external meter, cross-check)" in tex(out2, "tab_b1_power")
+    m2 = run(res, out2)
+    assert "meter" not in tex(out2, "tab_b1_power").lower()
+    assert not any("meter" in f["path"] for f in m2["files"])
 
 
 def test_dirty_ina260_rows_rejected(res, tmp_path):
@@ -413,3 +414,63 @@ def test_b3_safe_vs_fast_columns_and_speedup(res, tmp_path):
     t2 = tex(out2, "tab_b3_breakdown")
     assert "300.0" in t2 and "3.00$\\times$" in t2 and PH_BOARD not in t2
     assert not m2["artifacts"]["fig_b3_breakdown"]["placeholders"]
+
+
+# ---------------------------------------------------------------------- measurement rigor
+def test_non_paper_grade_board_rows_rejected(res, tmp_path):
+    fields, rows = synth_hw_a2a3(res)
+    for r in rows:
+        r["paper_grade"] = "False"
+    write_csv(res / "hw_a2_a3_cycles.csv", fields + ["paper_grade"], rows)
+    out = tmp_path / "out"
+    m = run(res, out)
+    assert PH_BOARD in tex(out, "tab_a3_cycles")
+    f = next(f for f in m["files"] if f["path"].endswith("hw_a2_a3_cycles.csv"))
+    assert f["rows_clean"] == 0 and all("paper_grade" in r["reason"] for r in f["rejected"])
+    for r in rows:
+        r["paper_grade"] = "True"
+    write_csv(res / "hw_a2_a3_cycles.csv", fields + ["paper_grade"], rows)
+    out2 = tmp_path / "out2"
+    run(res, out2)
+    assert PH_BOARD not in tex(out2, "tab_a3_cycles")
+
+
+def test_b3_median_with_ci_cells(res, tmp_path):
+    synth_b3(res, "hw_b3_breakdown.csv", "safe", 900.0)
+    fields, rows = read_csv(res / "hw_b3_breakdown.csv")
+    for r in rows:
+        v = float(r["median_us"])
+        r["median_ci_lo_us"], r["median_ci_hi_us"] = f"{v - 1.25:.3f}", f"{v + 2.5:.3f}"
+    write_csv(res / "hw_b3_breakdown.csv", fields + ["median_ci_lo_us", "median_ci_hi_us"], rows)
+    out = tmp_path / "out"
+    run(res, out)
+    t = tex(out, "tab_b3_breakdown")
+    assert "900.0 [898.8, 902.5]" in t and "95\\% CI" in t
+
+
+def test_repeatability_table_placeholder_then_data(res, tmp_path):
+    out = tmp_path / "out"
+    run(res, out)
+    assert PH_BOARD in tex(out, "tab_repeatability")
+    head = read_csv(res / "cycle_model.csv")[1][0]
+    rows = []
+    for net in ("lenet5", "cifar10"):
+        rows.append({"timestamp": "2026-10-02T00:00:00+00:00", "git_commit": head["git_commit"],
+                     "git_dirty": "False", "net": net, "layer": "", "clock_mhz": "300.0",
+                     "source": "hw", "paper_grade": "True", "metric_file": "hw_b3_breakdown.csv",
+                     "metric": "median_us", "key": json.dumps({"net": net, "phase": "end_to_end"}),
+                     "n_sessions": "3", "mean": "123.456", "between_sd": "1.5"})
+    write_csv(res / "hw_repeatability.csv", META + ["paper_grade", "metric_file", "metric", "key",
+                                                   "n_sessions", "mean", "between_sd"], rows)
+    out2 = tmp_path / "out2"
+    run(res, out2)
+    t = tex(out2, "tab_repeatability")
+    assert "123.5\\,$\\pm$\\,1.5 (3)" in t
+
+
+def test_tables_extra_hook_guarded(res, tmp_path, monkeypatch):
+    import sys as _sys
+    monkeypatch.setitem(_sys.modules, "tables_extra", None)          # absent -> no failure
+    out = tmp_path / "out"
+    m = run(res, out)
+    assert not m["failures"]

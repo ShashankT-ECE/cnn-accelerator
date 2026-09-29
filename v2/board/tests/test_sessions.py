@@ -339,6 +339,7 @@ def test_b2_step_uses_sweep_and_closed_clock(env):
                                                    "249.997498"]
     assert argv[argv.index("--max-mhz") + 1] == "249.997498"
     assert argv[argv.index("--power-repeats") + 1] == "3" and "--with-meter" not in argv
+    assert steps["s3.B2"].group == "sweep"
     exp = steps["s3.B2"].expect
     assert "hw_b2_clock.csv" in exp
     for tag in ("100mhz", "150mhz", "200mhz", "250mhz"):
@@ -349,8 +350,8 @@ def test_b2_step_uses_sweep_and_closed_clock(env):
 
 def test_session3_power_steps_ina260_primary(env):
     cfg = hw_cfg(env)
-    steps = RS.build_steps(cfg, [3])
-    assert [s.id for s in steps] == ["s3.B1.lenet5", "s3.B1.cifar10", "s3.B2"]   # meter off
+    steps = [s for s in RS.build_steps(cfg, [3]) if s.group != "fcal"]
+    assert [s.id for s in steps] == ["s3.B1.lenet5", "s3.B1.cifar10", "s3.B2"]   # INA260 only
     for s, net in zip(steps, ("lenet5", "cifar10")):
         a = s.argv
         assert a[0] == RS.POWER_HOOK_SCRIPT and "--protocol" in a and "--bit" in a
@@ -362,19 +363,22 @@ def test_session3_power_steps_ina260_primary(env):
         assert set(s.expect) == {f"hw_b1_power_ina260_{k}_{net}.csv"
                                  for k in ("samples", "phases", "summary")}
         assert RS.POWER_LABEL in s.title
+        assert a[a.index("--order") + 1] == "random" and "--order-seed" in a
     dry = RS.Config(backend="model", board_dir=env["tmp"], results_dir=env["rd"],
                     data_dir=env["data"], deploy={"bit_clock_mhz": CLOSED}, bit=env["bit"])
     for s in RS.build_steps(dry, [3], window_s=2.0):
-        assert s.argv[s.argv.index("--sensor") + 1] == "mock"
+        if s.group != "fcal":
+            assert s.argv[s.argv.index("--sensor") + 1] == "mock"
 
 
-def test_session3_meter_cross_check_optional(env):
-    steps = {s.id: s for s in RS.build_steps(hw_cfg(env), [3], with_meter=True)}
-    assert {"s3.B1meter", "s3.B1meter_cpu4"} <= set(steps)
-    assert "--csv-suffix" in steps["s3.B1meter_cpu4"].argv         # never overwrites the first set
-    assert steps["s3.B1meter"].expect == ("hw_b1_meter_windows.csv",)
-    assert "board input power (external meter, cross-check)" in steps["s3.B1meter"].title
-    assert "--with-meter" in steps["s3.B2"].argv
+def test_ina260_is_the_only_power_source(env):
+    """User decision: the INA260 is the only power source; no meter steps / options remain."""
+    steps = RS.build_steps(hw_cfg(env), [1, 2, 3])
+    for s in steps:
+        assert "meter" not in " ".join(s.argv[1:]).replace(str(env["tmp"]), "").lower() \
+            and "meter" not in s.title.lower(), s.id
+    with pytest.raises(SystemExit):
+        RS.make_parser().parse_args(["3", "--with-meter"])
 
 
 def test_power_step_estimates_realistic(env):
@@ -399,7 +403,8 @@ def test_power_step_estimates_realistic(env):
 def test_budget_defers_power_steps(env):
     counter = env["tmp"] / "never.txt"
 
-    def hook(steps, cfg):   # the real Session 3 steps, but pointed at a script that must not run
+    def hook(steps, cfg):   # the real Session 3 power steps, pointed at a script that must not run
+        steps = [s for s in steps if s.group in ("energy", "sweep")]
         for s in steps:
             s.argv = [str(env["tmp"] / "must_not_run.py"), *s.argv[1:]]
         return steps
@@ -416,7 +421,7 @@ def test_power_constants_match_power_log():
     import power_log as pl
     import exp_b1_power as b1
     assert RS.POWER_LABEL == pl.LABEL == b1.SENSOR_LABEL
-    assert RS.METER_LABEL == b1.METER_LABEL
+    assert not hasattr(RS, "METER_LABEL") and not hasattr(b1, "METER_LABEL")
     for c in (100.0, 150.0, 199.998001, 249.997498, 299.997):
         assert RS.clock_tag(c) == pl.clock_tag(c)
 
@@ -436,10 +441,12 @@ def test_host_path_steps(env):
     st = {s.id: s for s in RS.build_steps(cfg, [1, 2, 3])}
     f = st["s1.fast"]
     assert not f.required and f.argv[f.argv.index("--host-path") + 1] == "fast"
-    assert st["s2.B3"].argv[st["s2.B3"].argv.index("--host-path") + 1] == "safe"
-    b3f = st["s2.B3fast"]
-    assert b3f.requires == ("s1.fast",) and not b3f.required
-    assert b3f.expect == ("hw_b3_breakdown_fast.csv",)
+    b3 = st["s2.B3"]                    # interleaved: safe always, fast only if s1.fast is OK
+    assert b3.argv[b3.argv.index("--conditions") + 1] == "safe" and "fast" not in b3.argv
+    assert b3.cond_argv == (("s1.fast", ["--conditions-add", "fast"]),) and b3.requires == ()
+    assert "fast" in RS.resolve_step(b3, {"steps": {"s1.fast": {"status": "ok"}}}).argv
+    assert "fast" not in RS.resolve_step(b3, {"steps": {"s1.fast": {"status": "failed"}}}).argv
+    assert "s2.B3fast" not in st
     for sid in ("s2.A1", "s2.A2A3", "s2.A4", "s3.B1.lenet5", "s3.B1.cifar10", "s3.B2"):
         a = st[sid].argv
         assert a[a.index("--host-path") + 1] == "safe" and st[sid].requires == (), sid
@@ -448,7 +455,7 @@ def test_host_path_steps(env):
         a = st[sid].argv
         assert a[a.index("--host-path") + 1] == "fast" and st[sid].requires == ("s1.fast",), sid
         assert a[a.index("--fast-store") + 1] == "words32"
-    assert st["s2.B3"].argv[st["s2.B3"].argv.index("--host-path") + 1] == "safe"
+    assert st["s2.B3"].argv[st["s2.B3"].argv.index("--conditions") + 1] == "safe"
 
 
 def _req_hook(env, fast_rc):

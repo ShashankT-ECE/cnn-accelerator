@@ -18,14 +18,19 @@ Board-side code needs only **numpy + pynq** and the files in this directory plus
 | `exp_a1_accuracy.py` | A1 correctness on all 10k images per net |
 | `exp_a2_a3_cycles.py` | A2 latency + A3 model / RTL / accelerator cycles per layer, determinism over images |
 | `exp_a4_util.py` | A4 MAC_ACTIVE / cycles vs theoretical |
-| `exp_b3_breakdown.py` | B3 host-side phase times (≥1000 images, warm-up discarded); `--host-path safe` → `hw_b3_breakdown.csv`, `--host-path fast` → `hw_b3_breakdown_fast.csv` (after the fast-path check) |
-| `power_log.py` | **B1/B2 primary power:** on-board INA260 SOM-rail (VCC_SOM) logger + protocol (B1: idle/accel/idle/control/idle/cpu ×3 + idle), energy two ways (E_sys, E_comp) + duty cycle, sensor check, sensor probe |
-| `exp_b1_power.py` | B1 **optional** external-meter cross-check windows idle / fpga / cpu (`--with-meter`) |
-| `exp_b2_clock.py` | B2 pl_clk0 sweep (≤ closed clock): cycles == model, latency, INA260 idle/accel/idle per clock (+ meter window with `--with-meter`) |
-| `session.sh` / `run_sessions.py` | **one command per session** (`1`, `2`, `3`, `all`): pre-flight, resumable state, time budget, per-step timeout (below) |
+| `exp_b3_breakdown.py` | B3 host-side phase times, **interleaved conditions** (`--conditions safe fast cpu`: randomized blocks, seed recorded; ≥1000 kept per condition, warm-up discarded; median + 95 % CI) → `hw_b3_breakdown.csv` (safe), `hw_b3_breakdown_fast.csv` (fast, after the fast-path check), `hw_b3_breakdown_cpu.csv` (CPU INT8 reference, 1 thread) |
+| `power_log.py` | **B1/B2 power (the only power source):** on-board INA260 SOM-rail (VCC_SOM) logger + protocol (B1: accel / control / cpu, each bracketed by idle, seeded random order per repeat, ×3 + idle), energy two ways (E_sys, E_comp at f_meas) + duty cycle, sensor check, sensor probe |
+| `exp_b1_power.py` | B1 entry point: runs the `power_log.py` protocol for each net (thin wrapper) |
+| `exp_b2_clock.py` | B2 pl_clk0 sweep (≤ closed clock): cycles == model, latency, INA260 idle/accel/idle per clock, cycle identity + power-vs-clock fit (other owner; see "Publication extras") |
+| `exp_fclk_cal.py` | **measured PL clock** f_meas: cycle counter vs CLOCK_MONOTONIC_RAW, differential LeNet/CIFAR estimator + bootstrap CI → `hw_fclk_cal_s<N>.csv` |
+| `stats.py` | warm-up discard, median + distribution-free 95 % CI, p95, randomized block order, between-session statistics |
+| `board_env.py` | environment pre-flight: cpufreq governor + fixed frequency, pinning, package-manager check, AMS die temperature; fake sysfs/proc trees for laptop tests / dry runs |
+| `aggregate_sessions.py` | 3-session repeatability → `hw_repeatability.csv` |
+| `clock_fallback.py`, `session_extra_steps.py`, `exp_soak.py`, `exp_layer_spread.py` | publication extras (other owner): 300 → 250 MHz bitstream choice, extra session steps, soak, per-layer cycle spread |
+| `session.sh` / `run_sessions.py` | **one command per session** (`1`, `2`, `3`, `all`): pre-flight (+ environment), clock fallback, resumable state, priority order, time budget, per-step timeout (below) |
 | `run_all.sh` | superseded: thin wrapper for `session.sh 2` (B1/B2 are in Session 3) |
 | `deploy.sh` | rsync this directory + data + bitstream to `<user>@<host>:~/gos/`, write `DEPLOY_INFO.json` |
-| `tests/` | pytest: driver vs the simulated register map; session orchestrator (resume, interrupted step, budget, pre-flight, B2 sweep, power steps); power logger (sensor backends with fake sysfs / smbus, read-only I2C, ΔP / energy arithmetic, dry-run rules) — no hardware |
+| `tests/` | pytest: driver vs the simulated register map; session orchestrator (resume, interrupted step, budget, pre-flight, B2 sweep, power steps); power logger (sensor backends with fake sysfs / smbus, read-only I2C, ΔP / energy arithmetic, dry-run rules); measurement rigor (`test_rigor.py`: statistics, governor / pinning / package manager / temperature on fake trees, f_meas estimator on a fake device + clock, priority, extra steps, clock-fallback wiring, `$GOS_RUN_ENV` in rows, aggregation) — no hardware |
 | `cpu/` | CPU baselines (A5), separate owner; contract below |
 
 ## Prerequisites
@@ -47,7 +52,7 @@ write hardware rows if `DEPLOY_INFO.json` or the data manifest says dirty (overr
 ```bash
 # laptop, repo root, after committing the code
 .venv/bin/python v2/board/make_board_data.py            # ~1 min; refuses a dirty tree
-v2/board/deploy.sh <board-ip> [--bit v2/vivado/out/gos_200/gos_200.bit]   # prints the run commands
+v2/board/deploy.sh <board-ip>            # ships gos_300 + gos_250 (+ .hwh, .sha256, summary.json); prints the run commands
 ```
 
 ### On the board: one command per session (`ssh ubuntu@<board-ip>`, `cd ~/gos`)
@@ -63,28 +68,34 @@ sudo -E ./session.sh 2 --quick --results-dir results/quick   # optional first pa
 sudo -E ./session.sh 2 --budget-min 120             # Session 2: A1-A4, B3, CPU
 sudo -E python3 power_log.py --list-sensors        # before Session 3: which INA260 path exists
 sudo -E python3 power_log.py --sample-only --seconds 20   # real sensor update rate (value changes)
-sudo -E ./session.sh 3                              # Session 3: B1 INA260 power (both nets) + B2 sweep
-sudo -E ./session.sh 3 --with-meter                 # ... plus the optional external-meter windows
+sudo -E ./session.sh 3                              # Session 3: B1 INA260 power (both nets) + B2 sweep + soak
 sudo -E ./session.sh all --budget-min 240           # or everything in one go
+# repeatability: the whole campaign again on two other days, then combine
+sudo -E ./session.sh all --session-index 2          # -> results/rep2/
+sudo -E ./session.sh all --session-index 3          # -> results/rep3/
+python3 aggregate_sessions.py                       # -> results/hw_repeatability.csv
 # interrupted / out of time?  run the SAME command again: verified steps are skipped
 # new bitstream / data / scripts?  sudo -E ./session.sh all --fresh   (old outputs archived)
 ```
 
 | session | steps (ids) | what |
 |---|---|---|
-| 1 | `s1.shell`, `s1.smoke`, `s1.smoke_slice`, `s1.fast` | `test_shell.py --skip-scratch` (pl_clk0 read back, VERSION/BUILD_ID, every BRAM filled + read back); `test_core_smoke.py` (one LeNet-5 + one CIFAR-10 image bit- and cycle-exact, refused job → ERR_CODE rule 3, soft_reset, good job); the same with `--write-mode slice` (**informational**: a failure does not fail the session; use `--write-mode slice` for Sessions 2/3 only if it passed); `s1.fast` = the same smoke on the **fast host path** preceded and followed by `GosDevice.check_fast_path()` (**informational**; its PASS is the bring-up condition for `--host-path fast`, see "Host paths") |
-| 2 | `s2.A1`, `s2.A2A3`, `s2.A4`, `s2.B3`, `s2.B3fast`, `s2.CPU` | A1 all 10k images per net, A2/A3 all images, A4 1000 images, B3 1000 (+50 warm-up) on the safe host path, B3 on the fast host path (**informational**, only if `s1.fast` passed, else BLOCKED), CPU baselines `--tag board` |
-| 3 | `s3.B1.lenet5`, `s3.B1.cifar10`, `s3.B2` (+ `s3.B1meter`, `s3.B1meter_cpu4` with `--with-meter`) | B1 = INA260 SOM-rail protocol per net (idle/accel/idle/**control**/idle/cpu × `--power-repeats` 3 + final idle = 19 phases of `--window-s` 60 s ≈ 20.5 min per net incl. setup; `--no-power-control`: 13 phases ≈ 14.5 min; CPU = `cpu_int8_ref`, 1 thread); B2 clock sweep (LeNet-5): cycles == model + INA260 idle/accel/idle × `--b2-power-repeats` 3 per clock ≈ 9.5 min per clock; meter steps optional. Session 3 at the defaults (3 clocks) ≈ 70 min |
+| 1 | (clock fallback) `s1.shell`, `s1.smoke`, `s1.smoke_slice`, `s1.fast`, `s1.fcal` | before the steps, with several deployed bitstreams: `clock_fallback.choose` (pre-flight + core smoke of the 300 MHz build, else the 250 MHz build; choice in `hw_clock_choice.json` and the state, used by every later step and session); `s1.fcal` = PL clock calibration; `test_shell.py --skip-scratch` (pl_clk0 read back, VERSION/BUILD_ID, every BRAM filled + read back); `test_core_smoke.py` (one LeNet-5 + one CIFAR-10 image bit- and cycle-exact, refused job → ERR_CODE rule 3, soft_reset, good job); the same with `--write-mode slice` (**informational**: a failure does not fail the session; use `--write-mode slice` for Sessions 2/3 only if it passed); `s1.fast` = the same smoke on the **fast host path** preceded and followed by `GosDevice.check_fast_path()` (**informational**; its PASS is the bring-up condition for `--host-path fast`, see "Host paths") |
+| 2 | `s2.fcal`, `s2.A2A3`, `s2.layerspread`, `s2.A1`, `s2.B3`, `s2.CPU`, `s2.DPU`, `s2.A4` (priority order) | f_meas calibration, A2/A3 all images, A3b per-layer spread, A1 all 10k images per net, B3 1000 kept per condition, **interleaved** safe + CPU (+ fast host path only if `s1.fast` passed), CPU baselines `--tag board` (workers pinned), DPU baseline (only if `dpu/dpu_session.py` is deployed; informational), A4 1000 images |
+| 3 | `s3.fcal`, `s3.B1.lenet5`, `s3.B1.cifar10`, `s3.B2`, `s3.soak` | B1 = INA260 SOM-rail protocol per net (accel/**control**/cpu each bracketed by idle, seeded random order per repeat, × `--power-repeats` 3 + final idle = 19 phases of `--window-s` 60 s ≈ 20.5 min per net incl. setup; `--no-power-control`: 13 phases ≈ 14.5 min; CPU = `cpu_int8_ref`, 1 thread); B2 clock sweep (LeNet-5): cycles == model + INA260 idle/accel/idle × `--b2-power-repeats` 3 per clock ≈ 9.5 min per clock (+ cycle identity, power-vs-clock fit); soak 30 min |
 
 Options: `--budget-min N`, `--resume` (default) / `--fresh`, `--quick` (200 images per step, B3
 `--n 200`, CPU `--quick`, 30 s windows), `--plan`, `--steps s2.A1 s3.B2` (subset),
 `--step-timeout-min M`, `--write-mode {elem,slice}`, `--host-path {safe,fast}` (A1-A4, B1, B2; default
 safe; fast requires `s1.fast` OK in the same state, else those steps are BLOCKED = failed, nothing
-run), `--fast-store {block,words32}`, `--no-power-control` (B1 without control phases), `--window-s/--gap-s` (B1/B2 INA260 phase and
-meter window / meter gap, default 60/10 s; `--quick` 30 s), `--power-repeats`, `--b2-power-repeats`
-(default 3 each), `--power-rate-hz` (default 10), `--with-meter` (optional meter cross-check),
-`--b2-images`, `--allow-dirty` (rows git_dirty=True, invalid for the paper), `--no-bringup-check`,
-`--results-dir` (default `results/`). Exit codes: 0 all OK, 1 a step failed, 3 pre-flight failed,
+run), `--fast-store {block,words32}`, `--no-power-control` (B1 without control phases), `--window-s/--gap-s` (B1/B2 INA260 phase
+length / B2 gap, default 60/10 s; `--quick` 30 s), `--power-repeats`, `--b2-power-repeats`
+(default 3 each), `--power-rate-hz` (default 10), `--b2-images`, `--fcal-s` (calibration wall time,
+default 8 s), `--no-b3-cpu`, `--session-index {1,2,3}` (results of 2/3 in `results/rep<K>/`),
+`--meas-cores` (default 3), `--cpu1-cores` (3), `--cpun-cores` (0-3), `--cpu-freq-khz` (default the
+highest available), `--allow-non-paper-grade` (environment FAILs become warnings, rows
+paper_grade=False), `--bit` (one bitstream, no fallback), `--allow-dirty` (rows git_dirty=True,
+invalid for the paper), `--no-bringup-check`, `--results-dir` (default `results/`). Exit codes: 0 all OK, 1 a step failed, 3 pre-flight failed,
 4 provenance changed / Session 1 not recorded / another run holds the lock, 5 incomplete (deferred),
 130 interrupted.
 
@@ -96,6 +107,13 @@ closed clock == DEPLOY_INFO, timing met (WNS ≥ 0, no failing endpoints); overl
 and, for Sessions 2/3, equal to it (±0.5 MHz); every data file vs `MANIFEST.json`, each
 `MANIFEST.json` vs `PACKAGE.json`, `PACKAGE.json` vs DEPLOY_INFO; ≥ 1000 MB free; clean-tree flags
 (scripts + data). Sessions 2/3 also require Session 1 recorded OK in the same state.
+**Environment pre-flight** (`board_env.py`, before the device checks): no package manager
+running (offenders listed; `sudo systemctl stop unattended-upgrades packagekit`), cpufreq governor
+`performance` + one fixed frequency on every policy with `scaling_cur_freq` read back (restored on
+exit), the orchestrator pinned to the housekeeping cores and every step to `--meas-cores` (read
+back per step), AMS die temperature at the start/end of every step (`logs/env_log.jsonl`, state,
+`die_temp_start_c` column). A FAIL aborts (exit 3) unless `--allow-non-paper-grade`. Details and
+the paper-grade rule: EXPERIMENTS.md "Measurement rigor".
 
 **State / resume** (`results/session_state.json`): provenance (backend, BUILD_ID, bit SHA256,
 closed + read-back clock, data package SHA256, scripts commit) + per step: status, command,
@@ -129,7 +147,7 @@ SIGKILL.
 clock itself (e.g. 199.998001, 249.997498), never above; a read-back above closed + 0.5 MHz aborts
 the sweep. Each row records requested, read-back and closed clock.
 
-**Session 3 power (primary = INA260 SOM-rail):** `run_sessions.power_hook_steps` (block
+**Session 3 power (INA260 SOM-rail, the only power source):** `run_sessions.power_hook_steps` (block
 `POWER HOOK`) schedules one `power_log.py --protocol --net <net> --tag _<net>` step per net
 (`s3.B1.lenet5`, `s3.B1.cifar10`); `s3.B2` calls the same logger per clock
 (`power_log.run_power_protocol`, reduced protocol idle/accel/idle without CPU or control phases —
@@ -148,7 +166,7 @@ median for accel, pacing for control); per repeat and mean/std over repeats: P_i
 two idle phases bracketing the run phase), ΔP = P_run − P_idle, time/image = phase duration /
 images, energy/image = ΔP × time/image; accelerator energy two ways: **E_sys** = ΔP_accel ×
 time/image (host loop included), **E_comp** = ΔP_accel × TOTAL_CYC / f (TOTAL_CYC = hardware
-counter median, f = read-back pl_clk0), **duty** = (TOTAL_CYC / f) / time/image, and the
+counter median, f = f_meas, else the read-back pl_clk0), **duty** = (TOTAL_CYC / f) / time/image, and the
 control-subtracted **ΔP_accel − ΔP_control** with E_sys,net / E_comp,net — all computed by
 `power_log.py` (`energy_rule` column), never typed. CPU phases use `cpu_int8_ref` with 1 thread (same INT8 arithmetic as the
 accelerator, A5's single-thread configuration). Sensor path (`--sensor auto`): hwmon `ina260*`
@@ -158,12 +176,17 @@ the achieved rate and how often the value actually changed — hwmon `update_int
 INA260 averaging/conversion time limit the real bandwidth, so a 10 Hz sample stream may repeat
 values. Dry runs use a seeded mock sensor (source=dryrun_model; synthetic, not measurements).
 
-**Optional external-meter cross-check (`--with-meter`):** `exp_b1_power.py` / `exp_b2_clock.py
---with-meter` windows print `===== START ... | UTC ... | local ... | epoch ... =====` and a
-matching STOP line; write the meter readings with those timestamps into a meter log. Label:
-**"board input power (external meter, cross-check)"**. Any ΔP from the meter must be computed by a
-script from the meter log joined on the window timestamps (open item, see below), never typed by
-hand.
+**Measured PL clock and statistics:** `sN.fcal` (`exp_fclk_cal.py`) measures f_meas once per
+session; the orchestrator passes it to every later step (`$GOS_RUN_ENV`) and every µs value is
+converted with it when it was measured at the step's read-back clock (else the read-back clock;
+`f_used_mhz` / `f_used_source` columns, `f_readback_mhz` kept). Latencies are reported as median
+with the distribution-free order-statistic 95 % CI and p95 after warm-up discard (`stats.py`);
+compared conditions run interleaved in randomized blocks with a recorded seed.
+
+**Extra steps / priority:** `session_extra_steps.extra_steps(opts)` (if present) adds steps into
+their priority group (A3, A1, latency, baselines, energy, sweep, soak, A4 — after bring-up and the
+calibration); a step with a built-in id replaces it. The time budget defers the lowest-priority
+steps first.
 
 The individual scripts remain usable by hand (`--nets`, `--limit N`, `--timeout-s`,
 `--write-mode`, `--out-dir`), e.g. `sudo -E python3 test_core_smoke.py --write-mode slice`.
@@ -190,13 +213,18 @@ Expected board time is dominated by Python MMIO (per image: input writes 256 / 7
 | `hw_b1_power_ina260_{samples,phases,summary}_{lenet5,cifar10}.csv` | per sample / per phase / per repeat + mean + std | **B1 primary**, "SOM-rail power (INA260)": P_idle, P_accel, P_control, P_cpu, ΔP, time/image, energy/image (J, mJ); accel E_sys, t_PL = TOTAL_CYC/f, E_comp, duty, ΔP_accel − ΔP_control, E_sys,net, E_comp,net; host path; sensor backend/device/limits, requested + achieved rate, max gap |
 | `hw_b2_clock.csv` | per clock | requested/read-back clock, cycles (must equal the model), latency, INA260 P_idle/P_accel/ΔP/energy per image (mean/std over repeats) |
 | `hw_b2_power_ina260_{samples,phases,summary}_lenet5_<NNN>mhz.csv` | per clock (NNN = rounded requested clock, e.g. 200mhz) | B2 INA260 idle/accel/idle protocol at that clock |
-| `hw_b1_meter_windows[_cpu4_cifar10].csv`, `hw_b1_meter_samples*.csv`, `hw_b2_meter_*.csv` | per window / sample | only with `--with-meter`: window timestamps for the external meter cross-check |
+| `hw_fclk_cal_s<N>.csv` (+ `.npz`) | one per session | f_req, f_readback, f_meas + 95 % CI, estimator, f_simple, per-net jobs / medians / intercepts, seed |
+| `hw_b3_breakdown_cpu.csv` | per net × phase | B3 CPU condition (cpu_int8_ref, 1 thread) interleaved with the accelerator |
+| `hw_clock_choice.json` | one | clock_fallback decision (bit, closed clock, fell_back, attempts) |
+| `hw_repeatability.csv` | per metric × key × bitstream × clock | `aggregate_sessions.py`: mean ± between-session SD, range, CV, n sessions |
 
 Metadata columns on every row: EXPERIMENTS.md "CSV rule" (`timestamp, git_commit, git_dirty,
 vivado_version, bitstream_sha256, board_id, net, layer, clock_mhz, source, duration_s,
 num_inferences`) + `build_id_hw` (BUILD_ID register), `board_hostname`, `clock_source`
 (`clock_mhz` = pynq `Clocks.fclk0_mhz` read back on the board), `scripts_commit`,
-`data_manifest_sha256`, `data_git_commit`, `data_git_dirty`, `backend`. `git_commit` /
+`data_manifest_sha256`, `data_git_commit`, `data_git_dirty`, `backend`, and the measurement
+environment `session_index`, `paper_grade`, `env_step`, `cpu_governor`, `cpu_freq_khz`,
+`cpu_affinity` (read back in the step process), `die_temp_start_c`, `env_note`. `git_commit` /
 `scripts_commit` come from `DEPLOY_INFO.json` on the board (git on the laptop); `source` is `hw`
 or `dryrun_model`; `bitstream_sha256` is computed from the loaded `.bit`.
 
@@ -205,8 +233,10 @@ or `dryrun_model`; `bitstream_sha256` is computed from the loaded `.bit`.
 ```bash
 cd v2/board
 ../../.venv/bin/python -m pytest tests -q
-./session.sh all --backend model --allow-dirty      # sessions 1-3, all images, 2 s windows
+./session.sh all --backend model --allow-dirty      # sessions 1-3, all images, 2 s windows,
+                                                    # fake sysfs/proc tree, gos_300 -> gos_250 choice
 ./session.sh all --backend model --allow-dirty      # again: every step verified and skipped
+./session.sh all --backend model --allow-dirty --fresh --dryrun-fail-smoke-mhz 300   # fallback drill
 ./session.sh 3 --backend model --allow-dirty --bit ../vivado/out/gos_250/gos_250.bit --fresh \
     --results-dir ../results/dryrun/b250 --no-bringup-check    # sweep as a 250 MHz build would
 ```
@@ -310,16 +340,34 @@ pred = bc.predict(r.logits, pkg.dequant)                 # PS float32 dequant + 
   `platformstats -p` (format assumed; matched raw line recorded), else read-only I2C via smbus2
   (0x40 first, then 0x41–0x4F; Manufacturer ID 0xFE = 0x5449, Die ID 0xFF = 0x2270; power 0x03
   LSB 10 mW, current 0x01 1.25 mA signed, bus voltage 0x02 1.25 mV; config 0x00 decoded, never
-  written). Rail coverage: see "VCC_SOM coverage (INA260)" below. The meter-window scripts keep their own
-  simpler sampler (hwmon / platformstats) for the INA260 column of the cross-check rows.
+  written). Rail coverage: see "VCC_SOM coverage (INA260)" below.
 - **board_id:** `--board-id` / `$GOS_BOARD_ID`, else device-tree model + first 8 chars of
   `/etc/machine-id`.
 - **Clock sweep:** runtime pl_clk0 changes via PYNQ are assumed to work (EXPERIMENTS B2 says to
   verify at bring-up; fallback: one bitstream per clock). After each change the driver
   soft-resets and reloads + reads back WGT/QPARAM/DESC.
-- **Open:** (only for the optional meter cross-check) a script that joins the manual meter log
-  with the B1/B2 meter window timestamps and
-  computes ΔP and energy per inference; per-layer MAC_ACTIVE is not measurable (no HW counter).
+- **cpufreq / AMS paths (to confirm at bring-up):** `/sys/devices/system/cpu/cpufreq/policy*`
+  (cpufreq-dt; the target is the highest `scaling_available_frequencies` entry), AMS temperatures
+  under `/sys/bus/iio/devices/iio:device*/` (name containing "ams": `in_temp*_raw` × scale + offset)
+  or hwmon; the pre-flight prints what it found.
+- **Open:** per-layer MAC_ACTIVE is not measurable (no HW counter).
+
+## Publication extras (other owner: `session_extra_steps.py`, `clock_fallback.py`, `exp_soak.py`, `exp_layer_spread.py`, `exp_b2_clock.py`)
+
+- **`s2.layerspread`** (`exp_layer_spread.py` → `hw_layer_spread.csv`, group A3, scheduled right after
+  `s2.A2A3`): per net × layer, min / max / distinct / spread of LAYER_CYC (and TOTAL_CYC) over every
+  image; reuses `hw_cycles_<net>.npz` from `s2.A2A3` when it has the same source and clock and covers
+  all images, else runs every image itself.
+- **`s3.soak`** (`exp_soak.py`, group soak): 30 min (`--quick` 5 min), LeNet-5 / CIFAR-10 alternating
+  every 60 s, every job bit- and cycle-exact; counts errors, timeouts, STATUS errors and
+  PS_BUSY_VIOLATION flags; per-minute throughput; AMS die temperature via `board_env.read_die_temp`
+  → `hw_soak.csv`, `hw_soak_minutes.csv`; aborts after > 100 errors; not resumable (one run).
+- **Performance-clock choice:** `clock_fallback.py --bits bit/gos_300/gos_300.bit bit/gos_250/gos_250.bit
+  --out results/hw_clock_choice.json` (standalone; `session.sh 1` calls `clock_fallback.choose` itself):
+  300 MHz first, 250 MHz as fallback, 200 MHz only with `--allow-lower`.
+- **B2 additions:** `hw_b2_cycles.csv` (cycle identity across clocks, PASS/FAIL) and `hw_b2_fit.csv`
+  (least squares P = P_static + k·f on the per-clock mean SOM-rail power for P_accel, ΔP_accel and
+  P_idle, with SE, 95 % CI (t, n − 2), R², n); `exp_b2_clock.py --fit-only` recomputes the fit.
 
 ## VCC_SOM coverage (INA260) — what the B1/B2 numbers include
 

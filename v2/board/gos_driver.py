@@ -756,6 +756,37 @@ class GosDevice:
             r.t_counter_ns = time.perf_counter_ns() - t3
         return r
 
+    def set_host_path(self, host_path: str, fast_store: str | None = None):
+        """Switch the host path at runtime (interleaved safe/fast measurements, exp_b3_breakdown
+        --conditions). The fast windows are mapped on first use and kept."""
+        if host_path not in HOST_PATHS:
+            raise ValueError(f"host_path must be one of {HOST_PATHS}")
+        if fast_store is not None:
+            if fast_store not in FAST_STORES:
+                raise ValueError(f"fast_store must be one of {FAST_STORES}")
+            self.fast_store = fast_store
+        if host_path == "fast" and self._fw is None:
+            self._fw = self.be.fast_windows()
+        self.host_path = host_path
+        self._fast = host_path == "fast"
+
+    def timed_job(self, x, clock_ns=None, timeout_s: float | None = None) -> tuple[int, int, int]:
+        """PL clock calibration primitive (exp_fclk_cal.py). Untimed: input -> ACT0 and the
+        pre-start clear. Timed with clock_ns (default CLOCK_MONOTONIC_RAW: not slewed by NTP):
+        CTRL.start + STATUS poll until done. Then TOTAL_CYC (lo, hi). Returns
+        (t_done - t_start in ns, TOTAL_CYC, polls)."""
+        if self._desc is None:
+            raise GosError("load_net first")
+        if not self._desc_valid:
+            self.write_descriptors(self._desc, self.n_layers)
+        clk = clock_ns or (lambda: time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW))
+        self.write_input(x)
+        self._clear_for_start()
+        t0 = clk()
+        polls, _ = self.start_and_wait(timeout_s, clear=False)
+        t1 = clk()
+        return t1 - t0, self.read64(OFF_TOTAL_CYC), polls
+
     def recover(self):
         """After a timeout / refused job: soft_reset and mark DESC for rewrite."""
         self.soft_reset()

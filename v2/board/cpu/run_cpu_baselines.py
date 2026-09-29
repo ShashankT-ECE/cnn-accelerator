@@ -16,7 +16,12 @@ is imported (ORT: intra_op_num_threads = threads):
   * mode=e2e     : raw stored dataset image (uint8) -> preprocessing (and, for
                    cpu_int8_ref, input quantization) -> logits -> argmax prediction;
   * warm-up calls discarded, then ``--runs`` timed calls (>= 100 for paper data),
-    cycling over the first ``--runs`` test images; median, p5, p95 reported;
+    cycling over the first ``--runs`` test images; median with the distribution-free
+    order-statistic 95 % CI (../stats.py: median_ci_lo_us / median_ci_hi_us), p5, p95;
+  * pinning (EXPERIMENTS.md "Measurement rigor"): each worker process sets its CPU affinity
+    before numpy is imported: 1 thread -> --pin-1t cores, more -> --pin-nt cores (read back,
+    recorded in cpu_affinity); rows carry session_index / paper_grade / environment columns
+    from $GOS_RUN_ENV (run_sessions.py);
   * mode=accuracy: separate pass (not timed) over the test set (10k; --quick: 500),
     at threads = 1; cpu_int8_ref is also compared bit-exactly with the package's
     golden logits when available.
@@ -50,7 +55,10 @@ NETS = ("lenet5", "cifar10")
 META_COLUMNS = ("timestamp", "git_commit", "git_dirty", "vivado_version", "bitstream_sha256",
                 "board_id", "net", "layer", "clock_mhz", "source", "duration_s",
                 "num_inferences")
-FIELDS = ("kind", "label", "threads", "mode", "median_us", "p5_us", "p95_us", "mean_us",
+FIELDS = ("kind", "label", "threads", "mode", "median_us", "median_ci_lo_us", "median_ci_hi_us",
+          "ci_coverage", "ci_method", "p5_us", "p95_us", "mean_us", "cpu_affinity", "pin_requested",
+          "session_index", "paper_grade", "env_step", "cpu_governor", "cpu_freq_khz",
+          "die_temp_start_c", "env_note",
           "runs", "warmup", "accuracy", "correct", "n_images", "acc_batch",
           "golden_bitexact", "package_crosscheck", "status", "numpy_version", "blas", "ort_version",
           "cpu_model", "hostname", "python_version", "package_sha256",
@@ -62,9 +70,28 @@ FIELDS = ("kind", "label", "threads", "mode", "median_us", "p5_us", "p95_us", "m
 # --------------------------------------------------------------------------- #
 def _percentiles(ts_ns):
     import numpy as np
+    sys.path.insert(0, str(HERE.parent))
+    import stats
     a = np.asarray(ts_ns, dtype=np.float64) / 1e3
+    lo, hi, cov = stats.median_ci(a)
     return {"median_us": float(np.median(a)), "p5_us": float(np.percentile(a, 5)),
-            "p95_us": float(np.percentile(a, 95)), "mean_us": float(a.mean())}
+            "p95_us": float(np.percentile(a, 95)), "mean_us": float(a.mean()),
+            "median_ci_lo_us": "" if lo is None else lo, "median_ci_hi_us": "" if hi is None else hi,
+            "ci_coverage": "" if cov is None else round(cov, 4), "ci_method": stats.CI_METHOD_ORDER}
+
+
+def _pin(spec: str) -> str:
+    """sched_setaffinity(0, spec) (= taskset); returns the read-back core list ('' if none)."""
+    if spec:
+        cores = set()
+        for part in spec.split(","):
+            a_, _, b_ = part.partition("-")
+            cores |= set(range(int(a_), int(b_ or a_) + 1))
+        os.sched_setaffinity(0, cores)
+    try:
+        return ",".join(str(c) for c in sorted(os.sched_getaffinity(0)))
+    except (AttributeError, OSError):
+        return ""
 
 
 def _time_calls(fn, xs, runs: int, warmup: int):
@@ -125,6 +152,8 @@ def worker(args) -> dict:
     import cpu_infer
     data_dir = Path(args.data_dir)
     res = {"net": args.net, "kind": args.kind, "threads": args.threads, "rows": []}
+    res["pin_requested"] = args.pin or ""
+    res["cpu_affinity"] = _pin(args.pin)
     try:
         r = cpu_infer.make_runner(args.kind, args.net, data_dir, args.threads)
     except cpu_infer.RunnerUnavailable as e:
@@ -351,7 +380,8 @@ def run_worker_subprocess(a, net, kind, threads, timing, accuracy) -> dict:
     cmd = [sys.executable, str(Path(__file__).resolve()), "--worker",
            "--data-dir", str(a.data_dir), "--net", net, "--kind", kind,
            "--threads", str(threads), "--runs", str(a.runs), "--warmup", str(a.warmup),
-           "--acc-n", str(a.acc_n), "--acc-batch", str(a.acc_batch)]
+           "--acc-n", str(a.acc_n), "--acc-batch", str(a.acc_batch),
+           "--pin", a.pin_1t if threads == 1 else a.pin_nt]
     cmd += ["--timing"] if timing else []
     cmd += ["--accuracy"] if accuracy else []
     p = subprocess.run(cmd, env=env, capture_output=True, text=True)
@@ -382,6 +412,9 @@ def main() -> int:
                     help="--tag board: run although the deployed code or a CPU package is from a "
                          "dirty tree (rows are then invalid for the paper)")
     ap.add_argument("--board-id", default=None, help="default: GOS_BOARD_ID or device-tree model + machine-id")
+    ap.add_argument("--pin-1t", default="", help="cores for 1-thread workers (e.g. 3); '' = no pinning")
+    ap.add_argument("--pin-nt", default="", help="cores for multi-thread workers (e.g. 0-3)")
+    ap.add_argument("--pin", default="", help=argparse.SUPPRESS)
     # worker-only
     ap.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     ap.add_argument("--net", help=argparse.SUPPRESS)
@@ -436,7 +469,7 @@ def main() -> int:
               "bitstream_sha256": "", "board_id": prov["board_id"],
               "numpy_version": env["numpy"], "blas": env["blas"],
               "ort_version": env["onnxruntime"], "cpu_model": env["cpu_model"],
-              "hostname": env["hostname"], "python_version": env["python"]}
+              "hostname": env["hostname"], "python_version": env["python"], **run_env_cols(source, prov)}
     rows, failures = [], 0
     t_all = time.perf_counter()
     for net in a.nets:
@@ -467,7 +500,9 @@ def main() -> int:
                                      "timestamp": now()})
                     continue
                 for r in res["rows"]:
-                    row = {**base, "status": "ok", **r, "timestamp": now()}
+                    row = {**base, "status": "ok", **r, "timestamp": now(),
+                           "cpu_affinity": res.get("cpu_affinity", ""),
+                           "pin_requested": res.get("pin_requested", "")}
                     if row["status"] != "ok":
                         failures += 1
                         print(f"  {net:8s} {kind:15s} t={th}: {row['status']}", flush=True)
@@ -497,6 +532,21 @@ def main() -> int:
         "total_s": round(time.perf_counter() - t_all, 1)}, indent=1) + "\n")
     print(f"wrote {csv_path} ({len(rows)} rows), {env_path}")
     return 1 if failures else 0
+
+
+def run_env_cols(source: str, prov: dict) -> dict:
+    """Environment columns from $GOS_RUN_ENV (run_sessions.py); paper_grade only for a clean
+    board run whose step passed the environment pre-flight."""
+    try:
+        e = json.loads(os.environ.get("GOS_RUN_ENV") or "{}")
+    except ValueError:
+        e = {}
+    clean = str(prov.get("git_dirty")) == "False"
+    return {"session_index": e.get("session_index", ""),
+            "paper_grade": bool(e.get("paper_grade")) and source == "cpu_board" and clean,
+            "env_step": e.get("step_id", ""), "cpu_governor": e.get("cpu_governor", ""),
+            "cpu_freq_khz": e.get("cpu_freq_khz", ""), "die_temp_start_c": e.get("die_temp_start_c", ""),
+            "env_note": e.get("note", "") if e else "no environment pre-flight: not paper-grade"}
 
 
 def now() -> str:

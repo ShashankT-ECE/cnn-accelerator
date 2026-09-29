@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from paperdata import INA_LABEL, METER_LABEL, V, a3_net, at, div, impl_variants, latest, lines_of, pm, power_summaries
+from paperdata import INA_LABEL, V, a3_net, at, ci, div, impl_variants, latest, lines_of, pm, power_summaries
 from paperlib import (NETS, PH_BOARD, Artifact, Store, _rel, fnum, inum, latex_table, pretty_net,
                       tex_escape, write_text)
 
@@ -17,6 +17,17 @@ B3_PHASES = ["input_write", "status_clear", "start_done", "start_write", "poll",
 
 
 class Ctx:
+    """Table context (also passed to tables_extra.make by make_all.py):
+    store     paperlib.Store: .load(name, hw), .glob(pattern, hw), rules (git_dirty, source, paper_grade)
+    out       output directory (generated/ or generated/dryrun/)
+    booktabs  bool; dryrun: bool (dry-run rows, watermarked)
+    art(name) -> paperlib.Artifact (rows(), cell(), num(), label(), placeholder(), check())
+    table(art, colspec, header, body, caption, label, notes=None, wide=False) -> Artifact (writes .tex)
+    emit(art, tex) -> Artifact;  board_label -> "KV260" / "KV260 (DRY RUN)"
+    fctx      figures.FCtx for figures (set by make_all.py)
+    Helpers for extra tables: paperdata.V / at / div / latest / pm (mean +- std) / ci (median [95 % CI]) /
+    power_summaries; paperlib.PH_BOARD placeholder text "TBD (board)"."""
+
     def __init__(self, store: Store, out: Path, booktabs: bool, dryrun: bool):
         self.store, self.out, self.booktabs, self.dryrun = store, out, booktabs, dryrun
 
@@ -156,18 +167,24 @@ def a2_latency(c: Ctx) -> Artifact:
              if tot[n] and tot[n]["rtl"] else "--")
     hw = {n: latest(art.rows("hw_a2_a3_cycles.csv", hw=True, net=n) or [], lambda r: r["layer"]).get("total")
           for n in NETS}
-    line(f"PL latency (\\textmu s), {c.board_label}", lambda n: art.cell(hw[n], "hw_us", "f2")
+    line(f"PL latency (\\textmu s) at $f_\\mathrm{{meas}}$, {c.board_label}", lambda n: art.cell(hw[n], "hw_us", "f2")
          if hw[n] and hw[n].get("hw_us") else art.placeholder(f"A2 {n}: hw_us"))
+    line(f"$f_\\mathrm{{meas}}$ (MHz), {c.board_label}", lambda n: art.cell(hw[n], "f_meas_mhz", "f3")
+         if hw[n] and hw[n].get("f_meas_mhz") else art.placeholder(f"A2 {n}: f_meas_mhz (exp_fclk_cal)"))
     line(f"Clock read back (MHz), {c.board_label}", lambda n: art.cell(hw[n], "clock_mhz", "f3")
          if hw[n] and hw[n].get("clock_mhz") else art.placeholder(f"A2 {n}: clock_mhz"))
-    line(f"Wall-clock/image (\\textmu s), {c.board_label}", lambda n: art.cell(hw[n], "wall_us_median", "f1")
+    line(f"Wall-clock/image (\\textmu s), median [95\\% CI], {c.board_label}",
+         lambda n: ci(art, hw[n], "wall_us_median", "wall_us_ci_lo", "wall_us_ci_hi", "f1")
          if hw[n] and hw[n].get("wall_us_median") else art.placeholder(f"A2 {n}: wall_us_median"))
     return c.table(art, "@{}lrr@{}", ["& LeNet-5 & CIFAR-10"], rows,
                    "A2 latency per image (single-image jobs).", "tab:latency",
                    notes=["$^\\dagger$RTL sim cycles at post-impl clock (cycles / pl\\_clk0 actual from "
                           "impl\\_gos.csv), computed, not measured. Sources: cycle\\_model.csv (model), "
                           "rtl\\_network.csv (RTL sim), hw\\_a2\\_a3\\_cycles.csv (measured on KV260; PL "
-                          "counter at the read-back clock; wall-clock = host start to done, median)."])
+                          "latency = cycle counter / $f_\\mathrm{meas}$, the pl\\_clk0 measured by the "
+                          "calibration (cycle counter vs CLOCK\\_MONOTONIC\\_RAW, hw\\_fclk\\_cal\\_s*.csv); "
+                          "wall-clock = input write to counter read per image, warm-up discarded, median "
+                          "with the distribution-free order-statistic 95\\% CI)."])
 
 
 # --------------------------------------------------------------------------------------------
@@ -253,7 +270,8 @@ def a5_cpu(c: Ctx) -> Artifact:
                 for net in NETS:
                     for mode in ("compute", "e2e"):
                         r = cl.get((net, k, th, mode))
-                        cells.append(art.cell(r, "median_us", "f1") if r else "--")
+                        cells.append(ci(art, r, "median_us", "median_ci_lo_us", "median_ci_hi_us", "f1")
+                                     if r else "--")
                 trow = next(r for r in cpu if r["kind"] == k and r["threads"] == th)
                 body.append([CPU_KINDS.get(k, tex_escape(k)), art.cell(trow, "threads", "int")] + cells)
     else:
@@ -264,17 +282,20 @@ def a5_cpu(c: Ctx) -> Artifact:
     for net in NETS:
         for ph in ("pl_compute", "end_to_end"):
             r = b3l.get((net, ph))
-            fp.append(art.cell(r, "median_us", "f1") if r else art.placeholder(f"A5 FPGA {net} {ph}"))
+            fp.append(ci(art, r, "median_us", "median_ci_lo_us", "median_ci_hi_us", "f1") if r
+                      else art.placeholder(f"A5 FPGA {net} {ph}"))
     body.append(r"\midrule")
     body.append(fp)
     hdr = [r"& & \multicolumn{2}{c}{LeNet-5 (\textmu s)} & \multicolumn{2}{c}{CIFAR-10 (\textmu s)} \\",
            r"\cmidrule(lr){3-4}\cmidrule(l){5-6}",
            r"Implementation & thr. & comp. & e2e & comp. & e2e"]
     return c.table(art, "@{}lrrrrr@{}", hdr, body,
-                   "A5 same-board baseline: median time per image on the KV260 Cortex-A53 vs the accelerator.",
+                   "A5 same-board baseline: median [95\\% CI] time per image on the KV260 Cortex-A53 vs "
+                   "the accelerator.",
                    "tab:cpu",
                    notes=["CPU: hw\\_cpu\\_baseline.csv (source cpu\\_board; median over runs, warm-up "
-                          "discarded). Accelerator: hw\\_b3\\_breakdown.csv, comp.\\ = PL counter "
+                          "discarded, distribution-free order-statistic 95\\% CI; workers pinned). "
+                          "Accelerator: hw\\_b3\\_breakdown.csv, comp.\\ = PL counter / $f_\\mathrm{meas}$ "
                           "(pl\\_compute), e2e = input write + start + poll + logit read + PS dequant "
                           "(end\\_to\\_end)."])
 
@@ -309,12 +330,10 @@ def b1_power(c: Ctx) -> Artifact:
     dP accel / control / CPU, E_sys and E_comp (+ control-subtracted variants), duty cycle."""
     art = c.art("tab_b1_power")
     ents = power_summaries(art, "hw_b1_power_ina260")
-    meter = power_summaries(art, "hw_b1_power_meter")
     by = {}
     for e in ents:                                    # one entry per net (latest run if several clocks)
         if e["net"] not in by or e["mean"]["timestamp"] > by[e["net"]]["mean"]["timestamp"]:
             by[e["net"]] = e
-    mby = {e["net"]: e for e in meter}
     nets = list(NETS)
     body = []
     lab = _power_label(art, list(by.values())) if by else INA_LABEL
@@ -330,12 +349,6 @@ def b1_power(c: Ctx) -> Artifact:
     line("Sample rate achieved (Hz)", lambda e: art.cell(e["mean"], "rate_achieved_hz", "f1"))
     line("CPU workload", lambda e: art.label(tex_escape(e["mean"].get("cpu_workload") or "--"),
                                               f"{e['file']}:cpu_workload"))
-    if mby:
-        body.append(f"\\multicolumn{{{len(nets) + 1}}}{{@{{}}l}}{{\\emph{{{METER_LABEL}}}}} \\\\")
-        line("$\\Delta P$ accelerator (W)", lambda e: pm(art, mby[e["net"]], "accel_dp_w", "f3")
-             if e["net"] in mby else "--")
-        line("Energy/image accel.\\ (mJ)", lambda e: pm(art, mby[e["net"]], "accel_energy_per_image_mj", "f3")
-             if e["net"] in mby else "--")
     if not by:
         art.placeholder("B1: hw_b1_power_ina260_summary*.csv (source=hw)")
     hdr = ["Quantity & " + " & ".join(pretty_net(n) for n in nets)]
@@ -350,10 +363,11 @@ def b1_power(c: Ctx) -> Artifact:
                           "start-to-done time, LOGIT read, PS dequant) with the accelerator not started. "
                           "$E_\\mathrm{sys}=\\Delta P_\\mathrm{accel}\\times$ time/image (host loop included); "
                           "$E_\\mathrm{comp}=\\Delta P_\\mathrm{accel}\\times t_\\mathrm{PL}$, "
-                          "$t_\\mathrm{PL}$ = TOTAL\\_CYC (hardware counter) over the read-back pl\\_clk0; "
+                          "$t_\\mathrm{PL}$ = TOTAL\\_CYC (hardware counter) over $f_\\mathrm{meas}$ (measured "
+                          "pl\\_clk0; read-back clock if no calibration); run phases in a seeded random order "
+                          "per repeat; "
                           "``$-$ control'' rows use $\\Delta P_\\mathrm{accel}-\\Delta P_\\mathrm{control}$. "
-                          "All computed by power\\_log.py. Source: hw\\_b1\\_power\\_ina260\\_summary*.csv."
-                          + (" External meter rows: board input power, cross-check only." if mby else "")])
+                          "All computed by power\\_log.py. Source: hw\\_b1\\_power\\_ina260\\_summary*.csv."])
 
 
 CLK_TOL = 0.5      # MHz: a read-back / nominal pair of the same sweep point (points are >= 50 MHz apart)
@@ -363,7 +377,6 @@ def b2_clock(c: Ctx) -> Artifact:
     """B2: per-clock SOM-rail power (INA260) dP and energy/image + PL latency."""
     art = c.art("tab_b2_clock")
     ents = power_summaries(art, "hw_b2_power_ina260")
-    meter = {(e["net"], e["clock"]): e for e in power_summaries(art, "hw_b2_power_meter")}
     clk = [r for r in (art.rows("hw_b2_clock.csv", hw=True) or []) if not r.get("skipped_reason")
            and r.get("clock_readback_mhz")]
 
@@ -376,7 +389,7 @@ def b2_clock(c: Ctx) -> Artifact:
         f = fnum(r["clock_readback_mhz"])
         if not any(n == r["net"] and abs(g - f) < CLK_TOL for n, g in keys):
             keys[(r["net"], f)] = None
-    ncol = 5 + (1 if meter else 0)
+    ncol = 5
     body, last_net = [], None
     for (net, f) in sorted(keys, key=lambda k: (NETS.index(k[0]) if k[0] in NETS else 9, k[1])):
         e = keys[(net, f)]
@@ -391,22 +404,19 @@ def b2_clock(c: Ctx) -> Artifact:
                pm(art, e, "accel_time_per_image_s", "f3", 1000) if e else art.placeholder(f"B2 {net}: INA260 summary"),
                art.cell(lr, "latency_us", "f2") if lr and lr.get("latency_us")
                else art.placeholder(f"B2 {net}: hw_b2_clock.csv latency")]
-        if meter:
-            me = meter.get((net, e["clock"])) if e else None
-            row.append(pm(art, me, "accel_energy_per_image_mj", "f3") if me else "--")
         body.append(row)
     if not keys:
         body.append(f"\\multicolumn{{{ncol}}}{{c}}{{{art.placeholder('B2: hw_b2_power_ina260_summary*.csv / hw_b2_clock.csv (source=hw)')}}} \\\\")
     lab = _power_label(art, ents) if ents else INA_LABEL
-    hdr = [r"Clock & $\Delta P$ & Energy/img & Time/img & PL lat." + (" & Meter E/img" if meter else ""),
-           r"(MHz) & (W) & (mJ) & (ms) & (\textmu s)" + (" & (mJ)" if meter else "")]
+    hdr = [r"Clock & $\Delta P$ & Energy/img & Time/img & PL lat.",
+           r"(MHz) & (W) & (mJ) & (ms) & (\textmu s)"]
     return c.table(art, "@{}l" + "r" * (ncol - 1) + "@{}", hdr, body,
                    f"B2 clock sweep: {tex_escape(lab) if lab == INA_LABEL else lab} (mean $\\pm$ std over "
                    "repeats) and PL latency.", "tab:clock",
                    notes=["Measured on the KV260. $\\Delta P$ and energy/image: on-board INA260, SOM rail "
                           "(hw\\_b2\\_power\\_ina260\\_summary*.csv); time/img = host inference loop; PL latency = "
-                          "cycle counter at the read-back clock (hw\\_b2\\_clock.csv)."
-                          + (f" Meter column: {METER_LABEL}." if meter else "")])
+                          "cycle counter at the clock of each point (hw\\_b2\\_clock.csv; $f_\\mathrm{meas}$ where "
+                          "calibrated at that clock, else the read-back clock)."])
 
 
 B3_FILES = {"safe": "hw_b3_breakdown.csv", "fast": "hw_b3_breakdown_fast.csv"}
@@ -428,7 +438,8 @@ def b3_breakdown(c: Ctx) -> Artifact:
         for net in NETS:
             for hp in B3_FILES:
                 r = b.get((hp, net, p))
-                cells += ([art.cell(r, "median_us", "f1"), art.cell(r, "p95_us", "f1")] if r else
+                cells += ([ci(art, r, "median_us", "median_ci_lo_us", "median_ci_hi_us", "f1"),
+                           art.cell(r, "p95_us", "f1")] if r else
                           [art.placeholder(f"B3 {net} {hp}: {B3_FILES[hp]}")] * 2)
         body.append(cells)
     sp = ["speedup e2e (safe/fast)"]
@@ -444,7 +455,7 @@ def b3_breakdown(c: Ctx) -> Artifact:
     hdr = [r"& \multicolumn{4}{c}{LeNet-5 (\textmu s)} & \multicolumn{4}{c}{CIFAR-10 (\textmu s)} \\",
            r"\cmidrule(lr){2-5}\cmidrule(l){6-9}",
            r"& \multicolumn{2}{c}{safe} & \multicolumn{2}{c}{fast} & \multicolumn{2}{c}{safe} & \multicolumn{2}{c}{fast} \\",
-           r"Phase & median & p95 & median & p95 & median & p95 & median & p95"]
+           r"Phase & median [95\% CI] & p95 & median [95\% CI] & p95 & median [95\% CI] & p95 & median [95\% CI] & p95"]
     return c.table(art, "@{}l" + "r" * 8 + "@{}", hdr, body,
                    "B3 end-to-end breakdown per image (host side), safe vs fast host path.",
                    "tab:breakdown", wide=True,
@@ -453,7 +464,9 @@ def b3_breakdown(c: Ctx) -> Artifact:
                           "read with one vectorized read, tight STATUS poll (hw\\_b3\\_breakdown\\_fast.csv; used "
                           "only after the bring-up fast-path check passed). end\\_to\\_end = input\\_write + "
                           "status\\_clear + start\\_done + logit\\_read + ps\\_dequant; start\\_done = start\\_write "
-                          "+ poll; pl\\_compute = PL cycle counter."])
+                          "+ poll; pl\\_compute = PL cycle counter / $f_\\mathrm{meas}$. Safe and fast "
+                          "conditions interleaved in randomized blocks in one run (warm-up and block warm-up "
+                          "discarded); median with the distribution-free order-statistic 95\\% CI."])
 
 
 # --------------------------------------------------------------------------------------------
@@ -484,5 +497,54 @@ def verification(c: Ctx) -> Artifact:
                    "tab:verif", notes=["Source: verification\\_stats.csv."], wide=n > 5)
 
 
+REPEAT_METRICS = [   # (metric file glob, metric, key filter, label, fmt)
+    ("hw_fclk_cal_s*.csv", "f_meas_mhz", {}, "$f_\\mathrm{meas}$ (MHz)", "f3"),
+    ("hw_a2_a3_cycles.csv", "wall_us_median", {}, "A2 wall-clock/image, median (\\textmu s)", "f1"),
+    ("hw_b3_breakdown.csv", "median_us", {"phase": "end_to_end"}, "B3 end-to-end safe, median (\\textmu s)", "f1"),
+    ("hw_b3_breakdown_fast.csv", "median_us", {"phase": "end_to_end"}, "B3 end-to-end fast, median (\\textmu s)", "f1"),
+    ("hw_b1_power_ina260_summary_*.csv", "accel_dp_w", {}, "B1 $\\Delta P$ accel.\\ (W)", "f3"),
+    ("hw_b1_power_ina260_summary_*.csv", "accel_energy_per_image_mj", {}, "B1 $E_\\mathrm{sys}$ accel.\\ (mJ)", "f3"),
+    ("hw_b1_power_ina260_summary_*.csv", "accel_e_comp_mj", {}, "B1 $E_\\mathrm{comp}$ accel.\\ (mJ)", "f4"),
+]
+
+
+def repeatability(c: Ctx) -> Artifact:
+    """3-session repeatability (aggregate_sessions.py -> hw_repeatability.csv): per metric and net
+    mean of the per-session values +- between-session SD and the number of sessions. Groups are per
+    bitstream + clock (never mixed); the latest-timestamp group per metric/net is shown."""
+    import json as _json
+    art = c.art("tab_repeatability")
+    rows = art.rows("hw_repeatability.csv", hw=True) or []
+    body = []
+    for pat, metric, filt, label, fmt in REPEAT_METRICS:
+        cells = [label]
+        for net in NETS:
+            cand = []
+            for r in rows:
+                if r.get("metric_file") != pat or r.get("metric") != metric:
+                    continue
+                k = _json.loads(r.get("key") or "{}")
+                if "net" in k and k["net"] != net:       # f_meas has no net key: same for both
+                    continue
+                if all(k.get(a) == b for a, b in filt.items()):
+                    cand.append(r)
+            r = max(cand, key=lambda x: x["timestamp"]) if cand else None
+            if r is None:
+                cells.append(art.placeholder(f"repeatability {metric} {net}: hw_repeatability.csv"))
+                continue
+            txt = art.cell(r, "mean", fmt)
+            if r.get("between_sd"):
+                txt += r"\,$\pm$\," + art.cell(r, "between_sd", fmt)
+            cells.append(txt + " (" + art.cell(r, "n_sessions", "int") + ")")
+        body.append(cells)
+    return c.table(art, "@{}lrr@{}", ["Metric & LeNet-5 & CIFAR-10"], body,
+                   "Repeatability over independent board sessions: mean $\\pm$ between-session SD "
+                   "(number of sessions).", "tab:repeat",
+                   notes=["Source: hw\\_repeatability.csv (aggregate\\_sessions.py): per session the "
+                          "session's own statistic (latency median, power mean over repeats), combined "
+                          "across session\\_index values; rows from different bitstreams or clocks are "
+                          "never combined. Measured on the KV260."])
+
+
 ALL = [t1_impl, a1_accuracy, a2_latency, a3_cycles, a4_util, a5_cpu, b1_power, b2_clock, b3_breakdown,
-       verification]
+       repeatability, verification]

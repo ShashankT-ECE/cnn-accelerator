@@ -4,6 +4,12 @@
   final_dequant / predict        PS float32 dequant + argmax (DECISIONS D2, legacy expression)
   add_common_args / open_device  --backend {pynq,model}, bitstream, data dir, timeouts
   RunContext                     provenance + results-row metadata + output-dir rules
+  run_env / env_meta             measurement environment handed down by run_sessions.py
+                                 ($GOS_RUN_ENV: session_index, paper_grade, governor/frequency,
+                                 pinning, die temperature at step start, measured PL clock f_meas)
+  RunContext.f_used / clock_cols the clock used for every µs value: f_meas (PL clock calibration,
+                                 exp_fclk_cal.py) when it was measured at the current read-back
+                                 clock, else the read-back clock (labelled)
   write_csv                      results CSV (EXPERIMENTS.md "CSV rule" columns first)
 
 Layouts: on the laptop this file lives in v2/board/ (results -> v2/results/, dry runs ->
@@ -44,7 +50,13 @@ META_COLUMNS = (
     "board_id", "net", "layer", "clock_mhz", "source", "duration_s", "num_inferences",
 )
 EXTRA_META = ("build_id_hw", "board_hostname", "clock_source", "scripts_commit",
-              "data_manifest_sha256", "data_git_commit", "data_git_dirty", "backend")
+              "data_manifest_sha256", "data_git_commit", "data_git_dirty", "backend",
+              # measurement environment (run_sessions.py pre-flight, $GOS_RUN_ENV):
+              "session_index", "paper_grade", "env_step", "cpu_governor", "cpu_freq_khz",
+              "cpu_affinity", "die_temp_start_c", "env_note")
+RUN_ENV_VAR = "GOS_RUN_ENV"
+CLOCK_COLS = ("f_readback_mhz", "f_meas_mhz", "f_meas_ci_lo_mhz", "f_meas_ci_hi_mhz", "f_used_mhz",
+              "f_used_source")
 SOURCE_HW = "hw"
 SOURCE_DRYRUN = "dryrun_model"
 
@@ -206,6 +218,38 @@ def deploy_info() -> dict:
     return d
 
 
+def run_env() -> dict:
+    """The measurement environment run_sessions.py passes to every step ($GOS_RUN_ENV, JSON).
+    {} when a script is run by hand (then rows are not paper-grade: no environment pre-flight)."""
+    try:
+        d = json.loads(os.environ.get(RUN_ENV_VAR) or "{}")
+        return d if isinstance(d, dict) else {}
+    except ValueError:
+        return {}
+
+
+def env_meta(source: str, dirty: bool, env: dict | None = None) -> dict:
+    """Row columns describing the measurement environment. paper_grade is True only for a
+    hardware row from a clean tree whose step passed the environment pre-flight (governor fixed,
+    process pinned, no package manager running) without --allow-non-paper-grade."""
+    env = run_env() if env is None else env
+    try:
+        aff = ",".join(str(c) for c in sorted(os.sched_getaffinity(0)))
+    except (AttributeError, OSError):
+        aff = ""
+    pg = bool(env.get("paper_grade")) and source == SOURCE_HW and not dirty
+    if not env:
+        note = "no environment pre-flight (not run by run_sessions.py): not paper-grade"
+    elif source != SOURCE_HW:
+        note = "DRY RUN environment (fake sysfs), not paper data"
+    else:
+        note = env.get("note", "")
+    return {"session_index": env.get("session_index", ""), "paper_grade": pg,
+            "env_step": env.get("step_id", ""), "cpu_governor": env.get("cpu_governor", ""),
+            "cpu_freq_khz": env.get("cpu_freq_khz", ""), "cpu_affinity": aff,
+            "die_temp_start_c": env.get("die_temp_start_c", ""), "env_note": note}
+
+
 def board_id_default() -> str:
     env = os.environ.get("GOS_BOARD_ID")
     if env:
@@ -304,6 +348,28 @@ class RunContext:
             self.clock_source = "nominal (dry run, not measured)"
         self.packages: dict[str, Package] = {}
         self.out_dir = resolve_out_dir(be.source, args.out_dir)
+        self.run_env = run_env()
+
+    def f_used(self, readback_mhz=None) -> tuple[float, str]:
+        """(clock in MHz for every µs value, its source). f_meas from the PL clock calibration
+        (exp_fclk_cal.py, passed down in $GOS_RUN_ENV) if it was measured at this read-back clock
+        (within CLOCK_TOL_MHZ), else the read-back clock itself."""
+        rb = self.dev.fclk0_mhz() if readback_mhz is None else float(readback_mhz)
+        e = self.run_env
+        fm, fr = e.get("f_meas_mhz"), e.get("f_meas_readback_mhz")
+        if fm not in (None, "") and fr not in (None, "") and abs(float(fr) - rb) <= CLOCK_TOL_MHZ:
+            return float(fm), f"f_meas ({e.get('f_meas_source', 'calibration')}; {e.get('f_meas_step', '')})"
+        return rb, "f_readback (no PL clock calibration at this clock)"
+
+    def clock_cols(self, readback_mhz=None) -> dict:
+        rb = self.dev.fclk0_mhz() if readback_mhz is None else float(readback_mhz)
+        f, src = self.f_used(rb)
+        e = self.run_env
+        meas = src.startswith("f_meas")
+        return {"f_readback_mhz": f"{rb:.6f}", "f_meas_mhz": f"{float(e['f_meas_mhz']):.6f}" if meas else "",
+                "f_meas_ci_lo_mhz": e.get("f_meas_ci_lo_mhz", "") if meas else "",
+                "f_meas_ci_hi_mhz": e.get("f_meas_ci_hi_mhz", "") if meas else "",
+                "f_used_mhz": f"{f:.6f}", "f_used_source": src}
 
     def package(self, net: str) -> Package:
         if net not in self.packages:
@@ -355,6 +421,7 @@ class RunContext:
             "data_git_commit": pkg.manifest.get("git_commit", "") if pkg else "",
             "data_git_dirty": pkg.manifest.get("git_dirty", "") if pkg else "",
             "backend": self.be.kind,
+            **env_meta(self.source, self.dirty, self.run_env),
         }
 
     def csv(self, name: str, rows: list[dict], fields: list[str]) -> Path:
@@ -367,6 +434,13 @@ class RunContext:
 
     def banner(self):
         print(f"[{self.script}] host path: {self.dev.host_path_desc}")
+        em = env_meta(self.source, self.dirty, self.run_env)
+        print(f"[{self.script}] environment: session_index={em['session_index'] or '-'} "
+              f"paper_grade={em['paper_grade']} governor={em['cpu_governor'] or '-'} "
+              f"cpu_freq_khz={em['cpu_freq_khz'] or '-'} affinity={em['cpu_affinity']} "
+              f"die_temp_start_c={em['die_temp_start_c'] or '-'} {em['env_note']}")
+        f, fsrc = self.f_used()
+        print(f"[{self.script}] µs values use f = {f:.6f} MHz ({fsrc})")
         print(f"[{self.script}] backend={self.be.kind} source={self.source} "
               f"VERSION=0x{self.dev.version:08X} BUILD_ID={self.dev.build_id_hex} "
               f"clock={self.dev.fclk0_mhz():.3f} MHz ({self.clock_source}) "
