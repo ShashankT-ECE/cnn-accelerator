@@ -24,7 +24,8 @@ SOURCE_PATHS = ("v2/rtl", "v2/vivado", "v2/model")
 # CSVs whose producer lives outside SOURCE_PATHS: those sources are compared too (only for these CSVs,
 # so older rows of other CSVs are not made stale by a folder that did not exist when they were produced).
 EXTRA_SOURCES = {"schedule_ablation.csv": ("v2/analysis",), "projection_16x16.csv": ("v2/analysis",),
-                 "utilization_model.csv": ("v2/analysis",), "rtl_full10k.csv": ("v2/fullsim",)}
+                 "utilization_model.csv": ("v2/analysis",), "rtl_full10k.csv": ("v2/fullsim",),
+                 "dpu_model_accuracy.csv": ("v2/dpu",)}
 
 
 def git(*args: str) -> subprocess.CompletedProcess:
