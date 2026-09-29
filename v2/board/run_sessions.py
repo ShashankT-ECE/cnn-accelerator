@@ -18,8 +18,9 @@ Sessions (v2/board/README.md):
 Power: the on-board INA260 ("SOM-rail power (INA260)") is the ONLY power source.
 
 PRIORITY (steps run in this order; the time budget therefore defers the tail first):
-  bring-up, f_meas calibration, then A3, A1, latency (A2 + B3), baselines (CPU, DPU), energy (B1),
-  sweep (B2), soak, A4. Session 1 always first; otherwise the order is global across sessions.
+  bring-up, f_meas calibration, then A3, A1, latency (A2 + B3), shapes (A3-general random shape
+  jobs, s2.shapes, 15 min cap), baselines (CPU, DPU), energy (B1), sweep (B2), soak, A4.
+  Session 1 always first; otherwise the order is global across sessions.
 EXTRA STEPS: if session_extra_steps.py is importable, session_extra_steps.extra_steps(opts) ->
   list[dict] (id, session, group, cmd, outputs, est_s, timeout_s, requires, params; optional
   title, out_flag (default "--out-dir"; the orchestrator appends `out_flag <staging dir>`),
@@ -116,7 +117,7 @@ KILL_GRACE_S = (20.0, 5.0)      # SIGINT -> SIGTERM, SIGTERM -> SIGKILL
 RESULT_PATTERNS = ("hw_*.csv", "hw_*.npz", "hw_*.json")
 
 # Priority (EXPERIMENTS.md "Measurement rigor"): infrastructure first, then these groups.
-GROUP_ORDER = ("A3", "A1", "latency", "baselines", "energy", "sweep", "soak", "A4")
+GROUP_ORDER = ("A3", "A1", "latency", "shapes", "baselines", "energy", "sweep", "soak", "A4")
 INFRA_RANK = {"bringup": -2, "fcal": -1}
 
 DEFAULT_MEAS_CORES = "3"

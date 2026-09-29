@@ -5,7 +5,9 @@ as it talks to the KV260. On CTRL.start the job is computed from what the driver
 
   * config check: gos_pack.job_err_code(N_LAYERS, DESC)                  (RTL checker model)
   * refused job: STATUS.error, ERR_CODE, TOTAL_CYC = C_START (busy during S_CHK1..3)
-  * accepted job: every layer from the memory images — input map read from ACT[in_sel] with
+  * accepted job (any descriptor chain, not only the two nets: in_sel / out_raw / bases as
+    written; random multi-layer shape jobs of exp_shapes.py): every layer from the memory
+    images — input map read from ACT[in_sel] with
     gos_pack.unpack_act, weights/QPARAM with gos_pack.unpack_wgt / unpack_qparam at the
     descriptor's WGT_BASE / QP_BASE, layer computed by gos_golden.gos_layer (bit-exact golden),
     output written to ACT[!in_sel] (only the bytes the map covers) or LOGIT (out_raw)
@@ -36,9 +38,27 @@ import gos_golden as gg  # noqa: E402
 import gos_pack as gp  # noqa: E402
 
 
+class ModelUnsupported(RuntimeError):
+    """An accepted job whose result the dry-run model cannot determine from the contract."""
+
+
+def _valid_window(x: np.ndarray, f: dict) -> np.ndarray:
+    """Input rows/columns the layer's OH x OW outputs read (VALID, stride 1): the first
+    OH+KH-1 rows and OW+KW-1 columns. Equals x when OH = IH-KH+1 and OW = IW-KW+1 (every net
+    layer; gos_pack's host rule). A descriptor with a smaller OH/OW (accepted by the checker:
+    it only rejects OH > IH / OW > IW) computes the top-left OH x OW outputs; a larger one would
+    read past the map (undefined in the contract) and is refused by the dry run."""
+    h, w = f["OH"] + f["KH"] - 1, f["OW"] + f["KW"] - 1
+    if h > f["IH"] or w > f["IW"]:
+        raise ModelUnsupported(f"OH+KH-1 = {h} > IH = {f['IH']} or OW+KW-1 = {w} > IW = "
+                               f"{f['IW']}: output window reads past the input map")
+    return np.ascontiguousarray(x[:, :h, :w])
+
+
 def _layer_cfg(f: dict, i: int) -> dict:
     return {"name": f"L{i}", "IC": f["IC"], "OC": f["OC"], "KH": f["KH"], "KW": f["KW"],
-            "IH": f["IH"], "IW": f["IW"], "OH": f["OH"], "OW": f["OW"], "K": f["K"],
+            "IH": f["OH"] + f["KH"] - 1, "IW": f["OW"] + f["KW"] - 1,   # = the valid window
+            "OH": f["OH"], "OW": f["OW"], "K": f["K"],
             "relu": bool(f["relu_en"]), "pool": bool(f["pool_en"]), "final": bool(f["out_raw"])}
 
 
@@ -75,8 +95,13 @@ class _ModelJob:
         for i, (f, P) in enumerate(zip(fields, params)):
             src = sim.mems[f"ACT{f['in_sel']}"]
             x = gp.unpack_act(src.words(), f["IC"], f["IH"], f["IW"])
+            x = _valid_window(x, f)
             y = gg.gos_layer(x, P.cfg, P)
             if f["out_raw"]:
+                if f["OH"] * f["OW"] != 1:
+                    raise ModelUnsupported(
+                        f"layer {i}: out_raw with OH x OW = {f['OH']} x {f['OW']} != 1 x 1 "
+                        "(LOGIT contents not defined by FORMATS.md section 4)")
                 logits = [int(v) for v in y.reshape(-1)]
             else:
                 dst = sim.mems[f"ACT{1 - f['in_sel']}"]

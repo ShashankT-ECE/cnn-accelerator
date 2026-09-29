@@ -11,6 +11,15 @@ Everything comes from v2/model (no format re-implementation here):
   images    gos_pack.pack_wgt / pack_qparam / make_descriptors
   cycles    gos_cycle_model.net_cycles (label: model); RTL cycles = copies of
             v2/results/rtl_cycles.csv and rtl_network.csv (label: rtl_sim)
+  shapes    (A3-general, exp_shapes.py) the random shape set v2/build/shapes/<seed>/ (other owner,
+            v2/shapes/gen_shapes.py + shapeset.py): shapes.json + every jobs/*.npz it lists (not
+            hex/, runs/) copied to data/shapes/ with SHIP.json (SHA256 + size of every shipped
+            file, seed, n_jobs, categories, the set's shapeset_sha256, git provenance) + a copy of
+            v2/results/shapes_rtl.csv if present (label: rtl_sim); PACKAGE.json "shapes" records
+            SHIP.json's SHA256.
+              --shapes auto (default: the only v2/build/shapes/<digits>/ holding shapes.json, none
+              -> skipped with a note, several -> error) | none | <seed> | <dir>;  --shapes-only: ship the shape set
+              and rewrite PACKAGE.json without rebuilding the net packages.
 Layout: v2/board/README.md "Data package". Refuses a dirty git tree unless --allow-dirty (the
 manifest then records git_dirty=true and hardware runs using it refuse without --allow-dirty).
 """
@@ -172,12 +181,86 @@ def build_net(net: str, out: Path, limit: int | None, commit: str, dirty: bool) 
     return man
 
 
+SHAPES_BUILD = V2 / "build" / "shapes"
+SHAPES_RTL_CSV = V2 / "results" / "shapes_rtl.csv"
+
+
+def resolve_shapes_src(arg: str) -> Path | None:
+    if arg == "none":
+        return None
+    if arg == "auto":
+        subs = sorted(d for d in SHAPES_BUILD.iterdir() if d.is_dir() and d.name.isdigit()
+                      and (d / "shapes.json").is_file()) if SHAPES_BUILD.is_dir() else []
+        if not subs:
+            print(f"NOTE: no shape set under {SHAPES_BUILD}: data/shapes not shipped "
+                  "(A3-general step s2.shapes will not be registered)")
+            return None
+        if len(subs) > 1:
+            raise SystemExit(f"several shape sets under {SHAPES_BUILD} ({[d.name for d in subs]}): "
+                             "pass --shapes <seed>")
+        return subs[0]
+    p = Path(arg)
+    return p if p.is_dir() else SHAPES_BUILD / arg
+
+
+def ship_shapes(src: Path, out: Path, commit: str, dirty: bool,
+                rtl_csv: Path = SHAPES_RTL_CSV) -> dict:
+    """Copy the shape set src into out (= data/shapes) and write SHIP.json."""
+    import exp_shapes as xs
+    import shapeset
+    if not (src / xs.SHAPES_JSON).is_file():
+        raise SystemExit(f"{src}: no {xs.SHAPES_JSON} (not a shape set)")
+    man = shapeset.verify_manifest(src)
+    shapes = shapeset.load_shapeset(src)
+    if out.is_dir():
+        shutil.rmtree(out)                      # generated copy (gitignored data package)
+    out.mkdir(parents=True)
+    for rel in [xs.SHAPES_JSON, *sorted(man["files"])]:
+        (out / rel).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(src / rel, out / rel)
+    rtl_rows = None
+    if rtl_csv.is_file():
+        shutil.copyfile(rtl_csv, out / xs.RTL_CSV)
+        rtl_rows = sum(1 for _ in rtl_csv.open()) - 1
+    set_dirty = man.get("git_dirty")
+    cats = {}
+    for sh in shapes:
+        c = str(xs._f(sh, "category", ""))
+        cats[c] = cats.get(c, 0) + 1
+    files = sorted(str(f.relative_to(out)) for f in out.rglob("*") if f.is_file()
+                   and f.name != xs.SHIP_NAME)
+    rel = src.resolve()
+    rel = str(rel.relative_to(V2.parent)) if rel.is_relative_to(V2.parent) else str(rel)
+    ship = {"seed": str(man.get("seed", src.name)), "source_dir": rel,
+            "n_jobs": len(shapes), "categories": cats,
+            "shapeset_sha256": man["shapeset_sha256"],
+            "shapes_json_sha256": bc.sha256_file(out / xs.SHAPES_JSON),
+            "set_git_commit": man.get("git_commit", ""),
+            "set_git_dirty": set_dirty,
+            "git_commit": commit, "git_dirty": bool(dirty) or bool(set_dirty),
+            "created_utc": bc.utc_now(), "generator": "v2/board/make_board_data.py (ship_shapes)",
+            "rtl_csv": xs.RTL_CSV if rtl_rows is not None else "", "rtl_csv_rows": rtl_rows,
+            "source": "shape set = model (golden outputs, model cycles); shapes_rtl.csv = rtl_sim copy",
+            "files": {f: {"sha256": bc.sha256_file(out / f), "bytes": (out / f).stat().st_size}
+                      for f in files}}
+    _save_json(out / xs.SHIP_NAME, ship)
+    xs.verify_ship(out)
+    print(f"[shapes] shipped {len(shapes)} jobs ({len(cats)} categories) from {src} -> {out}; "
+          f"set {ship['shapeset_sha256'][:12]}; RTL csv: "
+          f"{'%d rows' % rtl_rows if rtl_rows is not None else 'not present'}")
+    return ship
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--nets", nargs="+", default=list(NETS), choices=NETS)
     ap.add_argument("--limit", type=int, default=None, help="first N test images (default 10000)")
     ap.add_argument("--out", default=str(bc.DEFAULT_DATA_DIR))
     ap.add_argument("--allow-dirty", action="store_true")
+    ap.add_argument("--shapes", default="auto",
+                    help="shape set to ship: auto | none | <seed> | <dir> (A3-general)")
+    ap.add_argument("--shapes-only", action="store_true",
+                    help="only ship the shape set and rewrite PACKAGE.json (net packages kept)")
     a = ap.parse_args(argv)
     commit, dirty = bc.git_state()
     if dirty and not a.allow_dirty:
@@ -185,13 +268,26 @@ def main(argv=None) -> int:
               "marked git_dirty=true)")
         return 1
     out = Path(a.out)
-    for net in a.nets:
-        build_net(net, out / net, a.limit, commit, dirty)
+    if not a.shapes_only:
+        for net in a.nets:
+            build_net(net, out / net, a.limit, commit, dirty)
     pk = {"nets": {}, "created_utc": bc.utc_now(), "git_commit": commit, "git_dirty": dirty}
     for net in NETS:
         m = out / net / "MANIFEST.json"
         if m.is_file():
             pk["nets"][net] = {"manifest_sha256": bc.sha256_file(m)}
+            if a.shapes_only:     # nets not rebuilt here: keep their own dirty flag
+                pk["git_dirty"] = pk["git_dirty"] or bool(json.loads(m.read_text()).get("git_dirty", True))
+    src = resolve_shapes_src(a.shapes)
+    if src is not None:
+        ship = ship_shapes(src, out / "shapes", commit, dirty)
+        pk["shapes"] = {"ship_sha256": bc.sha256_file(out / "shapes" / "SHIP.json"),
+                        "shapeset_sha256": ship["shapeset_sha256"], "n_jobs": ship["n_jobs"],
+                        "seed": ship["seed"]}
+        pk["git_dirty"] = pk["git_dirty"] or ship["git_dirty"]
+    elif (out / "shapes").is_dir():
+        print(f"WARNING: {out / 'shapes'} exists but is not listed in PACKAGE.json: s2.shapes and "
+              "deploy.sh will refuse it (remove the directory or ship a set with --shapes)")
     _save_json(out / "PACKAGE.json", pk)
     print(f"wrote {out}/PACKAGE.json (commit {commit[:8]}, dirty={dirty})")
     return 0

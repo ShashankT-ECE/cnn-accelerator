@@ -2,8 +2,8 @@
 
     extra_steps(opts) -> list[dict]
 
-Each dict: id, session (2 or 3), group ("A3","A1","latency","baselines","energy","sweep","soak",
-"A4"), title, cmd (argv relative to the board dir; the orchestrator appends `out_flag <staging>`),
+Each dict: id, session (2 or 3), group ("A3","A1","latency","shapes","baselines","energy","sweep",
+"soak","A4"), title, cmd (argv relative to the board dir; the orchestrator appends `out_flag <staging>`),
 out_flag ("--out-dir"), outputs (result file names that must exist after an OK run), est_s,
 timeout_s, requires (step ids that must be recorded OK first), required (False = informational),
 params (dict; part of the resume key), kind ("fixed" / "infer"), images (accelerator inferences,
@@ -17,6 +17,12 @@ Registered here:
                                            per net itself). Not `requires` s2.A2A3, so that a failed
                                            A2/A3 does not block the determinism evidence; schedule
                                            it after s2.A2A3 (group order) to avoid a duplicate run.
+  s2.shapes      session 2, group "shapes" exp_shapes.py (A3-general: the shipped random multi-layer
+                                           shape set, bit/cycle-exact vs model and RTL sim; hard
+                                           15 min cap inside the script, stratified job order).
+                                           Registered only if <data_dir>/shapes/SHIP.json exists
+                                           (make_board_data.py --shapes); requires s1.smoke (+ s1.fast
+                                           on the fast host path).
 The B2 sweep stays the orchestrator's s3.B2 (exp_b2_clock.py); it now also writes
 hw_b2_cycles.csv and hw_b2_fit.csv (B2_EXTRA_OUTPUTS, to add to s3.B2's expected outputs).
 
@@ -25,7 +31,8 @@ opts: a dict, an argparse Namespace or run_sessions.Config-like object; attribut
 {'bit_clock_mhz'}), results_dir, allow_dirty, quick, write_mode ('elem'), host_path ('safe'),
 fast_store ('block'), board_id, dev_args (optional: prebuilt device argv, replaces the one built
 here), soak_s (default 1800 s; --quick 300 s; dry run 60 s), soak_nets (both), soak_block_s (60),
-spread_limit (None = all images; --quick 200), clock_choice (path of the clock_fallback decision
+spread_limit (None = all images; --quick 200), shapes_budget_s (900 s; --quick 300 s; never above
+900), shapes_seed (job-order seed; default order_seed + 30), clock_choice (path of the clock_fallback decision
 JSON; default <results_dir>/hw_clock_choice.json).
 """
 from __future__ import annotations
@@ -41,6 +48,14 @@ SPREAD_OUTPUTS = ("hw_layer_spread.csv",)
 B2_EXTRA_OUTPUTS = ("hw_b2_cycles.csv", "hw_b2_fit.csv")
 SETUP_S = 60.0                  # overlay load, package verify, net loads
 RATE_S = {"pynq": 0.02, "model": 0.006}   # = run_sessions.DEFAULT_RATE_S (pynq value ASSUMED)
+SHAPES_OUTPUTS = ("hw_shapes.csv",)
+SHAPES_CAP_S = 900.0            # = exp_shapes.BUDGET_MAX_S (hard cap inside the script)
+SHAPES_QUICK_S = 300.0
+# per-job estimate: WGT/QPARAM/ACT0 writes + per-word readback + output readback. pynq value
+# ASSUMED (safe path, up to 16k WGT words written and verified), replaced by the recorded duration
+# after the first run (run_sessions.estimate "previous run").
+SHAPES_JOB_S = {"pynq": 1.5, "model": 0.3}
+SHAPES_TIMEOUT_MARGIN_S = 180.0  # script setup (overlay, set verify/load) + the job in flight
 
 
 def _opt(opts, name, default=None):
@@ -141,5 +156,40 @@ def spread_step(opts) -> dict:
             "required": True, "params": params, "kind": "infer", "images": n}
 
 
+def shapes_ship(opts) -> dict | None:
+    import json
+    p = Path(_opt(opts, "data_dir", "data")) / "shapes" / "SHIP.json"
+    try:
+        return json.loads(p.read_text())
+    except (OSError, ValueError):
+        return None
+
+
+def shapes_step(opts) -> dict | None:
+    """s2.shapes (A3-general) or None when no shape set is shipped in the data package."""
+    ship = shapes_ship(opts)
+    if ship is None:
+        return None
+    be = _opt(opts, "backend", "pynq")
+    quick = bool(_opt(opts, "quick", False))
+    budget = min(float(_opt(opts, "shapes_budget_s", SHAPES_QUICK_S if quick else SHAPES_CAP_S)),
+                 SHAPES_CAP_S)
+    seed = int(_opt(opts, "shapes_seed", int(_opt(opts, "order_seed", 1)) + 30))
+    n = int(ship.get("n_jobs") or 300)
+    est = min(SETUP_S + n * SHAPES_JOB_S.get(be, SHAPES_JOB_S["pynq"]), budget)
+    hp = _opt(opts, "host_path", "safe")
+    cmd = ["exp_shapes.py", *device_args(opts), "--budget-s", f"{budget:g}",
+           "--order-seed", str(seed)]
+    params = {"budget_s": budget, "order_seed": seed, "host_path": hp, "n_jobs": n,
+              "shapeset_sha256": ship.get("shapeset_sha256", ""), "seed": ship.get("seed", "")}
+    return {"id": "s2.shapes", "session": 2, "group": "shapes",
+            "title": f"A3-general: {n} random multi-layer shape jobs (set seed {ship.get('seed')}), "
+                     f"bit/cycle-exact vs model + RTL sim, stratified order, cap {budget:g} s",
+            "cmd": cmd, "out_flag": "--out-dir", "outputs": list(SHAPES_OUTPUTS), "est_s": est,
+            "timeout_s": budget + SHAPES_TIMEOUT_MARGIN_S,
+            "requires": ["s1.smoke"] + (["s1.fast"] if hp == "fast" else []),
+            "required": True, "params": params, "kind": "fixed", "images": 0}
+
+
 def extra_steps(opts) -> list[dict]:
-    return [spread_step(opts), soak_step(opts)]
+    return [s for s in (spread_step(opts), shapes_step(opts), soak_step(opts)) if s is not None]

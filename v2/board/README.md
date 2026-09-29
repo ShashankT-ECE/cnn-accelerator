@@ -81,7 +81,7 @@ python3 aggregate_sessions.py                       # -> results/hw_repeatabilit
 | session | steps (ids) | what |
 |---|---|---|
 | 1 | (clock fallback) `s1.shell`, `s1.smoke`, `s1.smoke_slice`, `s1.fast`, `s1.fcal` | before the steps, with several deployed bitstreams: `clock_fallback.choose` (pre-flight + core smoke of the 300 MHz build, else the 250 MHz build; choice in `hw_clock_choice.json` and the state, used by every later step and session); `s1.fcal` = PL clock calibration; `test_shell.py --skip-scratch` (pl_clk0 read back, VERSION/BUILD_ID, every BRAM filled + read back); `test_core_smoke.py` (one LeNet-5 + one CIFAR-10 image bit- and cycle-exact, refused job → ERR_CODE rule 3, soft_reset, good job); the same with `--write-mode slice` (**informational**: a failure does not fail the session; use `--write-mode slice` for Sessions 2/3 only if it passed); `s1.fast` = the same smoke on the **fast host path** preceded and followed by `GosDevice.check_fast_path()` (**informational**; its PASS is the bring-up condition for `--host-path fast`, see "Host paths") |
-| 2 | `s2.fcal`, `s2.A2A3`, `s2.layerspread`, `s2.A1`, `s2.B3`, `s2.CPU`, `s2.DPU`, `s2.A4` (priority order) | f_meas calibration, A2/A3 all images, A3b per-layer spread, A1 all 10k images per net, B3 1000 kept per condition, **interleaved** safe + CPU (+ fast host path only if `s1.fast` passed), CPU baselines `--tag board` (workers pinned), DPU baseline (only if `dpu/dpu_session.py` is deployed; informational), A4 1000 images |
+| 2 | `s2.fcal`, `s2.A2A3`, `s2.layerspread`, `s2.A1`, `s2.B3`, `s2.shapes`, `s2.CPU`, `s2.DPU`, `s2.A4` (priority order) | f_meas calibration, A2/A3 all images, A3b per-layer spread, A1 all 10k images per net, B3 1000 kept per condition, **interleaved** safe + CPU (+ fast host path only if `s1.fast` passed), A3-general random shape jobs (only if `data/shapes/` is shipped; hard 15 min cap), CPU baselines `--tag board` (workers pinned), DPU baseline (only if `dpu/dpu_session.py` is deployed; informational), A4 1000 images |
 | 3 | `s3.fcal`, `s3.B1.lenet5`, `s3.B1.cifar10`, `s3.B2`, `s3.soak` | B1 = INA260 SOM-rail protocol per net (accel/**control**/cpu each bracketed by idle, seeded random order per repeat, × `--power-repeats` 3 + final idle = 19 phases of `--window-s` 60 s ≈ 20.5 min per net incl. setup; `--no-power-control`: 13 phases ≈ 14.5 min; CPU = `cpu_int8_ref`, 1 thread); B2 clock sweep (LeNet-5): cycles == model + INA260 idle/accel/idle × `--b2-power-repeats` 3 per clock ≈ 9.5 min per clock (+ cycle identity, power-vs-clock fit); soak 30 min |
 
 Options: `--budget-min N`, `--resume` (default) / `--fresh`, `--quick` (200 images per step, B3
@@ -184,8 +184,8 @@ with the distribution-free order-statistic 95 % CI and p95 after warm-up discard
 compared conditions run interleaved in randomized blocks with a recorded seed.
 
 **Extra steps / priority:** `session_extra_steps.extra_steps(opts)` (if present) adds steps into
-their priority group (A3, A1, latency, baselines, energy, sweep, soak, A4 — after bring-up and the
-calibration); a step with a built-in id replaces it. The time budget defers the lowest-priority
+their priority group (A3, A1, latency, shapes, baselines, energy, sweep, soak, A4 — after bring-up
+and the calibration); a step with a built-in id replaces it. The time budget defers the lowest-priority
 steps first.
 
 The individual scripts remain usable by hand (`--nets`, `--limit N`, `--timeout-s`,
@@ -354,6 +354,30 @@ pred = bc.predict(r.logits, pkg.dequant)                 # PS float32 dequant + 
 
 ## Publication extras (other owner: `session_extra_steps.py`, `clock_fallback.py`, `exp_soak.py`, `exp_layer_spread.py`, `exp_b2_clock.py`)
 
+- **`s2.shapes` — A3-general** (`exp_shapes.py` → `hw_shapes.csv`, group `shapes`, scheduled right
+  after `latency` (A2 + B3); requires `s1.smoke` (+ `s1.fast` with `--host-path fast`); registered
+  only when the data package has `data/shapes/SHIP.json`). The seeded random multi-layer shape set
+  (`v2/shapes/gen_shapes.py` → `v2/build/shapes/<seed>/`, loader `shapeset.py`, other owner) is
+  run job by job: soft_reset; WGT from `wgt_base`, QPARAM from combined word `2*qp_base`, ACT0 =
+  `act_in` (host path as selected), each read back word by word (`--no-verify-writes` skips the
+  memory readback); DESC + N_LAYERS written and read back; start; STATUS poll (`--timeout-s`);
+  LAYER_CYC / TOTAL_CYC / MAC_ACTIVE / STALL / PS_BUSY_VIOLATION / ERR_CODE; output read back per
+  word from ACT`out_buf` and compared bit-exact on the bytes enabled by `out_mask` (bit b = byte
+  lane b; cross-checked with `Shape.compare_output`), or LOGIT[0..n_logits-1] for `out_raw` jobs.
+  Refuse jobs (N_LAYERS may be 0 or 9): STATUS.error, ERR_CODE == expected, TOTAL_CYC == C_START.
+  Cycles vs the model (per layer, total, MAC_ACTIVE; STALL == 0) and vs the RTL simulation row of
+  the same `job` in the shipped `shapes_rtl.csv` (compared only when its `shapeset_sha256` equals
+  the shipped set's). **Time cap:** `--budget-s` (default = hard maximum 900 s, from script start;
+  `--quick` 300 s): before each job the script stops if elapsed + the longest job so far would
+  exceed it and records `capped=True`, `jobs_completed` / `jobs_total` in the summary row. **Job
+  order:** seeded shuffle within each category, round-robin over the categories (`--order-seed`,
+  the session passes state seed + 30), so a capped run still covers every category. Step
+  estimate = 60 s + jobs × 1.5 s (board, **assumed**; the recorded duration replaces it), capped
+  at the budget; step timeout = budget + 180 s. Rows: one per job + `layer=summary` (jobs,
+  outputs exact, refuse OK, cycles == model, cycles == RTL / compared, max |err|, categories
+  covered); label "A3-general random shapes, measured on KV260" (dry run: model backend).
+  Dry run: `python3 exp_shapes.py --backend model --out-dir ../results/dryrun/shapes`.
+
 - **`s2.layerspread`** (`exp_layer_spread.py` → `hw_layer_spread.csv`, group A3, scheduled right after
   `s2.A2A3`): per net × layer, min / max / distinct / spread of LAYER_CYC (and TOTAL_CYC) over every
   image; reuses `hw_cycles_<net>.npz` from `s2.A2A3` when it has the same source and clock and covers
@@ -460,7 +484,19 @@ Subdirectory `cpu/` (written by the CPU-baseline exporter, own `CPU_MANIFEST.jso
 this manifest.
 
 `v2/board/data/PACKAGE.json` lists the nets and the SHA256 of each `MANIFEST.json`
-(`data_manifest_sha256` in every results row).
+(`data_manifest_sha256` in every results row), and `shapes.ship_sha256` when a shape set is shipped.
+
+**`data/shapes/` (A3-general, optional):** `make_board_data.py --shapes auto|none|<seed>|<dir>`
+(default auto = the only `v2/build/shapes/<digits>/` holding `shapes.json`; several → pass the
+seed; `--shapes-only` ships the set and rewrites PACKAGE.json without rebuilding the nets) copies
+`shapes.json` + every listed `jobs/*.npz` (not `hex/` or `runs/`) and, if present,
+`v2/results/shapes_rtl.csv` (RTL simulation, label rtl_sim), and writes `SHIP.json` (SHA256 + size
+of every shipped file, seed, n_jobs, categories, the set's `shapeset_sha256`, set and ship git
+provenance; `git_dirty` = ship tree dirty or set generated from a dirty tree). `exp_shapes.py`
+refuses a set whose files differ from SHIP.json, whose SHIP.json SHA256 is not the one in
+PACKAGE.json, or that fails `shapeset.verify_manifest`; `deploy.sh` runs `exp_shapes.py verify`
+before copying (no `data/shapes/` → warning, `s2.shapes` not scheduled). `data_manifest_sha256`
+of `hw_shapes.csv` rows = the SHIP.json SHA256.
 
 Python access (board or laptop): `from board_common import load_package; pkg = load_package(data_dir, "lenet5")`
 → `pkg.x_act`, `pkg.x_nchw`, `pkg.x_f32`, `pkg.labels`, `pkg.golden_logits`, `pkg.golden_pred`,

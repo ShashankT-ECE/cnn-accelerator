@@ -6,7 +6,7 @@
 # Default bitstreams: the performance builds v2/vivado/out/gos_300/gos_300.bit AND
 # v2/vivado/out/gos_250/gos_250.bit (Session 1 tries 300 MHz first and falls back to 250 MHz if
 # its smoke test fails: clock_fallback.py via run_sessions.py). --bit (repeatable) replaces the list.
-# Remote layout (dest relative to the remote home):  ~/gos/*.py, ~/gos/data/<net>/,
+# Remote layout (dest relative to the remote home):  ~/gos/*.py, ~/gos/data/<net>/, ~/gos/data/shapes/,
 # ~/gos/bit/<name>/<name>.bit|.hwh|.bit.sha256|.hwh.sha256|summary.json, ~/gos/DEPLOY_INFO.json,
 # ~/gos/results/ (kept). DEPLOY_INFO.json records the repo commit + dirty flag of the deployed
 # scripts, the data package SHA256 and, per bitstream ("bits", highest closed clock first), the
@@ -53,6 +53,15 @@ for b in "${BITS[@]}"; do
 done
 
 python3 "$HERE/board_common.py" verify "$HERE/data" || { echo "ERROR: data package incomplete (run make_board_data.py)"; exit 1; }
+# A3-general shape set (data/shapes/, make_board_data.py --shapes): every file vs SHIP.json SHA256,
+# SHIP.json vs PACKAGE.json, shapeset.verify_manifest. Absent: warned, s2.shapes is not scheduled.
+if [ -d "$HERE/data/shapes" ]; then
+  (cd "$HERE" && python3 exp_shapes.py verify "$HERE/data/shapes") || { echo "ERROR: shape set data/shapes fails verification (rerun make_board_data.py --shapes-only)"; exit 1; }
+elif python3 -c 'import json,sys; sys.exit(0 if "shapes" in json.load(open(sys.argv[1])) else 1)' "$HERE/data/PACKAGE.json"; then
+  echo "ERROR: PACKAGE.json lists a shape set but data/shapes/ is missing"; exit 1
+else
+  echo "WARNING: no shape set in the data package (data/shapes/): the A3-general step s2.shapes will not run"
+fi
 PKG_SHA=$(sha256sum "$HERE/data/PACKAGE.json" | cut -d' ' -f1)
 
 COMMIT=$(git -C "$REPO" rev-parse HEAD)
