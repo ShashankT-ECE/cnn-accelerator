@@ -11,7 +11,8 @@ Current work is V2, a generalized INT8 8x8 output-stationary accelerator running
 - **Results freeze (step 9) done 2026-09-28:** all producers re-run from one clean commit, `check_results.py` ALL CLEAN (results commit 8b8acce).
 - **Paper pipeline (step 10):** `v2/paper/scripts/make_all.py` renders every table/figure from the CSVs; board cells are placeholders until hardware rows exist. Model analyses in `v2/analysis/` (utilization, V1-vs-V2 schedule ablation, 16x16 projection labeled "projected", not C1). Reproduction: `v2/REPRODUCE.md`.
 - **Power plan:** primary = on-board INA260 SOM rail (VCC_SOM), `v2/board/power_log.py`, label "SOM-rail power (INA260)"; external meter optional cross-check.
-- **Next:** KV260 board sessions 1–3 (`v2/board/session.sh`, see `v2/board/README.md`) — nothing has been measured on the board yet; then the paper text.
+- **Laptop-side reviewer gaps closed (2026-09-29):** full-dataset RTL sim 10,000/10,000 images per net bit- and cycle-exact (`rtl_full10k.csv`); publication-grade board sessions (pre-flight, measured PL clock, median + 95% CI, interleaving, repeatability, soak, spread, B2 fit, 300→250 fallback, fast host path, control phase, energy two ways; INA260 only, no external meter); DPU baseline compiled for the prebuilt pynq-dpu 2.5 overlay (`v2/dpu/`).
+- **Next:** KV260 board sessions 1–3 + DPU session (`v2/board/session.sh`, `v2/dpu/dpu_session.py`) — nothing has been measured on the board yet; then the paper text.
 - **Open questions:** INA260 real update rate and VCC_SOM rail coverage (confirm on the board / schematic); ΔP includes PS activity driving the accelerator.
 
 ### V1 (frozen baseline)

@@ -187,7 +187,7 @@ All V2 work lives in `v2/` on branch `v2-dev`. For any file under `v2/`,
 directory. Legacy files (rtl/, sim/, python/, data/, docs/, scripts/,
 software/) are read-only references for V2 work.
 
-## Where the project stands (updated 2026-09-28, after the step 9 freeze)
+## Where the project stands (updated 2026-09-29, after the laptop-side reviewer-gap work)
 
 Update this section whenever a step finishes. It is a pointer summary. The
 records of truth are `v2/docs/DECISIONS.md` (decisions D1–D17, open
@@ -263,6 +263,25 @@ rule in `v2/CLAUDE.md`). xsim may run alongside it. The board workflow
   primary power, label "SOM-rail power (INA260)"), `v2/REPRODUCE.md`,
   `verification_stats.csv`.
 
+- **Reviewer-gap work (2026-09-29, laptop only, all pushed):**
+  - Full-dataset RTL sim `v2/results/rtl_full10k.csv`: 10,000/10,000 images per net
+    bit-exact logits, prediction match, cycle-exact (Verilator 5.028 in `~/tools`,
+    cross-validated vs xsim before every run; `v2/scripts/run_full10k.sh`, ~7 min on 8 shards).
+  - Board software: fast host path (`--host-path fast`, gated by the `s1.fast` bring-up
+    check), B1 control phase, energy two ways (E_sys, E_comp, duty cycle), VCC_SOM =
+    SOM +5 V input per UG1089 v1.3 (per-rail split unconfirmed), external meter removed
+    (INA260 only), pre-flight (governor/pinning/apt guard/AMS temp, `paper_grade`), measured
+    PL clock (`exp_fclk_cal.py`), median + 95% CI, interleaving, 3-session repeatability,
+    soak, per-layer spread, B2 cycle identity + P = P_static + k*f fit, 300->250 MHz
+    auto-fallback. Step priority: A3, A1, latency, baselines, energy, sweep, soak, A4.
+  - DPU baseline prep (`v2/dpu/`): Vitis AI 2.5.0 matched to the prebuilt pynq-dpu 2.5
+    KV260 overlay (fingerprint 0x101000016010407), xmodels in gitignored `v2/dpu/build/`
+    (Docker image `xilinx/vitis-ai-cpu:2.5.0` loaded locally), `dpu_session.py`;
+    model-level vai_q accuracy in `v2/results/dpu_model_accuracy.csv`.
+  - Fixes: CIFAR per-layer cycle list trimmed to 4 layers; D2/D3 r2 logit bound.
+  - Worktrees: `~/gos-build` (fd880d4, bitstream builds of record + proj/), `~/gos-10k`
+    (full-10k run dir incl. shard logs), `~/gos_build_wt` (killed b5fbcd6 runs, unused).
+
 ### Final implementation table (post-impl, build fd880d43, from `v2/results/impl_gos.csv`)
 
 | Clock | Complete? | Current RTL? | WNS (ns) | WHS (ns) | CW | LUT / FF / DSP / BRAM36+18 | bit sha256 | Verdict |
@@ -277,13 +296,15 @@ untruncated netlist scan passes.
 
 ### Pending (in order)
 
-1. Push `v2-dev` (done at the end of the 2026-09-28 session if the push succeeded —
-   check `git status -sb`).
-2. **KV260 board sessions** (nothing measured on the board yet): `make_board_data.py` →
-   `deploy.sh <ip> --bit v2/vivado/out/gos_300/gos_300.bit` → on the board
-   `power_log.py --list-sensors` / `--sample-only` first, then `sudo -E ./session.sh 1`,
-   `2`, `3` (resumable). Fallback bitstream gos_250.
-3. Copy board results back, `check_results.py`, commit results, rerun
-   `v2/paper/scripts/make_all.py`.
-4. Paper text (ROCS 2026 short paper, 4 pages + refs, IEEE 2-col, deadline 2026-10-09 AoE).
-5. Optional: meter-log join script (only if the external meter is used); C1/C2.
+1. **KV260 board sessions** (nothing measured on the board yet). Laptop: commit-clean
+   tree → `make_board_data.py` → `v2/board/deploy.sh <ip>` (ships gos_300 + gos_250) and
+   `v2/dpu/deploy_dpu.sh <ip>`. Board (`cd ~/gos`, tmux, stop packagekit/unattended-upgrades):
+   `power_log.py --list-sensors` / `--sample-only` first, then `sudo -E ./session.sh 1`
+   (smoke at 300, auto-fallback 250), `2`, `3`; repeat with `--session-index 2|3` for
+   repeatability; `dpu_session.py` for the DPU baseline.
+2. Copy results back (`rsync ... v2/results/`), `check_results.py`, separate results commit,
+   `aggregate_sessions.py`, `v2/paper/scripts/make_all.py`.
+3. Paper text (ROCS 2026 short paper, 4 pages + refs, IEEE 2-col, deadline 2026-10-09 AoE).
+4. Open: confirm INA260 update rate, VCC_SOM per-rail coverage (carrier schematic U14),
+   DPU input fix_point at bring-up; optional RTL-sim per-layer spread from `~/gos-10k`
+   shard logs (`exp_layer_spread.py --rtl-sim`, dry-run output only); C1/C2 optional.
