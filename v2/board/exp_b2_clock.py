@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""B2 clock sweep: pl_clk0 in {100, 150, 200} (+ 250 / 300 if the bitstream closed there), <= closed clock.
+"""B2 clock sweep: pl_clk0 = 100..300 MHz in 25 MHz steps (9 points), set at runtime, <= closed clock.
 
     sudo -E python3 exp_b2_clock.py [--clocks 100 150 200] [--max-mhz 200] [--net lenet5]
                                     [--images 100] [--window-s 60] [--power-repeats 3]
@@ -8,7 +8,7 @@
 
 The timing-closed frequency comes from --max-mhz or DEPLOY_INFO.json 'bit_clock_mhz' (the
 Vivado-reported pl_clk0 of the deployed build). Default sweep (board_common.b2_sweep_clocks):
-{100, 150, 200} + {250 if closed >= 250} + {300 if closed >= 300}, capped at the closed clock (the
+100, 125, ..., 300 MHz (25 MHz steps), capped at the closed clock (the
 top point is requested at the closed clock itself). A requested clock above it (+0.5 MHz
 tolerance) is skipped and logged, never run; a read-back above it aborts the sweep. Per clock: set pl_clk0 (pynq Clocks.fclk0_mhz), read it back,
 soft_reset + reload the net (WGT/QPARAM/DESC with readback), A2 on --images images (cycles must

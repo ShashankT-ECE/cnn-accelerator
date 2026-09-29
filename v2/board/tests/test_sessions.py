@@ -316,13 +316,13 @@ def test_dry_run_preflight_says_dry_run(env):
 
 # ---- B2 sweep ---------------------------------------------------------------------------------
 @pytest.mark.parametrize("closed, expect", [
-    (199.998001, [100.0, 150.0, 199.998001]),
-    (249.997498, [100.0, 150.0, 200.0, 249.997498]),
-    (250.0, [100.0, 150.0, 200.0, 250.0]),
-    (240.0, [100.0, 150.0, 200.0]),
-    (299.997, [100.0, 150.0, 200.0, 250.0, 299.997]),
-    (300.0, [100.0, 150.0, 200.0, 250.0, 300.0]),
-    (150.0, [100.0, 150.0]),
+    (199.998001, [100.0, 125.0, 150.0, 175.0, 199.998001]),
+    (249.997498, [100.0, 125.0, 150.0, 175.0, 200.0, 225.0, 249.997498]),
+    (250.0, [100.0, 125.0, 150.0, 175.0, 200.0, 225.0, 250.0]),
+    (240.0, [100.0, 125.0, 150.0, 175.0, 200.0, 225.0]),
+    (299.997009, [100.0, 125.0, 150.0, 175.0, 200.0, 225.0, 250.0, 275.0, 299.997009]),
+    (300.0, [100.0, 125.0, 150.0, 175.0, 200.0, 225.0, 250.0, 275.0, 300.0]),
+    (150.0, [100.0, 125.0, 150.0]),
 ])
 def test_b2_sweep_clocks(closed, expect):
     got = bc.b2_sweep_clocks(closed)
@@ -335,8 +335,8 @@ def test_b2_step_uses_sweep_and_closed_clock(env):
     steps = {s.id: s for s in RS.build_steps(cfg, [3])}
     argv = steps["s3.B2"].argv
     i = argv.index("--clocks")
-    assert argv[i + 1:argv.index("--max-mhz")] == ["100.000000", "150.000000", "200.000000",
-                                                   "249.997498"]
+    assert argv[i + 1:argv.index("--max-mhz")] == ["100.000000", "125.000000", "150.000000", "175.000000",
+                                                   "200.000000", "225.000000", "249.997498"]
     assert argv[argv.index("--max-mhz") + 1] == "249.997498"
     assert argv[argv.index("--power-repeats") + 1] == "3" and "--with-meter" not in argv
     assert steps["s3.B2"].group == "sweep"
@@ -394,7 +394,11 @@ def test_power_step_estimates_realistic(env):
         13 * 60 + RS.B1_POWER_OVERHEAD_S + RS.STEP_OVERHEAD_S)
     est2, _ = RS.estimate(steps["s3.B2"], {"timing": {}}, "pynq")
     per_clock = 3 * 3 * 60 + RS.B2_PER_CLOCK_OVERHEAD_S
-    assert est2 == pytest.approx(3 * per_clock + 300 * RS.DEFAULT_RATE_S["pynq"] + RS.STEP_OVERHEAD_S)
+    b2 = steps["s3.B2"].argv
+    n_clk = b2.index("--max-mhz") - b2.index("--clocks") - 1       # 25 MHz grid capped at the closed clock
+    assert n_clk == len(bc.b2_sweep_clocks(float(b2[b2.index("--max-mhz") + 1])))
+    assert est2 == pytest.approx(n_clk * per_clock + n_clk * 100 * RS.DEFAULT_RATE_S["pynq"]
+                                 + RS.STEP_OVERHEAD_S)
     q = {s.id: s for s in RS.build_steps(hw_cfg(env), [3], window_s=30.0, power_repeats=1)}
     assert RS.estimate(q["s3.B1.cifar10"], {"timing": {}}, "pynq")[0] == pytest.approx(
         7 * 30 + RS.B1_POWER_OVERHEAD_S + RS.STEP_OVERHEAD_S)

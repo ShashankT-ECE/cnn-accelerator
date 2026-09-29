@@ -93,13 +93,14 @@ def test_dry_run_sweep_fit_and_refit(tmp_path):
                  "--mock-slope-w-per-mhz", "0.002", "--out-dir", str(out)])
     assert rc == 0
     clk = list(csv.DictReader(open(out / "hw_b2_clock.csv")))
-    assert [float(r["clock_requested_mhz"]) for r in clk] == [100.0, 150.0, 200.0, 249.997498]
+    assert [float(r["clock_requested_mhz"]) for r in clk] == [100.0, 125.0, 150.0, 175.0, 200.0, 225.0,
+                                                                249.997498]
     assert all(r["cycle_check"] == "PASS" and r["cycles_identical_across_clocks"] == "True" for r in clk)
     cyc = list(csv.DictReader(open(out / "hw_b2_cycles.csv")))
-    assert len(cyc) == 4 * 6 and all(r["cycle_check"] == "PASS" for r in cyc)
+    assert len(cyc) == 7 * 6 and all(r["cycle_check"] == "PASS" for r in cyc)
     fit = list(csv.DictReader(open(out / "hw_b2_fit.csv")))
     r = next(r for r in fit if r["quantity"] == "p_accel_w" and r["basis"] == "per_clock_mean")
-    assert float(r["k_w_per_mhz"]) == pytest.approx(0.002, rel=1e-3) and r["n_points"] == "4"
+    assert float(r["k_w_per_mhz"]) == pytest.approx(0.002, rel=1e-3) and r["n_points"] == "7"
     assert r["source"] == "dryrun_model" and r["layer"] == "fit"
     rc = B.main(["--fit-only", "--in-dir", str(out), "--out-dir", str(out / "refit")])
     fit2 = list(csv.DictReader(open(out / "refit" / "hw_b2_fit.csv")))

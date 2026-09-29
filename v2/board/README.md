@@ -141,7 +141,7 @@ timeout: `--step-timeout-min` or max(5 min, 3 × estimate + 2 min), capped by th
 the step's process group gets SIGINT (B2 restores pl_clk0 in its `finally`), then SIGTERM, then
 SIGKILL.
 
-**B2 sweep:** {100, 150, 200} ∪ {250 if the bitstream closed ≥ 250} ∪ {300 if it closed ≥ 300}
+**B2 sweep:** 100–300 MHz in 25 MHz steps (9 points on the 300 MHz bitstream, pl_clk0 set at runtime via PYNQ; the per-clock INA260 protocol makes B2 ≈ 9 × 9.3 min ≈ 84 min at default settings)
 (`board_common.b2_sweep_clocks`), capped at the bitstream's closed clock (DEPLOY_INFO
 `bit_clock_mhz` = summary.json `pl_clk0_mhz_actual`): the top point is requested at the closed
 clock itself (e.g. 199.998001, 249.997498), never above; a read-back above closed + 0.5 MHz aborts

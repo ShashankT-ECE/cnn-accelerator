@@ -517,19 +517,19 @@ def rtl_cycles_for(pkg: Package) -> dict:
 
 
 CLOCK_TOL_MHZ = 0.5          # read-back vs closed-clock tolerance (PLL rounding, e.g. 199.998001)
-B2_BASE_CLOCKS = (100.0, 150.0, 200.0)      # EXPERIMENTS.md B2
-B2_EXTRA_CLOCKS = (250.0, 300.0)            # only if the deployed bitstream closed timing there
+B2_MIN_MHZ, B2_MAX_MHZ, B2_STEP_MHZ = 100.0, 300.0, 25.0   # EXPERIMENTS.md B2 (user, 2026-09-29)
+B2_GRID = tuple(B2_MIN_MHZ + i * B2_STEP_MHZ
+                for i in range(int(round((B2_MAX_MHZ - B2_MIN_MHZ) / B2_STEP_MHZ)) + 1))  # 9 points
 
 
 def b2_sweep_clocks(closed_mhz: float, tol: float = CLOCK_TOL_MHZ) -> list[float]:
-    """B2 sweep = {100, 150, 200} ∪ {250 if closed >= 250} ∪ {300 if closed >= 300}, each capped
-    at the bitstream's closed pl_clk0 (a nominal point within tol of the closed clock is requested
-    AT the closed clock, e.g. 249.997498 instead of 250; points above it are dropped)."""
+    """B2 sweep = 100..300 MHz in 25 MHz steps (9 points), set at runtime via PYNQ on the deployed
+    bitstream, capped at its closed pl_clk0: a grid point within tol of the closed clock is
+    requested AT the closed clock (e.g. 299.997009 instead of 300); points above it are dropped.
+    The PS PLL may not hit every grid point exactly; the read-back clock is recorded and used."""
     closed = float(closed_mhz)
     out = []
-    for c in B2_BASE_CLOCKS + B2_EXTRA_CLOCKS:
-        if c in B2_EXTRA_CLOCKS and closed < c - tol:
-            continue
+    for c in B2_GRID:
         if c > closed + tol:
             continue
         v = round(min(c, closed), 6)
