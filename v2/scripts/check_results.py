@@ -7,8 +7,10 @@ and before committing the CSVs. The r2 training log is exempt (DECISIONS D9).
 
 A row is valid when
   * git_dirty == False, and
-  * `git diff --quiet <row git_commit> <commit> -- v2/rtl v2/vivado v2/model` succeeds
-    (the row was produced from RTL, Vivado sources and model identical to <commit>).
+  * `git diff --quiet <row git_commit> <commit> -- <sources of that CSV's producer>` succeeds
+    (DECISIONS D16 as amended 2026-09-30: each CSV is compared only against the sources its producer
+    reads — v2/rtl + v2/vivado for Vivado rows (impl/OOC; their collectors import v2/model/common.py
+    for row metadata only), v2/rtl + v2/vivado + v2/model (+ EXTRA_SOURCES) for model and sim rows).
 Rows may therefore come from different commits. Failing rows are listed as STALE / DIRTY.
 Only files directly in v2/results/ are checked (v2/results/dryrun/ is gitignored, never paper data).
 """
@@ -21,6 +23,15 @@ from pathlib import Path
 V2 = Path(__file__).resolve().parents[1]
 EXEMPT = {"cifar10_retrain_log.csv"}
 SOURCE_PATHS = ("v2/rtl", "v2/vivado", "v2/model")
+# D16 amendment (2026-09-30): producers that do not read v2/model (beyond row metadata) are compared
+# against their own sources only, so a model-only change does not invalidate Vivado rows.
+PRODUCER_SOURCES = {
+    "impl_gos.csv": ("v2/rtl", "v2/vivado"),       # vivado/build_gos.sh + impl_collect.py
+    "impl_shell.csv": ("v2/rtl", "v2/vivado"),
+    "ooc_synth.csv": ("v2/rtl", "v2/vivado"),      # ooc_all.sh + ooc_collect.py
+    # make_dpu_package.py / export_data.py / vai_quantize.py: v2/dpu + net_config, common, r2 checkpoint
+    "dpu_model_accuracy.csv": ("v2/model/common.py", "v2/model/net_config.py", "v2/model/retrain"),
+}
 # CSVs whose producer lives outside SOURCE_PATHS: those sources are compared too (only for these CSVs,
 # so older rows of other CSVs are not made stale by a folder that did not exist when they were produced).
 EXTRA_SOURCES = {"schedule_ablation.csv": ("v2/analysis",), "projection_16x16.csv": ("v2/analysis",),
@@ -57,6 +68,10 @@ def sources_differ(row_commit: str, paths: tuple = SOURCE_PATHS) -> str:
     return _same[key]
 
 
+def sources_for(name: str) -> tuple:
+    return PRODUCER_SOURCES.get(name, SOURCE_PATHS) + EXTRA_SOURCES.get(name, ())
+
+
 ok = True
 for p in sorted((V2 / "results").glob("*.csv")):
     if p.name in EXEMPT:
@@ -66,7 +81,7 @@ for p in sorted((V2 / "results").glob("*.csv")):
     bad = []
     for i, r in enumerate(rows):
         why = "git_dirty" if r.get("git_dirty") != "False" else sources_differ(
-            r.get("git_commit", ""), SOURCE_PATHS + EXTRA_SOURCES.get(p.name, ()))
+            r.get("git_commit", ""), sources_for(p.name))
         if why:
             bad.append((i, r, why))
     commits = sorted({r.get("git_commit", "")[:7] for r in rows})
@@ -80,6 +95,8 @@ for p in sorted((V2 / "results").glob("*.csv")):
     if len(bad) > 5 and not a.verbose:
         print(f"      ... {len(bad) - 5} more (--verbose)")
 extra = "; ".join(f"{n}: +{'+'.join(v)}" for n, v in sorted(EXTRA_SOURCES.items()))
-print(f"check_results: sources compared against {commit[:8]} ({', '.join(SOURCE_PATHS)}; {extra})")
+scoped = "; ".join(f"{n}: {'+'.join(v)}" for n, v in sorted(PRODUCER_SOURCES.items()))
+print(f"check_results: sources compared against {commit[:8]} (default {', '.join(SOURCE_PATHS)}; {extra}; "
+      f"producer-scoped: {scoped})")
 print("check_results:", "ALL CLEAN" if ok else "FAILURES (stale/dirty rows above)")
 sys.exit(0 if ok else 1)
