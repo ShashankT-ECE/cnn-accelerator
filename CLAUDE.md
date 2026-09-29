@@ -190,7 +190,7 @@ software/) are read-only references for V2 work.
 ## Where the project stands (updated 2026-09-29, after the laptop-side reviewer-gap work)
 
 Update this section whenever a step finishes. It is a pointer summary. The
-records of truth are `v2/docs/DECISIONS.md` (decisions D1–D17, open
+records of truth are `v2/docs/DECISIONS.md` (decisions D1–D18, open
 conflicts, TODO) and the script-generated `v2/results/*.csv`. Every number
 below is copied from those sources and labelled model / RTL sim /
 post-impl. **None of them are KV260 measurements yet.**
