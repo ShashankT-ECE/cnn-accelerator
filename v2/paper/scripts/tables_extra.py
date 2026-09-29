@@ -18,15 +18,22 @@ Artifacts:
                     lines from hw_b2_fit.csv, (a) absolute P_accel / P_idle, (b) dP_accel
   tab_layer_spread  hw_layer_spread.csv per net x layer: model cycles, KV260 min / max / distinct /
                     spread over all images; RTL-sim reference = rtl_full10k.csv cycles_exact/images
+  tab_shapes        A3-general random shapes: per source (RTL sim = shapes_rtl.csv, KV260 = hw_shapes.csv):
+                    jobs (refuse jobs), outputs bit-exact, cycle-exact, refusals correct, all exact,
+                    max |measured - model| cycles (TOTAL / per layer)
+  fig_shapes_cycles predicted (model) vs measured cycles per random-shape job, log-log with y = x:
+                    RTL-sim TOTAL_CYC (+ per-layer LAYER_CYC) from shapes_rtl.csv, KV260 TOTAL_CYC from
+                    hw_shapes.csv (source=hw) when present, else a "board data pending" note
 """
 from __future__ import annotations
 
 import traceback
+from pathlib import Path
 
 import figures as F
 import tables as T
 from paperdata import INA_LABEL, latest, power_summaries
-from paperlib import NETS, Artifact, fnum, pretty_net, tex_escape
+from paperlib import NETS, Artifact, _rel, fnum, pretty_net, tex_escape
 
 FIT_Q = [("p_accel_w", r"$P_\mathrm{accel}$ (absolute)"), ("dp_accel_w", r"$\Delta P_\mathrm{accel}$"),
          ("p_idle_w", r"$P_\mathrm{idle}$")]
@@ -248,8 +255,217 @@ def layer_spread_table(c: T.Ctx) -> Artifact:
                           "an own run); RTL-sim reference: rtl\\_full10k.csv. Spread = max $-$ min."])
 
 
-ALL_TABLES = [soak_table, b2_fit_table, layer_spread_table]
-ALL_FIGURES = [b2_fit_figure]
+# --------------------------------------------------------------------------------------------
+# A3-general random shapes (v2/shapes: RTL sim; v2/board/exp_shapes.py: KV260)
+# Column aliases: shapes_rtl.csv (collect_shapes.py) and hw_shapes.csv (exp_shapes.py) name the
+# same quantities differently; the first present column wins.
+SH_RTL, SH_HW = "shapes_rtl.csv", "hw_shapes.csv"
+SH_COLS = {
+    "id": ("job_id", "job", "id"),
+    "refuse": ("expect_refuse",),
+    "model_total": ("model_total",),
+    "model_layers": ("model_layer_cycles",),
+    "rtl_total": ("rtl_total",),
+    "rtl_layers": ("rtl_layer_cycles",),
+    "hw_total": ("hw_total", "total_cyc"),
+    "hw_layers": ("hw_layer_cycles", "layer_cyc"),
+    "out_ok": ("outputs_match", "output_exact"),
+    "cyc_ok": ("cycles_exact", "cycles_eq_model"),
+    "ref_ok": ("err_ok", "refuse_ok"),
+    "all_ok": ("all_ok", "pass"),
+}
+TRUE = ("True", "true", "1")
+
+
+def _sc(r: dict, key: str) -> str | None:
+    """Name of the first present, non-empty alias column of `key` in row r."""
+    for c in SH_COLS[key]:
+        if r.get(c) not in ("", None):
+            return c
+    return None
+
+
+def _is_refuse(r: dict) -> bool:
+    c = _sc(r, "refuse")
+    return bool(c) and r[c] in TRUE
+
+
+def _ilist(s: str) -> list[int]:
+    return [int(float(x)) for x in str(s).split(",") if x.strip() not in ("", "-")]
+
+
+def _shape_rows(art: Artifact) -> tuple[list[dict], list[dict]]:
+    """(RTL rows, board rows): per-job rows only; board rows latest per job id."""
+    rtl = [r for r in (art.rows(SH_RTL) or []) if r.get("source") == "rtl_sim" and _sc(r, "id")]
+    hw_all = [r for r in (art.rows(SH_HW, hw=True) or []) if _sc(r, "id") and r.get("layer") != "summary"
+              and r.get("label", "") != "summary"]
+    hw = sorted(latest(hw_all, lambda r: r[_sc(r, "id")]).values(), key=lambda r: r["_line"])
+    shas = {r.get("shapeset_sha256") for r in rtl} | {r.get("shapeset_sha256") for r in hw}
+    shas.discard(None)
+    shas.discard("")
+    if len(shas) > 1:
+        art.check(f"random shapes: shapeset_sha256 differs between/within {SH_RTL} and {SH_HW}: "
+                  f"{sorted(x[:12] for x in shas)}")
+    return rtl, hw
+
+
+def _lines(rows: list[dict]) -> str:
+    ls = sorted(r["_line"] for r in rows)
+    return f"lines {ls[0]}-{ls[-1]}" if ls else "no lines"
+
+
+def _shape_summary(art: Artifact, rows: list[dict], meas: str, fname: str) -> dict:
+    """Counts and max |measured - model| over per-job rows, each registered with its origin."""
+    valid = [r for r in rows if not _is_refuse(r)]
+    refuse = [r for r in rows if _is_refuse(r)]
+    src = f"{fname} {_lines(rows)}"
+
+    def cnt(rs, key, what):
+        n = sum(1 for r in rs if (c := _sc(r, key)) and r[c] in TRUE)
+        return n, art.num(n, "int", origin=f"computed count({what}) over {src}")
+
+    tot_err, lay_err, n_cmp = [], [], 0
+    mt_col = f"{meas}_total"
+    for r in valid:
+        cm_, cr = _sc(r, "model_total"), _sc(r, mt_col)
+        if cm_ and cr:
+            n_cmp += 1
+            tot_err.append(abs(int(float(r[cr])) - int(float(r[cm_]))))
+            ml, rl = _sc(r, "model_layers"), _sc(r, f"{meas}_layers")
+            if ml and rl:
+                a, b = _ilist(r[ml]), _ilist(r[rl])
+                if len(a) == len(b):
+                    lay_err += [abs(x - y) for x, y in zip(a, b)]
+                else:
+                    art.check(f"{fname} line {r['_line']}: layer-cycle list lengths differ")
+    out = {"n": len(rows), "n_valid": len(valid), "n_refuse": len(refuse), "n_cmp": n_cmp}
+    out["jobs"] = art.num(len(rows), "int", origin=f"computed count(rows) over {src}")
+    out["refuse"] = art.num(len(refuse), "int", origin=f"computed count(expect_refuse) over {src}")
+    out["valid_s"] = art.num(len(valid), "int", origin=f"computed count(not expect_refuse) over {src}")
+    out["out_ok_n"], out["out_ok"] = cnt(valid, "out_ok", "outputs bit-exact, valid jobs")
+    out["cyc_ok_n"], out["cyc_ok"] = cnt(valid, "cyc_ok", "cycle-exact, valid jobs")
+    out["ref_ok_n"], out["ref_ok"] = cnt(refuse, "ref_ok", "refusal ERR_CODE correct")
+    out["all_ok_n"], out["all_ok"] = cnt(rows, "all_ok", "all exact")
+    out["max_tot"] = (art.num(max(tot_err), "int", origin=f"computed max|{meas}_total-model_total| over {src}")
+                      if tot_err else "--")
+    out["max_lay"] = (art.num(max(lay_err), "int", origin=f"computed max|{meas} layer - model layer| over {src}")
+                      if lay_err else "--")
+    for k, n in (("all_ok_n", len(rows)),):
+        if out[k] != n:
+            art.check(f"random shapes {fname}: {n - out[k]} of {n} jobs not exact")
+    return out
+
+
+def shapes_table(c: T.Ctx) -> Artifact:
+    art = c.art("tab_shapes")
+    rtl, hw = _shape_rows(art)
+    body = []
+    specs = [(rtl, "rtl", SH_RTL, "RTL sim", f"random shapes: {SH_RTL} (source=rtl_sim)", "TBD (RTL sim)"),
+             (hw, "hw", SH_HW, f"{c.board_label} (measured)", f"random shapes: {SH_HW} (source=hw)", None)]
+    for rows, meas, fname, lab, what, ph_text in specs:
+        if not rows:
+            ph = art.placeholder(what, ph_text) if ph_text else art.placeholder(what)
+            body.append([lab, ph, ph, ph, ph, ph, ph])
+            continue
+        s_ = _shape_summary(art, rows, meas, fname)
+        if meas == "rtl":
+            sims = sorted({f"{r.get('simulator', '')} {r.get('simulator_version', '')}".strip() for r in rows})
+            lab = lab + " (" + art.label(tex_escape(", ".join(sims)), f"{SH_RTL}:simulator,simulator_version") + ")"
+        body.append([lab, f"{s_['jobs']} ({s_['refuse']})", f"{s_['out_ok']}/{s_['valid_s']}",
+                     f"{s_['cyc_ok']}/{s_['valid_s']}", f"{s_['ref_ok']}/{s_['refuse']}",
+                     f"{s_['all_ok']}/{s_['jobs']}", f"{s_['max_tot']} / {s_['max_lay']}"])
+    hdr = ["Source & Jobs & Outputs & Cycle- & Refusals & All & max $|\\Delta|$ cycles",
+           "& (refuse) & bit-exact & exact & correct & exact & total / layer"]
+    notes = ["Random multi-layer jobs within the architecture envelope (gen\\_shapes.py, seeded). "
+             "Model = gos\\_cycle\\_model.py; $\\Delta$ = measured $-$ model. Refuse jobs: the config checker "
+             "must refuse with the expected ERR\\_CODE."]
+    if rtl:
+        seeds = sorted({r.get("seed", "") for r in rtl})
+        nx = sum(1 for r in rtl if r.get("xsim_crosschecked") in TRUE)
+        notes.append("Shape set seed " + art.label(tex_escape(",".join(seeds)), f"{SH_RTL}:seed")
+                     + "; RTL jobs also cross-checked on xsim: "
+                     + art.num(nx, "int", origin=f"computed count(xsim_crosschecked) over {SH_RTL} {_lines(rtl)}")
+                     + ".")
+    return c.table(art, "@{}lrrrrrr@{}", hdr, body,
+                   "A3-general: random-shape jobs, predicted (model) vs.\\ measured cycles and bit-exact outputs.",
+                   "tab:shapes", notes=notes)
+
+
+def shapes_figure(fc: F.FCtx) -> Artifact:
+    plt = F.plt
+    art = fc.art("fig_shapes_cycles")
+    rtl, hw = _shape_rows(art)
+    fig, ax = plt.subplots(figsize=(F.COL_W, 2.6), layout="constrained")
+    data: list[dict] = []
+
+    def pts(rows, meas, fname, per_layer):
+        xs, ys, lx, ly = [], [], [], []
+        for r in rows:
+            if _is_refuse(r):
+                continue
+            cm_, cr = _sc(r, "model_total"), _sc(r, f"{meas}_total")
+            if not (cm_ and cr):
+                continue
+            x, y = int(float(r[cm_])), int(float(r[cr]))
+            xs.append(x)
+            ys.append(y)
+            src = f"{_rel(Path(r['_file']))}:{r['_line']}"
+            data.append({"source": meas, "kind": "total", "job": r[_sc(r, "id")], "model_cycles": x,
+                         "measured_cycles": y, "src": src})
+            ml, rl = _sc(r, "model_layers"), _sc(r, f"{meas}_layers")
+            if per_layer and ml and rl:
+                a, b = _ilist(r[ml]), _ilist(r[rl])
+                if len(a) == len(b) and len(a) > 1:
+                    lx += a
+                    ly += b
+                    data.extend([{"source": meas, "kind": f"layer{i}", "job": r[_sc(r, "id")], "model_cycles": p,
+                              "measured_cycles": q, "src": src} for i, (p, q) in enumerate(zip(a, b))])
+        return xs, ys, lx, ly
+
+    rx, ry, rlx, rly = pts(rtl, "rtl", SH_RTL, True)
+    hx, hy, _, _ = pts(hw, "hw", SH_HW, False)
+    if rlx:
+        ax.scatter(rlx, rly, s=4, marker=".", color="0.6", lw=0, zorder=2, label="RTL sim, per layer (LAYER_CYC)")
+    if rx:
+        ax.scatter(rx, ry, s=14, marker="o", facecolor="white", edgecolor="0.3", lw=0.6, zorder=3,
+                   label="RTL sim, job (TOTAL_CYC)")
+    if hx:
+        ax.scatter(hx, hy, s=16, marker="x", color="black", lw=0.7, zorder=4, label=f"{fc.hw_name}, job (TOTAL_CYC)")
+    allv = rx + ry + rlx + rly + hx + hy
+    if allv:
+        lo, hi = max(1, min(allv)) / 1.8, max(allv) * 1.8
+    else:
+        lo, hi = 1e2, 1e6
+    ax.plot([lo, hi], [lo, hi], ls="--", color="0.45", lw=0.6, zorder=1, label="y = x (model)")
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_xlim(lo, hi)
+    ax.set_ylim(lo, hi)
+    ax.set_aspect("equal", adjustable="box")
+    ax.set_xlabel("predicted cycles (model)")
+    ax.set_ylabel("measured cycles")
+    ax.grid(True, which="major", color="0.9", lw=0.4, zorder=0)
+    ann = []
+    if rx:
+        s_ = _shape_summary(art, rtl, "rtl", SH_RTL)
+        ann.append(f"RTL sim: {s_['cyc_ok']}/{s_['valid_s']} jobs cycle-exact")
+    else:
+        art.placeholder(f"random shapes figure: {SH_RTL} (source=rtl_sim)", "TBD (RTL sim)")
+    if hx:
+        s_ = _shape_summary(art, hw, "hw", SH_HW)
+        ann.append(f"{fc.hw_name}: {s_['cyc_ok']}/{s_['valid_s']} jobs cycle-exact")
+    else:
+        art.placeholder(f"random shapes figure: {SH_HW} (source=hw)")
+        F._pending_label(ax, "board data pending" if rx else "RTL sim + board data pending")
+    if ann:
+        ax.text(0.03, 0.97 if hx else 0.86, "\n".join(ann), transform=ax.transAxes, ha="left", va="top",
+                fontsize=F.FS - 1.5, color="0.15")
+    ax.legend(loc="lower right", fontsize=F.FS - 2.5, handletextpad=0.3, borderaxespad=0.3)
+    return fc.save(art, fig, data)
+
+
+ALL_TABLES = [soak_table, b2_fit_table, layer_spread_table, shapes_table]
+ALL_FIGURES = [b2_fit_figure, shapes_figure]
 
 
 def make(ctx, failures: list | None = None) -> list[Artifact]:
@@ -269,4 +485,5 @@ def make(ctx, failures: list | None = None) -> list[Artifact]:
     return arts
 
 
-__all__ = ["make", "soak_table", "b2_fit_table", "b2_fit_figure", "layer_spread_table"]
+__all__ = ["make", "soak_table", "b2_fit_table", "b2_fit_figure", "layer_spread_table", "shapes_table",
+           "shapes_figure"]

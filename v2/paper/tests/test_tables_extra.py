@@ -1,4 +1,5 @@
-"""tables_extra (soak / B2 fit / layer spread): placeholders, provenance, dry-run, fit-input consistency.
+"""tables_extra (soak / B2 fit / layer spread / random shapes): placeholders, provenance, dry-run,
+fit-input consistency.
 Works on temporary results dirs only; board-shaped rows are generated synthetically here."""
 from __future__ import annotations
 
@@ -75,6 +76,44 @@ def board_rows(d: Path, source="hw", dirty="False"):
                     "k_ci95_hi_w_per_mhz": f"{k + 5e-5:.9f}", "r2": "0.999900" if k else "",
                     "inputs": " ".join(files)})
     wcsv(d / "hw_b2_fit.csv", fit)
+    shapes_hw_rows(d, source=source, dirty=dirty)
+
+
+SH_SHA = "ab" * 32
+# (job_id, expect_refuse, model layer cycles, measured layer cycles); refuse jobs: TOTAL only
+SH_JOBS = [(0, 0, [2829, 6029], [2829, 6029]), (1, 0, [164], [164]), (2, 0, [33629, 64029, 6429, 157],
+                                                                      [33629, 64029, 6429, 157]),
+           (3, 1, [], []), (4, 0, [548], [548])]
+
+
+def shapes_rtl_rows(d: Path, dirty="False", bad_job=None, sha=SH_SHA):
+    rows = []
+    for j, ref, ml, rl in SH_JOBS:
+        mt = 3 if ref else sum(ml) + 3
+        rt = mt + (7 if j == bad_job else 0)
+        ok = "True" if j != bad_job else "False"
+        rows.append({**meta("shapes", f"J{j:04d}", clk="", source="rtl_sim", dirty=dirty), "job_id": str(j),
+                     "category": "refuse" if ref else "conv", "expect_refuse": str(ref),
+                     "model_layer_cycles": ",".join(map(str, ml)), "rtl_layer_cycles": ",".join(map(str, rl)),
+                     "model_total": str(mt), "rtl_total": str(rt), "outputs_match": "" if ref else "True",
+                     "cycles_exact": ok, "err_ok": "True", "all_ok": ok, "simulator": "verilator",
+                     "simulator_version": "5.028", "xsim_crosschecked": "1" if j < 2 else "0",
+                     "seed": "20260929", "shapeset_sha256": sha})
+    wcsv(d / "shapes_rtl.csv", rows)
+
+
+def shapes_hw_rows(d: Path, source="hw", dirty="False", sha=SH_SHA):
+    rows = []
+    for j, ref, ml, rl in SH_JOBS:
+        mt = 3 if ref else sum(ml) + 3
+        rows.append({**meta("shapes", f"J{j:04d}", source=source, dirty=dirty), "label": "", "job_id": str(j),
+                     "expect_refuse": str(bool(ref)), "hw_layer_cycles": ",".join(map(str, rl)),
+                     "model_layer_cycles": ",".join(map(str, ml)), "hw_total": str(mt), "model_total": str(mt),
+                     "output_exact": "" if ref else "True", "cycles_eq_model": "True",
+                     "refuse_ok": "True" if ref else "", "pass": "True", "shapeset_sha256": sha})
+    rows.append({**meta("shapes", "summary", source=source, dirty=dirty), "label": "summary",
+                 "jobs_total": "5", "shapeset_sha256": sha})
+    wcsv(d / "hw_shapes.csv", rows)
 
 
 @pytest.fixture
@@ -82,6 +121,7 @@ def res(tmp_path):
     r = tmp_path / "results"
     r.mkdir()
     shutil.copy(DEFAULT_RESULTS / "rtl_full10k.csv", r / "rtl_full10k.csv")
+    shapes_rtl_rows(r)
     return r
 
 
@@ -95,10 +135,11 @@ def make(res: Path, out: Path, dryrun=False):
 
 def test_placeholders_without_board_data(res, tmp_path):
     arts = make(res, tmp_path / "gen")
-    assert set(arts) == {"tab_soak", "tab_b2_fit", "tab_layer_spread", "fig_b2_fit"}
+    assert set(arts) == {"tab_soak", "tab_b2_fit", "tab_layer_spread", "tab_shapes", "fig_b2_fit",
+                         "fig_shapes_cycles"}
     for n in arts:
         assert arts[n].placeholders, n
-    for n in ("tab_soak", "tab_b2_fit", "tab_layer_spread"):
+    for n in ("tab_soak", "tab_b2_fit", "tab_layer_spread", "tab_shapes"):
         assert PH_BOARD in (tmp_path / "gen" / f"{n}.tex").read_text()
     assert (tmp_path / "gen" / "fig_b2_fit.pdf").is_file()
     # the committed RTL-sim reference is used even without board data
@@ -110,7 +151,8 @@ def test_board_data_switches_automatically(res, tmp_path):
     arts = make(res, tmp_path / "gen")
     for n, a in arts.items():
         assert not a.placeholders, (n, a.placeholders)
-        assert a.sources == ({"hw", "rtl_sim"} if n == "tab_layer_spread" else {"hw"})
+        assert a.sources == ({"hw", "rtl_sim"} if n in ("tab_layer_spread", "tab_shapes", "fig_shapes_cycles")
+                             else {"hw"})
     t = (tmp_path / "gen" / "tab_b2_fit.tex").read_text()
     assert "1.100" in t and "2.000" in t and "[1.087, 1.113]" in t        # k in mW/MHz, CI
     assert not unregistered_numbers(t, arts["tab_b2_fit"])
@@ -165,3 +207,48 @@ def test_make_raises_without_failures_list(res, tmp_path, monkeypatch):
     fails: list = []
     TX.make(tables.Ctx(Store(res), tmp_path, booktabs=True, dryrun=False), fails)
     assert fails and "ZeroDivisionError" in fails[0]["error"]
+
+
+# --------------------------------------------------------------------------------------------
+# random shapes (tab_shapes / fig_shapes_cycles)
+def test_shapes_rtl_only(res, tmp_path):
+    arts = make(res, tmp_path / "gen")
+    t, f = arts["tab_shapes"], arts["fig_shapes_cycles"]
+    assert t.placeholders == ["random shapes: hw_shapes.csv (source=hw)"]
+    assert f.placeholders == ["random shapes figure: hw_shapes.csv (source=hw)"]
+    tex = (tmp_path / "gen" / "tab_shapes.tex").read_text()
+    assert "5 (1)" in tex and "4/4" in tex and "1/1" in tex and "5/5" in tex and "0 / 0" in tex
+    assert "verilator 5.028" in tex and PH_BOARD in tex
+    assert not unregistered_numbers(tex, t)
+    d = list(csv.DictReader(open(tmp_path / "gen" / "fig_shapes_cycles.data.csv")))
+    tot = [r for r in d if r["kind"] == "total"]
+    assert len(tot) == 4 and all(r["source"] == "rtl" and r["model_cycles"] == r["measured_cycles"] for r in tot)
+    assert sum(r["kind"].startswith("layer") for r in d) == 2 + 4          # multi-layer jobs only
+    assert (tmp_path / "gen" / "fig_shapes_cycles.pdf").is_file()
+    assert t.sources == {"rtl_sim"} and not t.checks
+
+
+def test_shapes_with_board_and_mismatch(res, tmp_path):
+    shapes_rtl_rows(res, bad_job=2)
+    shapes_hw_rows(res)
+    arts = make(res, tmp_path / "gen")
+    t = arts["tab_shapes"]
+    assert not t.placeholders and t.sources == {"rtl_sim", "hw"}
+    tex = (tmp_path / "gen" / "tab_shapes.tex").read_text()
+    assert "3/4" in tex and "4/5" in tex and "7 / 0" in tex             # RTL row: one TOTAL off by 7
+    assert "KV260 (measured)" in tex
+    assert any("1 of 5 jobs not exact" in c for c in t.checks)
+    d = list(csv.DictReader(open(tmp_path / "gen" / "fig_shapes_cycles.data.csv")))
+    assert sum(r["source"] == "hw" for r in d) == 4                      # summary + refuse rows skipped
+
+
+def test_shapes_rows_rejected_or_inconsistent(res, tmp_path):
+    shapes_rtl_rows(res, dirty="True")
+    shapes_hw_rows(res, source="dryrun_model")
+    arts = make(res, tmp_path / "g1")
+    assert len(arts["tab_shapes"].placeholders) == 2
+    assert "TBD (RTL sim)" in (tmp_path / "g1" / "tab_shapes.tex").read_text()
+    shapes_rtl_rows(res)
+    shapes_hw_rows(res, sha="cd" * 32)
+    arts = make(res, tmp_path / "g2")
+    assert any("shapeset_sha256 differs" in c for c in arts["fig_shapes_cycles"].checks)

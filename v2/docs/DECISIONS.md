@@ -145,6 +145,11 @@ The 200 MHz worst path (+0.291 ns, build c88e71a0) was `u_csr/w_data_reg -> desc
 
 ## Open conflicts
 
+### OC-3 — OPEN (user decision needed) — ACT read/rotate is only valid for KW ≤ 9, and the config checker does not bound KW (2026-09-29, A3-general)
+- Evidence (model, found while generating random shapes for A3-general, `v2/shapes/gen_shapes.py`): the conflict-free ACT read (ARCH_SPEC Memory: bank b supplies row (b − kx) mod 8 at rowbase + ox0/8 + (b < kx ? 1 : 0), rotator by kx[2:0]) assumes kx < 8+1 per word step; at KW = 10 and 12 the address-level tile model (`gos_tile_model`, same formula as the RTL) disagrees with `gos_golden`. The FORMATS.md §5 checker rules have no KW upper bound, so such a descriptor would be accepted and computed wrongly.
+- Not affected: both workloads (LeNet-5, CIFAR-10) use KW = 5; every committed result; the random-shape set is generated with KW ≤ 8.
+- RTL frozen: nothing changed. Options: (1) document the limit KW ≤ 9 as a host-side contract (gos_pack assert + FORMATS.md), no RTL change; (2) add a checker rule (RTL change → re-verification + rebuild of all bitstreams). Recommendation: (1) for the paper.
+
 ### OC-2 — RESOLVED (option 1, user decision 2026-09-24) — CIFAR r2: B = 48 is infeasible with the 6-bit s field (2026-09-24, Step 2.1c)
 - Evidence (model, `requant_check.py`): r2 conv1 ch7 has M = 8.1999e-06 (r1 min M over all CIFAR layers 1.5060e-04; LeNet 2.0568e-04). s = B − E(M) gives s_max = 48 / 56 / **64** at B = 32 / 40 / 48; s = 64 does not fit s[5:0] (ARCH_SPEC QPARAM, FORMATS.md "s < 64"), so `select_m_s` hits its guard: `STOP: s=64 outside [1, 63] for M=8.199850688629206e-06, B=48 (spec contradiction)`. `requant_check.py --nets lenet5 cifar10` (default B ∈ {32, 40, 48}, as run by `regen_results.sh`) therefore aborts before writing any CSV.
 - Not affected: the selected B = 32 (D1 outcome) — r2 at B = 32: 0 mismatches over 195,138,270 values, s 40–48; B = 40 also passes (0 mismatches, s 48–56). LeNet-5 and CIFAR r1 at B = 48 stay within s ≤ 60.

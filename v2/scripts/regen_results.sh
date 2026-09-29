@@ -61,7 +61,8 @@ OTHER_PRODUCERS = {"unit_tb": "run_unit_all.sh", "ooc_synth": "ooc_all.sh",
                    "rtl_netlist": "run_netlist_sim.sh",
                    "verification_stats": "scripts/verification_stats.py (after all RTL/Vivado producers)",
                    "rtl_full10k": "scripts/run_full10k.sh",
-                   "dpu_model_accuracy": "dpu/make_dpu_package.py --results"}
+                   "dpu_model_accuracy": "dpu/make_dpu_package.py --results",
+                   "shapes_rtl": "scripts/run_shapes.sh"}
 # Board rows (hw_*.csv, source=hw) come from v2/board (Sessions 1-3) and are checked by check_results.py.
 paths = sorted(glob.glob("v2/results/*.csv"))
 found = {p.split("/")[-1][:-4] for p in paths if p not in TRAINING_ARTIFACTS
