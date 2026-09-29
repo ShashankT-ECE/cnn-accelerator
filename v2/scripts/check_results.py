@@ -25,7 +25,8 @@ SOURCE_PATHS = ("v2/rtl", "v2/vivado", "v2/model")
 # so older rows of other CSVs are not made stale by a folder that did not exist when they were produced).
 EXTRA_SOURCES = {"schedule_ablation.csv": ("v2/analysis",), "projection_16x16.csv": ("v2/analysis",),
                  "utilization_model.csv": ("v2/analysis",), "rtl_full10k.csv": ("v2/fullsim",),
-                 "dpu_model_accuracy.csv": ("v2/dpu",), "shapes_rtl.csv": ("v2/shapes",)}
+                 "dpu_model_accuracy.csv": ("v2/dpu",), "shapes_rtl.csv": ("v2/shapes",),
+                 "limits_rtl.csv": ("v2/shapes",)}
 
 
 def git(*args: str) -> subprocess.CompletedProcess:

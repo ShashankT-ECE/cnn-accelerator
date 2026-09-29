@@ -434,6 +434,7 @@ def finalize_structure(rng, s: dict) -> dict:
         for w in words:
             ok, why = gp.check_descriptor(w)
             assert ok, f"checker rejects a generated valid descriptor: {why}"
+        gp.assert_job_limits(Ls, n_layers, words)      # host limits the checker cannot verify
         err = gp.job_err_code(n_layers, words)
         assert err == 0
     else:

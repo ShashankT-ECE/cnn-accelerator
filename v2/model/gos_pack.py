@@ -32,6 +32,8 @@ Public API (all shapes/dtypes explicit):
     encode_descriptor(fields)             -> uint32 [16]   (asserts derived consistency)
     decode_descriptor(words)              -> field dict (raw + derived + flags)
     check_descriptor(words)               -> (ok, reasons)  model of the RTL config checker
+    assert_host_limits(fields)            -> None  per-layer limits the checker cannot verify (LIMITS.md)
+    assert_job_limits(descs, n, words)    -> None  job-level host contract (N_LAYERS, chaining, ...)
     descriptors_json(net)                 -> JSON-able dict
 
   Reports / files
@@ -505,6 +507,80 @@ def job_err_code(n_layers: int, desc_words) -> int:
     return 0
 
 
+# ---- host-side limits the RTL checker does not enforce (v2/docs/LIMITS.md) ------------
+# The RTL config checker (rules 1-27, 32) only bounds single fields. The limits below need
+# products / cross-field relations, or would be silently mis-computed by the frozen RTL, so the
+# host asserts them before emitting a real job descriptor. NOT used by encode_descriptor:
+# expected-refusal jobs (v2/shapes/gen_shapes.py) and the KW >= 10 boundary cases
+# (v2/shapes/limit_cases_kw.py) must still encode.
+MAX_KW = 9                                # DECISIONS OC-3: rd[b] = rowbase + ox0/8 + (b < kx),
+                                          # rotate kx[2:0] is exact only for kx <= 8
+V_ABS_LIMIT = 1 << (V_MUL_W - 1)          # |v| < 2^25 on requant layers (gos_pkg::V_MUL_W)
+RESERVED_MASKS = {2: 0xFFFF0000, 6: 0xFFFFFFF0}   # w2[31:16], w6[31:4] must be 0
+
+
+def assert_host_limits(f: dict) -> None:
+    """Assert the per-layer limits the RTL checker cannot verify (LIMITS.md). `f` holds the raw
+    fields + flags (derived fields optional; if present they must be consistent)."""
+    d = derive_fields(f)
+    for k, v in d.items():
+        if k in f:
+            assert int(f[k]) == v, f"derived field {k}={f[k]} inconsistent (expected {v})"
+    IH, IW, KH, KW, OH, OW = (int(f[k]) for k in ("IH", "IW", "KH", "KW", "OH", "OW"))
+    # VALID conv, stride 1: rows/cols beyond IH-KH+1 would read the next channel / row
+    assert OH == IH - KH + 1, f"OH={OH} != IH-KH+1={IH - KH + 1} (VALID, stride 1)"
+    assert OW == IW - KW + 1, f"OW={OW} != IW-KW+1={IW - KW + 1} (VALID, stride 1)"
+    assert 1 <= KH <= IH and 1 <= KW <= IW, f"kernel {KH}x{KW} larger than input {IH}x{IW}"
+    assert KW <= MAX_KW, f"KW={KW} > {MAX_KW}: ACT read/rotate wrong for kx > 8 (DECISIONS OC-3)"
+    if f["out_raw"]:
+        # LOGIT[oc] takes row 0 of every tile (gos_core.sv logit write): 1x1 output only
+        assert OH == 1 and OW == 1, f"out_raw needs a 1x1 output, got {OH}x{OW}"
+        assert not f["pool_en"], "out_raw with pool_en"
+        assert not f["relu_en"], "out_raw with relu_en"
+        assert int(f["OC"]) <= N_LOGITS, f"out_raw with OC={f['OC']} > {N_LOGITS}"
+    else:
+        # requant multiply uses v[V_MUL_W-1:0]: worst case K*16384 (+|q_bias|, checked with the
+        # parameters in load_params / v_abs_bound) must stay below 2^25 -> K <= 2047
+        assert d["K"] * ACT_PROD_MAX < V_ABS_LIMIT, \
+            f"K={d['K']}: K*16384 >= 2^{V_MUL_W - 1} (requant v width V_MUL_W={V_MUL_W})"
+    # rotator over-read stays within IN_END+1 (12-bit wrap at 4096 only hits masked rows)
+    full = {**f, **d}
+    assert max_act_read_word(full) <= d["IN_END"] + 1, "ACT read footprint beyond IN_END+1"
+
+
+def assert_descriptor_words(words) -> None:
+    """Reserved bits of one encoded descriptor are 0 (the checker ignores them)."""
+    w = [int(x) for x in np.asarray(words, dtype=np.uint64)]
+    assert len(w) == DESC_WORDS
+    for i, m in RESERVED_MASKS.items():
+        assert w[i] & m == 0, f"reserved bits set in w{i}: 0x{w[i] & m:08X}"
+
+
+def assert_job_limits(descs: list[dict], n_layers: int | None = None, words=None) -> None:
+    """Job-level host contract (FORMATS.md 'What the RTL checker cannot verify'):
+    1 <= N_LAYERS <= 8 (the CSR keeps only bits 3:0, so e.g. 17 would read as 1), per-layer
+    assert_host_limits, in_sel = i mod 2, out_raw only on the last layer, layer chaining, and no
+    WGT / QPARAM overlap between layers."""
+    n = len(descs) if n_layers is None else int(n_layers)
+    assert n == len(descs), f"N_LAYERS={n} but {len(descs)} descriptors"
+    assert 1 <= n <= MAX_LAYERS, f"N_LAYERS={n} outside 1..{MAX_LAYERS}"
+    for i, f in enumerate(descs):
+        assert_host_limits(f)
+        assert int(f["in_sel"]) == i % 2, f"layer {i}: in_sel={f['in_sel']} != {i % 2}"
+        assert not f["out_raw"] or i == n - 1, f"layer {i}: out_raw on a non-final layer"
+    for a, b in zip(descs, descs[1:]):
+        d_a = {**a, **derive_fields(a)}
+        assert (b["IC"], b["IH"], b["IW"]) == (d_a["OC"], d_a["OUT_H"], d_a["OUT_W"]), \
+            f"chaining: ({b['IC']},{b['IH']},{b['IW']}) != ({d_a['OC']},{d_a['OUT_H']},{d_a['OUT_W']})"
+    for lo, hi in (("WGT_BASE", "WGT_END"), ("QP_BASE", "QP_END")):
+        spans = sorted((int(f[lo]), int(derive_fields(f)[hi])) for f in descs)
+        for (_, e0), (b1, _) in zip(spans, spans[1:]):
+            assert b1 > e0, f"{lo}..{hi} ranges overlap between layers"
+    if words is not None:
+        for w in words:
+            assert_descriptor_words(w)
+
+
 def make_descriptors(net: str) -> tuple[list[dict], np.ndarray]:
     """Descriptors of every layer of `net`: (field dicts incl. name, uint32 [N_LAYERS, 16]).
 
@@ -534,6 +610,7 @@ def make_descriptors(net: str) -> tuple[list[dict], np.ndarray]:
     for a, b in zip(descs, descs[1:]):
         assert (b["IC"], b["IH"], b["IW"]) == (a["OC"], a["OUT_H"], a["OUT_W"]), (a["name"], b["name"])
         assert b["in_sel"] == 1 - a["in_sel"]
+    assert_job_limits(descs, len(descs), words)     # host limits the checker cannot verify
     return descs, np.stack(words)
 
 

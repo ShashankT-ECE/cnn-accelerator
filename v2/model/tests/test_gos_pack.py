@@ -413,3 +413,117 @@ def test_job_err_code():
     bad[2, 7] = 7                                   # K < 8 on layer 2
     assert gp.job_err_code(len(words), bad) == (3 << 8) | 2
     assert gp.job_err_code(2, bad) == 0             # layer 2 not in the job
+
+
+# ---- host-side limits the checker does not enforce (LIMITS.md) -------------------
+def _lay(IC, IH, IW, OC, KH, KW, pool=0, relu=1, raw=0, wb=0, qb=0, in_sel=0):
+    f = {"IC": IC, "OC": OC, "IH": IH, "IW": IW, "KH": KH, "KW": KW, "OH": IH - KH + 1,
+         "OW": IW - KW + 1, "WGT_BASE": wb, "QP_BASE": qb, "relu_en": relu, "pool_en": pool,
+         "out_raw": raw, "in_sel": in_sel}
+    f.update(gp.derive_fields(f))
+    return f
+
+
+def test_host_limits_accept_real_nets():
+    for net in NETS:
+        descs, words = gp.make_descriptors(net)          # calls assert_job_limits
+        gp.assert_job_limits(descs, len(descs), words)
+
+
+# (name, at-limit layer, just-over layer): the first passes, the second must fire an assert
+HOST_LIMIT_PAIRS = [
+    ("K_vmul", _lay(2047, 1, 1, 8, 1, 1), _lay(2048, 1, 1, 8, 1, 1)),
+    ("K_vmul_raw_ok", _lay(2048, 1, 1, 8, 1, 1, relu=0, raw=1), _lay(2048, 1, 1, 8, 1, 1)),
+    ("OH_valid", _lay(2, 8, 12, 8, 3, 3), {**_lay(2, 8, 12, 8, 3, 3), "OH": 7}),
+    ("OH_valid_under", _lay(2, 8, 12, 8, 3, 3), {**_lay(2, 8, 12, 8, 3, 3), "OH": 5}),
+    ("OW_valid", _lay(2, 8, 12, 8, 3, 3), {**_lay(2, 8, 12, 8, 3, 3), "OW": 11}),
+    ("raw_OH", _lay(8, 1, 1, 4, 1, 1, relu=0, raw=1), _lay(8, 2, 1, 4, 1, 1, relu=0, raw=1)),
+    ("raw_OW", _lay(8, 1, 1, 4, 1, 1, relu=0, raw=1), _lay(8, 1, 2, 4, 1, 1, relu=0, raw=1)),
+    ("raw_relu", _lay(8, 1, 1, 4, 1, 1, relu=0, raw=1), _lay(8, 1, 1, 4, 1, 1, relu=1, raw=1)),
+    ("raw_OC", _lay(8, 1, 1, 16, 1, 1, relu=0, raw=1), _lay(8, 1, 1, 17, 1, 1, relu=0, raw=1)),
+    ("raw_pool", _lay(8, 1, 1, 4, 1, 1, relu=0, raw=1),
+     {**_lay(8, 2, 2, 4, 1, 1, relu=0, raw=1), "pool_en": 1}),
+]
+
+
+@pytest.mark.parametrize("name,ok,bad", HOST_LIMIT_PAIRS, ids=[p[0] for p in HOST_LIMIT_PAIRS])
+def test_assert_host_limits(name, ok, bad):
+    gp.assert_host_limits(ok)
+    gp.encode_descriptor({k: v for k, v in ok.items() if k in gp.DESC_LAYOUT or k in gp.FLAG_BITS})
+    with pytest.raises(AssertionError):
+        gp.assert_host_limits(bad)
+
+
+def test_host_limits_not_in_encode():
+    """encode_descriptor must keep accepting descriptors the host asserts reject (gen_shapes
+    builds expected-refusal jobs with it); only derived consistency and widths are checked."""
+    bad = _lay(2048, 1, 1, 8, 1, 1)
+    gp.encode_descriptor(bad)
+    raw = _lay(8, 2, 1, 4, 1, 1, relu=0, raw=1)
+    gp.encode_descriptor(raw)
+
+
+def test_assert_host_limits_derived_consistency():
+    f = _lay(2, 8, 12, 8, 3, 3)
+    gp.assert_host_limits(f)
+    with pytest.raises(AssertionError):
+        gp.assert_host_limits({**f, "IN_PLANE": f["IN_PLANE"] + 1})
+
+
+def test_assert_descriptor_words_reserved():
+    w = gp.encode_descriptor(_lay(2, 8, 12, 8, 3, 3))
+    gp.assert_descriptor_words(w)
+    for wi, bit in ((2, 16), (2, 31), (6, 4), (6, 31)):
+        b = w.copy()
+        b[wi] |= np.uint32(1 << bit)
+        with pytest.raises(AssertionError):
+            gp.assert_descriptor_words(b)
+
+
+def _chain2(in_sel=(0, 1), raw0=False, wb1=None, qb1=None):
+    a = _lay(2, 8, 12, 8, 3, 3, in_sel=in_sel[0])
+    b = _lay(8, 6, 10, 5, 3, 3, in_sel=in_sel[1],
+             wb=a["WGT_END"] + 1 if wb1 is None else wb1, qb=a["QP_END"] + 1 if qb1 is None else qb1)
+    if raw0:
+        a = _lay(8, 1, 1, 4, 1, 1, relu=0, raw=1, in_sel=in_sel[0])
+        b = _lay(4, 1, 1, 8, 1, 1, in_sel=in_sel[1], wb=a["WGT_END"] + 1, qb=a["QP_END"] + 1)
+    return [a, b]
+
+
+def test_assert_job_limits():
+    gp.assert_job_limits(_chain2())
+    gp.assert_job_limits(_chain2()[:1], 1)
+    Ls8 = [_lay(8, 1, 1, 8, 1, 1, in_sel=i % 2, wb=8 * i, qb=8 * i) for i in range(8)]
+    gp.assert_job_limits(Ls8, 8)
+    bad_cases = {
+        "n_layers_9": (Ls8 + [_lay(8, 1, 1, 8, 1, 1, wb=64, qb=64)], 9),
+        "n_layers_mismatch": (_chain2(), 1),
+        "in_sel_same": (_chain2(in_sel=(0, 0)), 2),
+        "in_sel_l0": (_chain2(in_sel=(1, 0)), 2),
+        "raw_not_last": (_chain2(raw0=True), 2),
+        "chain": ([_lay(2, 8, 12, 8, 3, 3), _lay(8, 6, 11, 5, 3, 3, in_sel=1, wb=500, qb=50)], 2),
+        "wgt_overlap": (_chain2(wb1=10), 2),
+        "qp_overlap": (_chain2(qb1=7), 2),
+    }
+    for name, (descs, n) in bad_cases.items():
+        with pytest.raises(AssertionError):
+            gp.assert_job_limits(descs, n)
+            print("did not fire:", name)
+    # at the overlap boundary (next base = previous END + 1) it passes
+    gp.assert_job_limits(_chain2(wb1=_chain2()[0]["WGT_END"] + 1, qb1=8), 2)
+    # reserved bits in the emitted words
+    words = np.stack([gp.encode_descriptor({k: v for k, v in f.items()}) for f in _chain2()])
+    gp.assert_job_limits(_chain2(), 2, words)
+    words[1, 6] |= np.uint32(1 << 9)
+    with pytest.raises(AssertionError):
+        gp.assert_job_limits(_chain2(), 2, words)
+
+
+def test_kw_limit():
+    """OC-3: KW <= 9 passes the host limits, KW = 10 is rejected though the checker accepts it."""
+    ok = _lay(8, 12, 20, 8, 3, gp.MAX_KW)
+    gp.assert_host_limits(ok)
+    bad = _lay(8, 12, 20, 8, 3, gp.MAX_KW + 1)
+    assert gp.check_descriptor(gp.encode_descriptor(bad))[0]      # RTL checker accepts it
+    with pytest.raises(AssertionError, match="OC-3"):
+        gp.assert_host_limits(bad)

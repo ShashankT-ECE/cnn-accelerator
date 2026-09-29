@@ -265,3 +265,53 @@ The tests cover:
   - end-to-end collect with a mismatch and a missing job;
   - xval identity and the minimum job count.
 - **Paper:** RTL-only, RTL + board, and rejected/inconsistent rows.
+
+## Boundary cases (`gen_limits.py`, `run_limits.sh`, `limits_rtl.csv`)
+
+The random set stays inside the envelope (`gen_shapes.LIMITS`). The boundary-case set tests
+descriptor values at and beyond it, e.g. KW = 8, 9, 10, 11, 12, 16 and KH = 9, 10, 16
+(DECISIONS OC-3: the ACT read `rd[b] = rowbase + ox0/8 + (b < kx)`, `rot = kx[2:0]` is exact
+only for KW <= 9 by analysis, and the checker has no KW bound).
+
+- **Cases:** every module `limit_cases_*.py` exposes `CASES: list[dict]`. The schema is
+  `gen_limits.CASE_SCHEMA`: `id`, `field`, `value`, `layers` (`gen_shapes.layer(...)` dicts),
+  `expect` (`exact | mismatch | refuse | unknown`), `note`, and optionally `err_code` and
+  `overrides` (`wgt_base`, `qp_base`, `n_layers`, `in_sel`, `desc_patch`, `raw_words`).
+  `expect` is a prediction only. The RTL result is recorded in `observed`.
+  `limit_cases_kw.py` holds the KW/KH cases.
+- **Set:** `gen_limits.py gen [--cases kw,...]` writes `v2/build/limits/<all|cases>-s<seed>/`
+  in the gen_shapes format (`shapes.json` with `"kind": "limits"` and per-case model
+  predictions, plus `jobs/*.npz` and `hex/`). No envelope rejects are applied. Descriptors go
+  through `derive_fields`/`encode_descriptor`, then any patches are applied. Per case it
+  records these predictions without asserting them: the golden output, the checker verdict
+  (`job_err_code`), the model cycles, and `tile_model_matches_golden` / `tile_model_n_bad`.
+  The tile model runs on garbage memories loaded like the TB loads them.
+  Cases the checker model refuses become refuse jobs.
+- **Run:** `v2/scripts/run_limits.sh [--cases kw] [--allow-dirty]` runs every case on both
+  **Verilator and xsim**, with one simulator process per case under `timeout` (default
+  1800 s), so a hang cannot stop the other cases. The TB also has its own timeout and soft
+  reset. The builds are cached in `v2/build/limits/builds/`.
+- **Collect:** `gen_limits.py collect` writes one row per case (source `rtl_sim`, label RTL sim)
+  with these columns:
+  - `case_id, field, value, expect`
+  - `observed` (`exact | mismatch | refuse | timeout | no_result | disagree`)
+  - `outputs_match, cycles_exact, err_code_expected, err_code_rtl`
+  - `tile_model_matches_golden, checker_accepts`
+  - `sim_agree`. Every control field (done, error, ERR_CODE, LAYER_CYC/TOTAL_CYC/MAC_ACTIVE,
+    STALL, flags, timeout) must be identical between Verilator and xsim. Output *values*
+    (`out_sig`, `n_bad`, `out_ok`, `logits`) may differ only when both simulators observe the
+    same `mismatch` or `timeout`. In that case the wrong output reads memory that tb_shapes
+    filled with `$urandom` garbage, and that sequence is simulator-specific.
+    `sim_agree_strict`, `outputs_identical` and `sim_diff_keys` record the exact comparison.
+  - `simulators, n_bad, note`
+  - per-simulator verdicts, cycles and the set sha256
+  
+  The output goes to `v2/results/limits_rtl.csv`, plus `limits_rtl_logs_<key>.tar.xz` with
+  its sha256 in the CSV, only from a clean tree with all case modules and the default seed.
+  Otherwise it goes to the run dir. The script exits 0 when every case has a result from both
+  simulators and they agree. RTL mismatches are data, not failures. `check_results.py` covers
+  the CSV, with `v2/shapes` as an extra source.
+- **Tests:** `tests/test_limits.py` covers the loader (every module is picked up, ids are
+  unique, the schema is enforced), determinism, the recorded predictions, the overrides, and
+  the collector verdicts: exact, mismatch, refuse, timeout, no_result, simulator
+  disagreement.

@@ -217,6 +217,10 @@ layer (lowest l) and its lowest failing rule id. Descriptor slots l >= N_LAYERS 
 - WGT_END, IN_END, OUT_END, QP_END being consistent with their bases and sizes, and so that the
   bound checks on the END fields reflect the real footprint.
 - OH = IH-KH+1, OW = IW-KW+1 (VALID, stride 1) and KH <= IH, KW <= IW.
+- **KW <= 9** (DECISIONS OC-3): the conflict-free ACT read `rd[b] = rowbase + ox0/8 + (b < kx)`,
+  rotate `kx[2:0]`, is exact only for kx <= 8. The checker does not test KW; `gos_pack.assert_host_limits`
+  asserts it. RTL sim: KW = 9 bit- and cycle-exact, KW >= 10 wrong outputs (`v2/results/limits_rtl.csv`).
+  All host-side limits: `v2/docs/LIMITS.md`.
 - Layer chaining (IC/IH/IW of layer i+1 = OC/OUT_H/OUT_W of layer i; in_sel alternation), and
   that the layers do not overlap in WGT or QPARAM.
 - out_raw only on the last layer; relu_en = 0 with out_raw.
