@@ -175,7 +175,9 @@ utilization, timing, power, methodology, DRC and check_timing reports, `summary.
 synthesis logs. `impl_collect.py` writes one row per outdir to **`impl_gos.csv`**
 (`source=post_impl`, including the bit/hwh SHA256). **`--csv` is required**, because the
 default is `impl_shell.csv`. BUILD_ID is the 8-hex short commit. The performance bitstream is
-the highest variant with WNS ≥ 0, WHS ≥ 0 and 0 critical warnings (D14).
+**gos_250** (DECISIONS D21): the highest variant with WNS ≥ 0, WHS ≥ 0 and 0 critical warnings
+(D14) that the KV260 can clock. gos_300 met timing but is post-implementation only — PYNQ does not
+reprogram the PS PLLs and 300 MHz is not reachable from the boot image's PLLs (D19).
 `power_w_estimate` is a Vivado vectorless estimate, not a measurement. Runtime: not recorded
 (`duration_s` is empty).
 

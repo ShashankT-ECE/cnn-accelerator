@@ -3,7 +3,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from paperdata import INA_LABEL, V, a3_net, at, ci, div, impl_variants, latest, lines_of, pm, power_summaries
+from paperdata import (INA_LABEL, V, a3_net, at, ci, clock_marks, clock_notes, div, impl_variants, is_performance,
+                       is_postimpl_only, latest, lines_of, pm, power_summaries)
 from paperlib import (NETS, PH_BOARD, Artifact, Store, _rel, fnum, inum, latex_table, pretty_net,
                       tex_escape, write_text)
 
@@ -68,7 +69,10 @@ def t1_impl(c: Ctx) -> Artifact:
         return c.table(art, "@{}ll@{}", ["Quantity & Value"], body,
                        "Implementation results (post-implementation).", "tab:impl")
     n = len(vs)
-    head = "Quantity & " + " & ".join(f"{_mhz(art, r)}~MHz" for r in vs)
+    head = "Quantity & " + " & ".join(f"{_mhz(art, r)}~MHz{clock_marks(r)}" for r in vs)
+    status = lambda r: art.label("post-impl.\\ only" if is_postimpl_only(r) else  # noqa: E731
+                                 "post-impl.; run on KV260" if is_performance(r) else "post-impl.",
+                                 "DECISIONS D21 (performance clock) / D19 (PLL constraint)")
     grp = lambda t: f"\\multicolumn{{{n + 1}}}{{@{{}}l}}{{\\emph{{{t}}}}} \\\\"
     row = lambda lab, col, fmt="int": [lab] + [art.cell(r, col, fmt) for r in vs]
     body = [grp("Full design (gos\\_top + AXI shell)"),
@@ -78,6 +82,7 @@ def t1_impl(c: Ctx) -> Artifact:
             row("CLB LUT", "core_luts"), row("CLB FF", "core_registers"), row("DSP48E2", "core_dsps"),
             row("RAMB36", "core_ramb36"), row("RAMB18", "core_ramb18"),
             grp("Timing and build"),
+            ["Status"] + [status(r) for r in vs],
             row("WNS (ns)", "wns_ns", "f3"), row("WHS (ns)", "whs_ns", "f3"),
             row("pl\\_clk0 requested (MHz)", "pl_clk0_mhz_requested", "int"),
             row("pl\\_clk0 actual (MHz)", "pl_clk0_mhz_actual", "f3"),
@@ -92,10 +97,12 @@ def t1_impl(c: Ctx) -> Artifact:
                       f"synth_unwaived_groups={r.get('synth_unwaived_groups')})")
     return c.table(art, "@{}l" + "r" * n + "@{}", [head], body,
                    f"Implementation results (post-implementation, Vivado {vtxt}, "
-                   "xck26-sfvc784-2LV-c). One column per implemented clock that met timing.",
+                   "xck26-sfvc784-2LV-c). One column per implemented clock that met timing; every "
+                   "number is a post-implementation result.",
                    "tab:impl",
                    notes=["Source: impl\\_gos.csv (post\\_impl). Resources are Vivado utilization "
-                          "report counts; no percentages (device totals not in a results CSV)."])
+                          "report counts; no percentages (device totals not in a results CSV).",
+                          *clock_notes(art, vs)])
 
 
 # --------------------------------------------------------------------------------------------
@@ -162,7 +169,7 @@ def a2_latency(c: Ctx) -> Artifact:
          else art.placeholder(f"A2 {n}: hw_a2_a3_cycles.csv total"))
     for r in vs:
         f = at(r, "pl_clk0_mhz_actual")
-        lab = f"Latency (\\textmu s) @ {_mhz(art, r)}~MHz$^\\dagger$"
+        lab = f"Latency (\\textmu s) @ {_mhz(art, r)}~MHz$^\\dagger${clock_marks(r)}"
         line(lab, lambda n, f=f: div(tot[n]["rtl"], f, "cycles/MHz = us").fmt(art, "f2")
              if tot[n] and tot[n]["rtl"] else "--")
     hw = {n: latest(art.rows("hw_a2_a3_cycles.csv", hw=True, net=n) or [], lambda r: r["layer"]).get("total")
@@ -181,10 +188,12 @@ def a2_latency(c: Ctx) -> Artifact:
                    notes=["$^\\dagger$RTL sim cycles at post-impl clock (cycles / pl\\_clk0 actual from "
                           "impl\\_gos.csv), computed, not measured. Sources: cycle\\_model.csv (model), "
                           "rtl\\_network.csv (RTL sim), hw\\_a2\\_a3\\_cycles.csv (measured on KV260; PL "
-                          "latency = cycle counter / $f_\\mathrm{meas}$, the pl\\_clk0 measured by the "
-                          "calibration (cycle counter vs CLOCK\\_MONOTONIC\\_RAW, hw\\_fclk\\_cal\\_s*.csv); "
+                          "latency = cycle counter / the pl\\_clk0 PLL read-back, the clock of record; "
+                          "$f_\\mathrm{meas}$ = cross-check of that clock (cycle counter vs "
+                          "CLOCK\\_MONOTONIC\\_RAW, hw\\_fclk\\_cal\\_s*.csv), not used for any value; "
                           "wall-clock = input write to counter read per image, warm-up discarded, median "
-                          "with the distribution-free order-statistic 95\\% CI)."])
+                          "with the distribution-free order-statistic 95\\% CI).",
+                          *clock_notes(art, vs)])
 
 
 # --------------------------------------------------------------------------------------------
@@ -363,8 +372,8 @@ def b1_power(c: Ctx) -> Artifact:
                           "start-to-done time, LOGIT read, PS dequant) with the accelerator not started. "
                           "$E_\\mathrm{sys}=\\Delta P_\\mathrm{accel}\\times$ time/image (host loop included); "
                           "$E_\\mathrm{comp}=\\Delta P_\\mathrm{accel}\\times t_\\mathrm{PL}$, "
-                          "$t_\\mathrm{PL}$ = TOTAL\\_CYC (hardware counter) over $f_\\mathrm{meas}$ (measured "
-                          "pl\\_clk0; read-back clock if no calibration); run phases in a seeded random order "
+                          "$t_\\mathrm{PL}$ = TOTAL\\_CYC (hardware counter) over the pl\\_clk0 PLL read-back "
+                          "(clock of record); run phases in a seeded random order "
                           "per repeat; "
                           "``$-$ control'' rows use $\\Delta P_\\mathrm{accel}-\\Delta P_\\mathrm{control}$. "
                           "All computed by power\\_log.py. Source: hw\\_b1\\_power\\_ina260\\_summary*.csv."])

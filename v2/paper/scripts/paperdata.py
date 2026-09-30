@@ -168,6 +168,42 @@ def a3_net(art: Artifact, net: str) -> list[dict] | None:
 # --------------------------------------------------------------------------------------------
 # Implemented clocks (impl_gos.csv)
 # --------------------------------------------------------------------------------------------
+# DECISIONS D21 (user, 2026-09-30): the 250 MHz build is the performance clock, the build the
+# KV260 runs. A variant above it met timing in Vivado but is POST-IMPLEMENTATION ONLY: PYNQ does
+# not reprogram the PS PLLs and the boot image's PL clock source has no integer divider to it (D19).
+PERFORMANCE_CLOCK_MHZ = 250
+PERF_MARK, POSTIMPL_ONLY_MARK = "$^\\star$", "$^\\ddagger$"
+
+
+def is_performance(r: dict) -> bool:
+    return abs(fnum(r["pl_clk0_mhz_requested"]) - PERFORMANCE_CLOCK_MHZ) < 0.5
+
+
+def is_postimpl_only(r: dict) -> bool:
+    """True for a timing-met variant that cannot be run on the board (above the performance clock)."""
+    return fnum(r["pl_clk0_mhz_requested"]) > PERFORMANCE_CLOCK_MHZ + 0.5
+
+
+def clock_marks(r: dict) -> str:
+    return PERF_MARK if is_performance(r) else POSTIMPL_ONLY_MARK if is_postimpl_only(r) else ""
+
+
+def clock_notes(art: "Artifact", vs: list[dict]) -> list[str]:
+    """Footnotes for the marks above (the clock numbers are impl_gos.csv cells)."""
+    perf = [r for r in vs if is_performance(r)]
+    only = [r for r in vs if is_postimpl_only(r)]
+    out = []
+    mhz = lambda r: art.cell(r, "pl_clk0_mhz_requested", "int")  # noqa: E731
+    if perf:
+        out.append(f"{PERF_MARK}Performance clock: the {mhz(perf[0])}~MHz build is the one run on the KV260.")
+    if only:
+        out.append(f"{POSTIMPL_ONLY_MARK}Post-implementation only ({', '.join(mhz(r) for r in only)}~MHz): "
+                   "timing met in Vivado, never run on the KV260. PYNQ does not reprogram the PS PLLs, "
+                   "and the PL clock source of the board's boot image has no integer divider to this "
+                   "frequency" + (f"; the board runs the {mhz(perf[0])}~MHz build." if perf else "."))
+    return out
+
+
 def impl_variants(art: Artifact) -> list[dict]:
     """Latest clean row per requested clock that met timing (D14: WNS >= 0, WHS >= 0,
     0 critical warnings, timing_met). Sorted by clock."""

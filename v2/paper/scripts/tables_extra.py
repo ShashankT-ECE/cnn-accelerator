@@ -32,7 +32,7 @@ from pathlib import Path
 
 import figures as F
 import tables as T
-from paperdata import INA_LABEL, latest, power_summaries
+from paperdata import INA_LABEL, PERFORMANCE_CLOCK_MHZ, latest, power_summaries
 from paperlib import NETS, Artifact, _rel, fnum, pretty_net, tex_escape
 
 FIT_Q = [("p_accel_w", r"$P_\mathrm{accel}$ (absolute)"), ("dp_accel_w", r"$\Delta P_\mathrm{accel}$"),
@@ -100,10 +100,16 @@ def soak_table(c: T.Ctx) -> Artifact:
     notes = ["Source: hw\\_soak.csv (per-minute throughput in hw\\_soak\\_minutes.csv). Die temperature: "
              + art.label(tex_escape(clk.get("temp_source", "") or "not recorded"),
                          f"{clk['_file']}:{clk['_line']}:temp_source") + "."]
+    on_perf = abs(fnum(clk["clock_mhz"]) - PERFORMANCE_CLOCK_MHZ) < 0.5
     if clk.get("clock_fell_back") == "True":
-        notes.append("The performance bitstream fell back to a lower clock (clock\\_fallback.py, "
-                     "hw\\_soak.csv clock\\_choice\\_reason).")
-        art.check("soak ran on the fallback bitstream (clock_fell_back=True)")
+        notes.append("The clock fallback recorded in hw\\_soak.csv (clock\\_choice\\_reason) is expected: "
+                     "the higher-clock build is post-implementation only (PLL constraint of the board), "
+                     "the soak ran on the performance build." if on_perf else
+                     "The bitstream fell back to a clock below the performance clock "
+                     "(clock\\_fallback.py, hw\\_soak.csv clock\\_choice\\_reason).")
+    if not on_perf:
+        art.check(f"soak ran at {clk['clock_mhz']} MHz, not at the performance clock "
+                  f"{PERFORMANCE_CLOCK_MHZ} MHz (DECISIONS D21)")
     return c.table(art, "@{}l" + "r" * len(keys) + "@{}", [head], body, cap, "tab:soak", notes=notes)
 
 

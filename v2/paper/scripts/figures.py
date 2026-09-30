@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.patches import Patch, Rectangle  # noqa: E402
 from matplotlib.transforms import blended_transform_factory  # noqa: E402
 
-from paperdata import INA_LABEL, a3_net, at, div, impl_variants, latest, power_summaries  # noqa: E402
+from paperdata import INA_LABEL, a3_net, at, div, impl_variants, is_postimpl_only, latest, power_summaries  # noqa: E402
 from paperlib import DRYRUN_MARK, NETS, Artifact, Store, _rel, fnum  # noqa: E402
 
 COL_W, DCOL_W = 3.5, 7.16           # IEEEtran single / double column (in)
@@ -224,7 +224,8 @@ def fig_a4(c: FCtx) -> Artifact:
 def fig_b2(c: FCtx) -> Artifact:
     """B2 clock sweep: (a) PL latency, (b) SOM-rail dP (INA260), (c) energy/image; x = pl_clk0."""
     art = c.art("fig_b2_clock")
-    vs = impl_variants(art)
+    # only builds the board can run (D21): a post-implementation-only clock is not a sweep point
+    vs = [r for r in impl_variants(art) if not is_postimpl_only(r)]
     data = {net: a3_net(art, net) for net in NETS}
     hwr = [r for r in (art.rows("hw_b2_clock.csv", hw=True) or []) if not r.get("skipped_reason")
            and r.get("latency_us")]

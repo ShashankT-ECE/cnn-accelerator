@@ -354,8 +354,14 @@ def test_t1_gets_300mhz_column_from_build_copy(res, tmp_path):
     out = tmp_path / "out"
     run(res, out)
     t = tex(out, "tab_t1_impl")
-    assert "200~MHz & 250~MHz & 300~MHz" in t
-    assert "300~MHz" in tex(out, "tab_a2_latency")
+    # D21: 250 MHz = performance clock (star), 300 MHz = post-implementation only (double dagger)
+    assert "200~MHz & 250~MHz$^\\star$ & 300~MHz$^\\ddagger$" in t
+    assert "post-impl.\\ only" in t and "post-impl.; run on KV260" in t
+    assert "Post-implementation only (300~MHz)" in t and "PLL" in t and "Performance clock" in t
+    a2 = tex(out, "tab_a2_latency")
+    assert "300~MHz$^\\dagger$$^\\ddagger$" in a2 and "250~MHz$^\\dagger$$^\\star$" in a2
+    assert "Post-implementation only (300~MHz)" in a2
+    assert "$^\\ddagger$" not in tex(out, "tab_b2_clock")
 
 
 # ------------------------------------------------ B1 energy two ways / control; B3 safe vs fast

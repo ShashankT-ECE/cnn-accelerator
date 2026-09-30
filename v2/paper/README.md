@@ -25,7 +25,7 @@ Rules enforced by the code (`scripts/paperlib.py`):
 
 | output | content | sources |
 |---|---|---|
-| `tab_t1_impl.tex` | A6/T1: LUT/FF/LUTRAM/DSP/RAMB, gos_core share, WNS/WHS, pl_clk0 req./actual, BUILD_ID, bitstream SHA-256 prefix; one column per clock that met timing (D14) — a 300 MHz row appears automatically | impl_gos.csv (post_impl) |
+| `tab_t1_impl.tex` | A6/T1: LUT/FF/LUTRAM/DSP/RAMB, gos_core share, WNS/WHS, pl_clk0 req./actual, BUILD_ID, bitstream SHA-256 prefix; one column per clock that met timing (D14), all post-implementation; **250 MHz = the performance clock run on the KV260 (⋆, DECISIONS D21); the 300 MHz column is marked post-implementation only (‡) with a footnote on the PLL constraint** (`paperdata.PERFORMANCE_CLOCK_MHZ`, `clock_notes`); the same marks appear on the computed-latency rows of `tab_a2_latency.tex`, and `fig_b2_clock` plots only clocks the board can run | impl_gos.csv (post_impl) |
 | `tab_a1_accuracy.tex` | A1: FP32/INT8 accuracy of record, RTL bit-exact images, KV260 mismatches/accuracy | reference_accuracy.csv (model; r2 cross-checked with cifar10_r2_accuracy.csv), rtl_network.csv (rtl_sim), hw_a1_accuracy.csv (hw) |
 | `tab_a2_latency.tex` | A2: total cycles model/RTL/KV260, µs at each post-impl clock (RTL cycles / f, computed), KV260 PL µs at the read-back clock (clock of record, DECISIONS D20), f_meas cross-check, read-back clock, wall-clock median [95% CI] | cycle_model, rtl_network, impl_gos, hw_a2_a3_cycles |
 | `tab_a3_cycles.tex`, `fig_a3_cycles{,_wide}.pdf` | A3: per-layer model/RTL/KV260 cycles + error % vs model | cycle_model, rtl_network (+ rtl_cycles cross-check), hw_a2_a3_cycles |
