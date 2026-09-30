@@ -187,7 +187,7 @@ All V2 work lives in `v2/` on branch `v2-dev`. For any file under `v2/`,
 directory. Legacy files (rtl/, sim/, python/, data/, docs/, scripts/,
 software/) are read-only references for V2 work.
 
-## Where the project stands (updated 2026-09-29, after the laptop-side reviewer-gap work)
+## Where the project stands (updated 2026-09-30, after OC-3 / limits audit)
 
 Update this section whenever a step finishes. It is a pointer summary. The
 records of truth are `v2/docs/DECISIONS.md` (decisions D1–D18, open
@@ -281,6 +281,12 @@ rule in `v2/CLAUDE.md`). xsim may run alongside it. The board workflow
   - Fixes: CIFAR per-layer cycle list trimmed to 4 layers; D2/D3 r2 logit bound.
   - Worktrees: `~/gos-build` (fd880d4, bitstream builds of record + proj/), `~/gos-10k`
     (full-10k run dir incl. shard logs), `~/gos_build_wt` (killed b5fbcd6 runs, unused).
+
+- **OC-3 + limits audit (2026-09-30, pushed 626a341):** RTL sim (Verilator + xsim) KW ≤ 9 exact, KW ≥ 10
+  wrong → host contract `gos_pack.assert_host_limits` (MAX_KW = 9) + host asserts for every limit the
+  checker does not enforce (`v2/docs/LIMITS.md`, `run_limits.sh` → `limits_rtl.csv`, 49 cases). D16 amended:
+  rows checked only against their producer's sources (Vivado rows: v2/rtl + v2/vivado). All v2/model
+  producers re-run @ e9cbb88, results identical, `check_results.py` ALL CLEAN. Post-ROCS checker rules: DECISIONS TODO.
 
 ### Final implementation table (post-impl, build fd880d43, from `v2/results/impl_gos.csv`)
 
