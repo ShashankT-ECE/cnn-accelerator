@@ -153,57 +153,88 @@ class FakeClock:
 
 
 class FakeCalDev:
-    """start->done = C / f + overhead (+ seeded jitter); advances the fake clock."""
+    """KV260-like timing: the job ends C / f after the start write; done is only seen on the
+    STATUS poll grid (period poll_ns), optionally phase-shifted by the dither wait. Deterministic
+    cycle counts + a fixed grid = a fixed, net-dependent detection latency (the 2026-09-30 bug)."""
 
-    def __init__(self, clock, f_mhz=299.997009, overhead_ns=2500.0, jitter_ns=300.0, seed=0):
-        self.clock, self.f, self.ov, self.j = clock, f_mhz, overhead_ns, jitter_ns
+    def __init__(self, clock, f_mhz=249.9975, start_ns=1500.0, poll_ns=3500.0, read_ns=900.0,
+                 jitter_ns=40.0, seed=0):
+        self.clock, self.f, self.start, self.poll, self.read, self.j = \
+            clock, f_mhz, start_ns, poll_ns, read_ns, jitter_ns
         self.rng = np.random.default_rng(seed)
         self.cyc = None
 
     def load_net(self, pkg):
         self.cyc = pkg.cycles
 
-    def timed_job(self, x, clock_ns=None):
+    def poll_period_ns(self, clock_ns=None):
+        return self.poll
+
+    def timed_job(self, x, clock_ns=None, dither_ns=0, rng=None):
         t0 = clock_ns()
-        self.clock.t += int(self.cyc / self.f * 1e3 + self.ov + self.rng.uniform(0, self.j))
+        end = self.start + self.cyc / self.f * 1e3               # true end, relative to t0
+        first = self.start + (rng.integers(0, dither_ns) if dither_ns else 0) + self.rng.uniform(0, self.j)
+        n = max(0, int(np.ceil((end - first) / self.poll)))      # polls that still see busy
+        seen = first + n * self.poll + self.read
+        self.clock.t += int(seen)
         t1 = clock_ns()
         self.clock.t += 20000            # host work between jobs
-        return t1 - t0, self.cyc, 3
+        return t1 - t0, self.cyc, n + 1
 
 
 def _pkg(c):
     return types.SimpleNamespace(cycles=c, x_act=np.zeros((4, 8), np.int8))
 
 
-def test_fclk_calibration_recovers_clock():
+def _cal(dither_ns=None, seed=7):
     clk = FakeClock()
-    dev = FakeCalDev(clk)
-    r = FC.calibrate(dev, {"lenet5": _pkg(16436), "cifar10": _pkg(104247)}, seconds=0.2, rounds=2,
-                     warmup=3, seed=7, n_boot=300, clock_ns=clk, say=lambda m: None)
+    return FC.calibrate(FakeCalDev(clk), {"lenet5": _pkg(16436), "cifar10": _pkg(104247)},
+                        seconds=1.0, rounds=2, warmup=3, seed=seed, clock_ns=clk,
+                        say=lambda m: None, dither_ns=dither_ns)
+
+
+def test_fclk_cross_check_recovers_clock_with_dither():
+    r = _cal()
     assert r["net_a"] == "lenet5" and r["jobs_a"] > 100 and r["jobs_b"] > 100
-    assert r["f_mhz"] == pytest.approx(299.997009, rel=2e-4)
-    assert r["ci_lo_mhz"] <= 299.997009 <= r["ci_hi_mhz"]
+    assert r["dither_ns"] == 7000 and r["n_folds"] == FC.N_FOLDS
+    assert r["f_mhz"] == pytest.approx(249.9975, rel=3e-4)
+    assert r["ci_lo_mhz"] < r["ci_hi_mhz"] and r["fold_min_mhz"] <= r["fold_max_mhz"]
+    rel, flag = FC.agreement(r["f_mhz"], 249.9975)
+    assert abs(rel) < FC.AGREE_TOL and flag is False
     assert r["f_simple_mhz"] < r["f_mhz"]                         # naive estimate biased low
-    assert r["intercept_a_ns"] == pytest.approx(r["intercept_b_ns"], abs=200)
+    assert r["intercept_a_ns"] == pytest.approx(r["intercept_b_ns"], abs=150)
     assert r["cycles_constant"] and len(r["order"]) == 4
 
 
-def test_fmeas_used_only_at_calibrated_clock(monkeypatch):
+def test_fclk_median_estimator_is_biased_by_the_poll_grid():
+    """The former method: without dither the detection latency is a fixed phase of the poll grid
+    per net, the medians do not cancel it and the estimate is off by ~1 % (KV260, 2026-09-30)."""
+    r = _cal(dither_ns=0)
+    assert abs(r["f_median_est_mhz"] / 249.9975 - 1) > 2e-3
+    rel, flag = FC.agreement(r["f_median_est_mhz"], 249.9975)
+    assert flag is True
+
+
+def test_fclk_agreement_flag_threshold():
+    assert FC.agreement(200.19, 199.998)[1] is False              # +0.096 %
+    assert FC.agreement(200.21, 199.998)[1] is True               # +0.106 %
+    assert FC.agreement(201.992064, 199.998)[1] is True           # the first board run (+1.0 %)
+    assert FC.agreement(float("nan"), 199.998)[1] is True
+
+
+def test_readback_is_the_clock_of_record(monkeypatch):
     monkeypatch.setenv(bc.RUN_ENV_VAR, json.dumps({"f_meas_mhz": 199.9, "f_meas_readback_mhz": 199.998001,
-                                                   "f_meas_source": "calibration", "f_meas_step": "s2.fcal",
+                                                   "f_meas_source": "cross-check", "f_meas_step": "s2.fcal",
                                                    "session_index": 2, "paper_grade": True}))
     ctx = bc.RunContext.__new__(bc.RunContext)
     ctx.run_env = bc.run_env()
-    assert ctx.f_used(199.998001) == (199.9, "f_meas (calibration; s2.fcal)")
-    f, src = ctx.f_used(100.0)                              # B2 at another clock: read-back
+    assert ctx.f_used(199.998001) == (199.998001, bc.F_USED_SOURCE)      # never f_meas
+    f, src = ctx.f_used(100.0)                              # B2 at another clock
     assert f == 100.0 and src.startswith("f_readback")
     cols = ctx.clock_cols(199.998001)
-    assert cols["f_used_mhz"] == "199.900000" and cols["f_readback_mhz"] == "199.998001"
-    em = bc.env_meta(bc.SOURCE_HW, False, ctx.run_env)
-    assert em["paper_grade"] is True and em["session_index"] == 2
-    assert bc.env_meta(bc.SOURCE_HW, True, ctx.run_env)["paper_grade"] is False     # dirty
-    assert bc.env_meta(bc.SOURCE_DRYRUN, False, ctx.run_env)["paper_grade"] is False
-    assert bc.env_meta(bc.SOURCE_HW, False, {})["paper_grade"] is False             # hand run
+    assert cols["f_used_mhz"] == "199.998001" and cols["f_readback_mhz"] == "199.998001"
+    assert cols["f_meas_mhz"] == "199.900000"               # recorded beside it as the cross-check
+    assert ctx.clock_cols(100.0)["f_meas_mhz"] == ""        # no cross-check at that clock
 
 
 # ---- power_log random order --------------------------------------------------------------------

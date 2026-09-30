@@ -19,10 +19,10 @@ Board-side code needs only **numpy + pynq** and the files in this directory plus
 | `exp_a2_a3_cycles.py` | A2 latency + A3 model / RTL / accelerator cycles per layer, determinism over images |
 | `exp_a4_util.py` | A4 MAC_ACTIVE / cycles vs theoretical |
 | `exp_b3_breakdown.py` | B3 host-side phase times, **interleaved conditions** (`--conditions safe fast cpu`: randomized blocks, seed recorded; ≥1000 kept per condition, warm-up discarded; median + 95 % CI) → `hw_b3_breakdown.csv` (safe), `hw_b3_breakdown_fast.csv` (fast, after the fast-path check), `hw_b3_breakdown_cpu.csv` (CPU INT8 reference, 1 thread) |
-| `power_log.py` | **B1/B2 power (the only power source):** on-board INA260 SOM-rail (VCC_SOM) logger + protocol (B1: accel / control / cpu, each bracketed by idle, seeded random order per repeat, ×3 + idle), energy two ways (E_sys, E_comp at f_meas) + duty cycle, sensor check, sensor probe |
+| `power_log.py` | **B1/B2 power (the only power source):** on-board INA260 SOM-rail (VCC_SOM) logger + protocol (B1: accel / control / cpu, each bracketed by idle, seeded random order per repeat, ×3 + idle), energy two ways (E_sys, E_comp at the read-back clock) + duty cycle, sensor check, sensor probe |
 | `exp_b1_power.py` | B1 entry point: runs the `power_log.py` protocol for each net (thin wrapper) |
 | `exp_b2_clock.py` | B2 pl_clk0 sweep (≤ closed clock): cycles == model, latency, INA260 idle/accel/idle per clock, cycle identity + power-vs-clock fit (other owner; see "Publication extras") |
-| `exp_fclk_cal.py` | **measured PL clock** f_meas: cycle counter vs CLOCK_MONOTONIC_RAW, differential LeNet/CIFAR estimator + bootstrap CI → `hw_fclk_cal_s<N>.csv` |
+| `exp_fclk_cal.py` | **PL clock cross-check** f_meas (not the clock of record): cycle counter vs CLOCK_MONOTONIC_RAW, differential LeNet/CIFAR lower-envelope estimator with dithered poll phase, fold t-interval, flag if > 0.1 % off the read-back → `hw_fclk_cal_s<N>.csv` |
 | `stats.py` | warm-up discard, median + distribution-free 95 % CI, p95, randomized block order, between-session statistics |
 | `board_env.py` | environment pre-flight: cpufreq governor + fixed frequency, pinning, package-manager check, AMS die temperature; fake sysfs/proc trees for laptop tests / dry runs |
 | `aggregate_sessions.py` | 3-session repeatability → `hw_repeatability.csv` |
@@ -167,7 +167,7 @@ median for accel, pacing for control); per repeat and mean/std over repeats: P_i
 two idle phases bracketing the run phase), ΔP = P_run − P_idle, time/image = phase duration /
 images, energy/image = ΔP × time/image; accelerator energy two ways: **E_sys** = ΔP_accel ×
 time/image (host loop included), **E_comp** = ΔP_accel × TOTAL_CYC / f (TOTAL_CYC = hardware
-counter median, f = f_meas, else the read-back pl_clk0), **duty** = (TOTAL_CYC / f) / time/image, and the
+counter median, f = the pl_clk0 PLL read-back), **duty** = (TOTAL_CYC / f) / time/image, and the
 control-subtracted **ΔP_accel − ΔP_control** with E_sys,net / E_comp,net — all computed by
 `power_log.py` (`energy_rule` column), never typed. CPU phases use `cpu_int8_ref` with 1 thread (same INT8 arithmetic as the
 accelerator, A5's single-thread configuration). Sensor path (`--sensor auto`): hwmon `ina260*`
@@ -177,10 +177,12 @@ the achieved rate and how often the value actually changed — hwmon `update_int
 INA260 averaging/conversion time limit the real bandwidth, so a 10 Hz sample stream may repeat
 values. Dry runs use a seeded mock sensor (source=dryrun_model; synthetic, not measurements).
 
-**Measured PL clock and statistics:** `sN.fcal` (`exp_fclk_cal.py`) measures f_meas once per
-session; the orchestrator passes it to every later step (`$GOS_RUN_ENV`) and every µs value is
-converted with it when it was measured at the step's read-back clock (else the read-back clock;
-`f_used_mhz` / `f_used_source` columns, `f_readback_mhz` kept). Latencies are reported as median
+**Clock of record and statistics (DECISIONS D20):** every µs value is converted with the pl_clk0
+**PLL read-back** frequency (`f_used_mhz` = `f_readback_mhz`, `f_used_source` = f_readback).
+`sN.fcal` (`exp_fclk_cal.py`) measures f_meas once per session as a **cross-check only**; the
+orchestrator passes it to every later step (`$GOS_RUN_ENV`), which records it beside the read-back
+(`f_meas_mhz` columns) without using it. If |f_meas − read-back| > 0.1 % the step prints a FLAG,
+sets `fcal_flag=True` in `hw_fclk_cal_s<N>.csv` and the session summary shows it. Latencies are reported as median
 with the distribution-free order-statistic 95 % CI and p95 after warm-up discard (`stats.py`);
 compared conditions run interleaved in randomized blocks with a recorded seed.
 
@@ -214,7 +216,7 @@ Expected board time is dominated by Python MMIO (per image: input writes 256 / 7
 | `hw_b1_power_ina260_{samples,phases,summary}_{lenet5,cifar10}.csv` | per sample / per phase / per repeat + mean + std | **B1 primary**, "SOM-rail power (INA260)": P_idle, P_accel, P_control, P_cpu, ΔP, time/image, energy/image (J, mJ); accel E_sys, t_PL = TOTAL_CYC/f, E_comp, duty, ΔP_accel − ΔP_control, E_sys,net, E_comp,net; host path; sensor backend/device/limits, requested + achieved rate, max gap |
 | `hw_b2_clock.csv` | per clock | requested/read-back clock, cycles (must equal the model), latency, INA260 P_idle/P_accel/ΔP/energy per image (mean/std over repeats) |
 | `hw_b2_power_ina260_{samples,phases,summary}_lenet5_<NNN>mhz.csv` | per clock (NNN = rounded requested clock, e.g. 200mhz) | B2 INA260 idle/accel/idle protocol at that clock |
-| `hw_fclk_cal_s<N>.csv` (+ `.npz`) | one per session | f_req, f_readback, f_meas + 95 % CI, estimator, f_simple, per-net jobs / medians / intercepts, seed |
+| `hw_fclk_cal_s<N>.csv` (+ `.npz`) | one per session | f_req, f_readback (clock of record), f_meas cross-check + 95 % fold t-interval, fold min/max, rel. difference, `fcal_flag` (> 0.1 %), former median estimator, f_simple, per-net jobs / minima / medians / intercepts, poll period, dither, seed |
 | `hw_b3_breakdown_cpu.csv` | per net × phase | B3 CPU condition (cpu_int8_ref, 1 thread) interleaved with the accelerator |
 | `hw_clock_choice.json` | one | clock_fallback decision (bit, closed clock, fell_back, attempts) |
 | `hw_repeatability.csv` | per metric × key × bitstream × clock | `aggregate_sessions.py`: mean ± between-session SD, range, CV, n sessions |

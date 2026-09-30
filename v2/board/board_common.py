@@ -6,10 +6,10 @@
   RunContext                     provenance + results-row metadata + output-dir rules
   run_env / env_meta             measurement environment handed down by run_sessions.py
                                  ($GOS_RUN_ENV: session_index, paper_grade, governor/frequency,
-                                 pinning, die temperature at step start, measured PL clock f_meas)
-  RunContext.f_used / clock_cols the clock used for every µs value: f_meas (PL clock calibration,
-                                 exp_fclk_cal.py) when it was measured at the current read-back
-                                 clock, else the read-back clock (labelled)
+                                 pinning, die temperature at step start, PL clock cross-check f_meas)
+  RunContext.f_used / clock_cols the clock used for every µs value: always the pl_clk0 PLL
+                                 read-back (clock of record, DECISIONS D20); f_meas
+                                 (exp_fclk_cal.py) is recorded beside it as a cross-check only
   write_csv                      results CSV (EXPERIMENTS.md "CSV rule" columns first)
 
 Layouts: on the laptop this file lives in v2/board/ (results -> v2/results/, dry runs ->
@@ -55,6 +55,7 @@ EXTRA_META = ("build_id_hw", "board_hostname", "clock_source", "scripts_commit",
               "session_index", "paper_grade", "env_step", "cpu_governor", "cpu_freq_khz",
               "cpu_affinity", "die_temp_start_c", "env_note")
 RUN_ENV_VAR = "GOS_RUN_ENV"
+F_USED_SOURCE = "f_readback (pl_clk0 PLL read-back, clock of record; f_meas is a cross-check only)"
 CLOCK_COLS = ("f_readback_mhz", "f_meas_mhz", "f_meas_ci_lo_mhz", "f_meas_ci_hi_mhz", "f_used_mhz",
               "f_used_source")
 SOURCE_HW = "hw"
@@ -374,21 +375,26 @@ class RunContext:
         self.run_env = run_env()
 
     def f_used(self, readback_mhz=None) -> tuple[float, str]:
-        """(clock in MHz for every µs value, its source). f_meas from the PL clock calibration
-        (exp_fclk_cal.py, passed down in $GOS_RUN_ENV) if it was measured at this read-back clock
-        (within CLOCK_TOL_MHZ), else the read-back clock itself."""
+        """(clock in MHz for every µs value, its source): ALWAYS the PLL read-back frequency
+        (DECISIONS D20, clock of record). The PL clock calibration (exp_fclk_cal.py) is a
+        cross-check only and is never used for a conversion."""
         rb = self.dev.fclk0_mhz() if readback_mhz is None else float(readback_mhz)
+        return rb, F_USED_SOURCE
+
+    def f_meas_at(self, readback_mhz: float) -> bool:
+        """True if $GOS_RUN_ENV carries a PL clock cross-check measured at this read-back clock."""
         e = self.run_env
         fm, fr = e.get("f_meas_mhz"), e.get("f_meas_readback_mhz")
-        if fm not in (None, "") and fr not in (None, "") and abs(float(fr) - rb) <= CLOCK_TOL_MHZ:
-            return float(fm), f"f_meas ({e.get('f_meas_source', 'calibration')}; {e.get('f_meas_step', '')})"
-        return rb, "f_readback (no PL clock calibration at this clock)"
+        return (fm not in (None, "") and fr not in (None, "")
+                and abs(float(fr) - float(readback_mhz)) <= CLOCK_TOL_MHZ)
 
     def clock_cols(self, readback_mhz=None) -> dict:
+        """f_used_* = the read-back clock; f_meas_* = the cross-check at this clock, if any
+        (recorded beside it, not used)."""
         rb = self.dev.fclk0_mhz() if readback_mhz is None else float(readback_mhz)
         f, src = self.f_used(rb)
         e = self.run_env
-        meas = src.startswith("f_meas")
+        meas = self.f_meas_at(rb)
         return {"f_readback_mhz": f"{rb:.6f}", "f_meas_mhz": f"{float(e['f_meas_mhz']):.6f}" if meas else "",
                 "f_meas_ci_lo_mhz": e.get("f_meas_ci_lo_mhz", "") if meas else "",
                 "f_meas_ci_hi_mhz": e.get("f_meas_ci_hi_mhz", "") if meas else "",

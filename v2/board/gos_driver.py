@@ -830,22 +830,60 @@ class GosDevice:
         self.host_path = host_path
         self._fast = host_path == "fast"
 
-    def timed_job(self, x, clock_ns=None, timeout_s: float | None = None) -> tuple[int, int, int]:
-        """PL clock calibration primitive (exp_fclk_cal.py). Untimed: input -> ACT0 and the
+    def poll_period_ns(self, clock_ns=None, n: int = 512) -> float:
+        """Median time of one STATUS read + loop iteration of timed_job's poll loop (idle core)."""
+        clk = clock_ns or (lambda: time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW))
+        read = self.csr.read
+        per = []
+        for _ in range(5):
+            t0 = clk()
+            for _ in range(n):
+                read(OFF_STATUS)
+            per.append((clk() - t0) / n)
+        return float(np.median(per))
+
+    def timed_job(self, x, clock_ns=None, timeout_s: float | None = None, dither_ns: int = 0,
+                  rng=None) -> tuple[int, int, int]:
+        """PL clock cross-check primitive (exp_fclk_cal.py). Untimed: input -> ACT0 and the
         pre-start clear. Timed with clock_ns (default CLOCK_MONOTONIC_RAW: not slewed by NTP):
-        CTRL.start + STATUS poll until done. Then TOTAL_CYC (lo, hi). Returns
-        (t_done - t_start in ns, TOTAL_CYC, polls)."""
+        t0, CTRL.start, [a random wait in [0, dither_ns)], a tight STATUS poll (per-word reads,
+        no clock read per poll), t1 right after the first poll that sees done. Then TOTAL_CYC
+        (lo, hi). Returns (t1 - t0 in ns, TOTAL_CYC, polls).
+
+        The job's end is only seen on the poll grid (one STATUS read ~ several µs), and the cycle
+        counts are deterministic, so without the random wait the detection latency is a fixed
+        phase of that grid and differs between job lengths. dither_ns >= one poll period makes
+        the phase uniform, so the minimum over many jobs converges to the true end."""
         if self._desc is None:
             raise GosError("load_net first")
         if not self._desc_valid:
             self.write_descriptors(self._desc, self.n_layers)
         clk = clock_ns or (lambda: time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW))
+        timeout = self.timeout_s if timeout_s is None else timeout_s
         self.write_input(x)
         self._clear_for_start()
+        wait = int(rng.integers(0, dither_ns)) if (dither_ns and rng is not None) else 0
+        read, write = self.csr.read, self.csr.write
+        polls = 0
         t0 = clk()
-        polls, _ = self.start_and_wait(timeout_s, clear=False)
-        t1 = clk()
-        return t1 - t0, self.read64(OFF_TOTAL_CYC), polls
+        write(OFF_CTRL, CTRL_START)
+        if wait:
+            t_w = clk() + wait
+            while clk() < t_w:
+                pass
+        t_end = t0 + int(timeout * 1e9)
+        while True:
+            st = read(OFF_STATUS)
+            if st & (ST_DONE | ST_ERROR):
+                t1 = clk()
+                break
+            polls += 1
+            if not polls % 256 and clk() > t_end:
+                raise GosTimeout(f"job not done after {timeout} s (STATUS=0x{st:X}, "
+                                 f"{polls} polls)", st, polls)
+        if st & ST_ERROR:
+            raise GosJobError(self.err_code(), st, self.violation())
+        return t1 - t0, self.read64(OFF_TOTAL_CYC), polls + 1
 
     def recover(self):
         """After a timeout / refused job: soft_reset and mark DESC for rewrite."""

@@ -167,9 +167,9 @@ def a2_latency(c: Ctx) -> Artifact:
              if tot[n] and tot[n]["rtl"] else "--")
     hw = {n: latest(art.rows("hw_a2_a3_cycles.csv", hw=True, net=n) or [], lambda r: r["layer"]).get("total")
           for n in NETS}
-    line(f"PL latency (\\textmu s) at $f_\\mathrm{{meas}}$, {c.board_label}", lambda n: art.cell(hw[n], "hw_us", "f2")
+    line(f"PL latency (\\textmu s) at the read-back clock, {c.board_label}", lambda n: art.cell(hw[n], "hw_us", "f2")
          if hw[n] and hw[n].get("hw_us") else art.placeholder(f"A2 {n}: hw_us"))
-    line(f"$f_\\mathrm{{meas}}$ (MHz), {c.board_label}", lambda n: art.cell(hw[n], "f_meas_mhz", "f3")
+    line(f"$f_\\mathrm{{meas}}$ cross-check (MHz), {c.board_label}", lambda n: art.cell(hw[n], "f_meas_mhz", "f3")
          if hw[n] and hw[n].get("f_meas_mhz") else art.placeholder(f"A2 {n}: f_meas_mhz (exp_fclk_cal)"))
     line(f"Clock read back (MHz), {c.board_label}", lambda n: art.cell(hw[n], "clock_mhz", "f3")
          if hw[n] and hw[n].get("clock_mhz") else art.placeholder(f"A2 {n}: clock_mhz"))

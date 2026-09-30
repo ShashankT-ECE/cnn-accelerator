@@ -56,7 +56,8 @@ cpu_affinity, die_temp_start_c):
   proc tree under <results>/.dryrun_env (DRY RUN on every line); the laptop's cpufreq is never
   touched.
 MEASURED PL CLOCK: sN.fcal (exp_fclk_cal.py) measures f_meas per session; later steps get it in
-  $GOS_RUN_ENV and convert every µs value with it (f_readback kept alongside).
+  $GOS_RUN_ENV and record it beside the read-back clock as a CROSS-CHECK; every µs value uses the
+  pl_clk0 PLL read-back (clock of record, DECISIONS D20). |f_meas - read-back| > 0.1 % is FLAGGED.
 SESSION INDEX (3-session repeatability): --session-index K tags every row; results of K = 1 go to
   <results>/, of K >= 2 to <results>/rep<K>/; aggregate_sessions.py combines them.
 
@@ -272,7 +273,7 @@ def build_steps(cfg: Config, sessions, quick: bool = False, window_s: float = 60
     steps: list[Step] = []
 
     def fcal(s: int) -> Step:
-        return Step(f"s{s}.fcal", s, f"PL clock calibration: f_meas (cycle counter vs "
+        return Step(f"s{s}.fcal", s, f"PL clock cross-check: f_meas vs the read-back clock (cycle counter vs "
                     f"CLOCK_MONOTONIC_RAW, {fcal_s:g} s)",
                     ["exp_fclk_cal.py", *dev, *wm, *dirty, "--seconds", f"{fcal_s:g}", "--tag",
                      f"_s{s}", "--seed", str(order_seed + 100 * s)],
@@ -912,7 +913,9 @@ def fmeas_for(state: dict, rd: Path, session: int) -> dict:
         return {"f_meas_mhz": float(r["f_meas_mhz"]), "f_meas_ci_lo_mhz": r.get("f_meas_ci_lo_mhz", ""),
                 "f_meas_ci_hi_mhz": r.get("f_meas_ci_hi_mhz", ""),
                 "f_meas_readback_mhz": float(r["f_readback_mhz"]),
-                "f_meas_source": r.get("f_meas_source", ""), "f_meas_step": sid}
+                "f_meas_source": r.get("f_meas_source", ""), "f_meas_step": sid,
+                "f_meas_rel_diff_pct": r.get("rel_diff_pct", ""),
+                "f_meas_flag": str(r.get("fcal_flag", "")).lower() == "true"}
     return {}
 
 
@@ -1544,7 +1547,15 @@ def _main(a, board_dir, data_dir, rd, window_s, gap_s, say, lock_fd, open_backen
                      env_paths=paths, strict_pin=envp["paper_grade"])
         say(f"[session] ===== {st.id}: {r['status'].upper()} (exit {r.get('exit_code')}, "
             f"{r['duration_s']:.1f} s; {len(r['outputs'])} outputs) =====")
-        report.append((st.id, r["status"], r["duration_s"], est, r.get("note", "")))
+        note = r.get("note", "")
+        if st.group == "fcal" and r["status"] == "ok":
+            fm = fmeas_for(state, rd, st.session)
+            if fm.get("f_meas_step") == st.id:
+                note = (f"cross-check f_meas {fm['f_meas_mhz']:.6f} vs read-back "
+                        f"{fm['f_meas_readback_mhz']:.6f} MHz: {fm['f_meas_rel_diff_pct']} %"
+                        + (" — FLAG: > 0.1 %" if fm["f_meas_flag"] and not dry else ""))
+                say(f"  [fcal] {note} (µs values use the read-back clock)")
+        report.append((st.id, r["status"], r["duration_s"], est, note))
         if r["status"] != "ok":
             if st.required:
                 any_fail = True

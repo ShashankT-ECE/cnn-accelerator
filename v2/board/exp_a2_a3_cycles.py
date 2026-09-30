@@ -9,9 +9,9 @@ Runs every image (default) and reads LAYER_CYC[l] and TOTAL_CYC after each job. 
 simulation network jobs, packaged rtl_network.csv; single-layer jobs from rtl_cycles.csv as a
 cross-check), hw_cycles (the value if identical on every image, else the median) with min/max and
 the number of distinct values over images (determinism), rtl_err_pct and hw_err_pct vs the model,
-µs at f_used (= the calibrated f_meas from exp_fclk_cal.py when it was measured at this read-back
-clock, else the read-back clock; f_readback_mhz / f_meas_mhz / f_used_mhz / f_used_source columns,
-hw_us_readback = the same cycles at the read-back clock), and for the total row MAC_ACTIVE/STALL
+µs at f_used (= the pl_clk0 PLL read-back, the clock of record (DECISIONS D20); f_meas from exp_fclk_cal.py is
+a cross-check column only; f_readback_mhz / f_meas_mhz / f_used_mhz / f_used_source columns,
+hw_us_readback = hw_us), and for the total row MAC_ACTIVE/STALL
 ranges and the wall-clock time per image (input write + clear + start/poll + logit read + counter
 read, perf_counter_ns) after discarding the first --wall-warmup images: median with the
 distribution-free order-statistic 95 % CI (stats.py), p5, p95, p99.
@@ -43,7 +43,7 @@ def _err(x, ref):
 def cycle_rows(ctx, dev, pkg, idx, clk: float, tag: str = "A2",
                wall_warmup: int = WALL_WARMUP) -> tuple[list[dict], dict, bool]:
     """Run the images, return (rows, raw per-image arrays, all-equal-to-model flag).
-    clk = the read-back clock; µs use ctx.f_used(clk) (f_meas at that clock, else clk)."""
+    clk = the read-back clock; µs use ctx.f_used(clk) = clk (clock of record)."""
     res = bc.infer_loop(dev, pkg, idx, read_counters=True, tag=f"{tag} {pkg.name}")
     good = res["ok"]
     n = int(good.sum())

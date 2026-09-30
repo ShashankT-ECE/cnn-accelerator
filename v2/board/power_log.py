@@ -57,9 +57,9 @@ control) + idle_pre r+1, or idle_post after the last repeat). This cancels a lin
 idle level. If only one bracketing idle exists it is used alone (recorded in p_idle_ref).
     dP = P_run - P_idle;  time/image = phase duration / images;
     energy/image = dP x time/image (J and mJ)                          (every run kind)
-Accelerator energy two ways (all computed here, per repeat; f = f_used = the calibrated f_meas
-(exp_fclk_cal.py, passed down by run_sessions.py) when it was measured at this read-back clock,
-else the pl_clk0 read back; f_readback_mhz / f_used_mhz / f_used_source recorded):
+Accelerator energy two ways (all computed here, per repeat; f = f_used = the pl_clk0 PLL
+read-back, the clock of record (DECISIONS D20); f_meas (exp_fclk_cal.py) is a cross-check only;
+f_readback_mhz / f_used_mhz / f_used_source recorded):
     E_sys  = dP_accel x time/image (host loop included)       accel_e_sys_mj (= energy_per_image)
     t_PL   = TOTAL_CYC / f  (TOTAL_CYC = hardware counter, median over the phase's images)
     E_comp = dP_accel x t_PL (compute-only)                   accel_e_comp_mj
@@ -837,7 +837,7 @@ SUMMARY_FIELDS = SENSOR_FIELDS + ["row_kind", "repeat", "n_repeats", "p_idle_rul
                                   *bc.CLOCK_COLS] + NUM_SUMMARY
 P_IDLE_RULE = "mean of the phase means of the two idle phases bracketing the run phase"
 ENERGY_RULE = ("E_sys = dP_accel x time/image; E_comp = dP_accel x TOTAL_CYC/f (f = f_used_mhz: "
-               "calibrated f_meas at this clock, else the clock read back, TOTAL_CYC median of the phase); duty = (TOTAL_CYC/f)/(time/image); "
+               "the pl_clk0 PLL read-back = clock of record, TOTAL_CYC median of the phase); duty = (TOTAL_CYC/f)/(time/image); "
                "_net: dP_accel - dP_control")
 
 
@@ -964,13 +964,13 @@ def run_power_protocol(ctx, net: str, cpu_fn=None, *, accel_fn=None, sensor="aut
     if clock_mhz is None and getattr(ctx, "dev", None) is not None:
         clock_mhz = ctx.dev.fclk0_mhz()
     clk = f"{clock_mhz:.6f}" if isinstance(clock_mhz, float) else clock_mhz
-    # clock for t_PL / E_comp: the calibrated f_meas at this clock, else the read-back clock
+    # clock for t_PL / E_comp: the pl_clk0 PLL read-back (clock of record)
     if hasattr(ctx, "clock_cols") and clock_mhz not in (None, ""):
         ccols = ctx.clock_cols(float(clock_mhz))
         f_comp = float(ccols["f_used_mhz"])
     else:
         ccols = {"f_readback_mhz": clk if clk is not None else "", "f_used_mhz": clk if clk is not None else "",
-                 "f_used_source": "f_readback (no calibration)" if clk not in (None, "") else ""}
+                 "f_used_source": "f_readback" if clk not in (None, "") else ""}
         f_comp = clock_mhz
     work = {"idle": idle_until, "accel": accel_fn, "cpu": cpu_fn, "control": control_fn}
     wl_name = {"idle": "none (sleep)", "accel": accel_label or "accel callable",

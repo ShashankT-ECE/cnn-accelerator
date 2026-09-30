@@ -30,8 +30,9 @@ Per accelerator image (images 0..N-1 cycled):
   ps_dequant    PS float32 dequant + argmax (board_common.predict, D2)
   end_to_end    sum of the four phases above
   counter_read  TOTAL/MAC/STALL/LAYER_CYC reads (measurement overhead; NOT in end_to_end)
-  pl_compute    TOTAL_CYC / f_used (f_used = the calibrated f_meas when available, else the
-                read-back clock; columns f_readback_mhz / f_meas_mhz / f_used_mhz / f_used_source)
+  pl_compute    TOTAL_CYC / f_used (f_used = the pl_clk0 PLL read-back, the clock of record;
+                f_meas is a cross-check column only; columns f_readback_mhz / f_meas_mhz /
+                f_used_mhz / f_used_source)
 CPU condition phases: cpu_compute (runner) and end_to_end (runner + argmax).
 Statistics (stats.summarize): median with the distribution-free order-statistic 95 % CI
 (median_ci_lo_us / median_ci_hi_us, achieved coverage), p5, p95, p99, mean, min, max in µs;
