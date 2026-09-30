@@ -187,13 +187,14 @@ All V2 work lives in `v2/` on branch `v2-dev`. For any file under `v2/`,
 directory. Legacy files (rtl/, sim/, python/, data/, docs/, scripts/,
 software/) are read-only references for V2 work.
 
-## Where the project stands (updated 2026-09-30, after OC-3 / limits audit)
+## Where the project stands (updated 2026-09-30, after board Session 1 at 250 MHz)
 
 Update this section whenever a step finishes. It is a pointer summary. The
 records of truth are `v2/docs/DECISIONS.md` (decisions D1–D18, open
 conflicts, TODO) and the script-generated `v2/results/*.csv`. Every number
 below is copied from those sources and labelled model / RTL sim /
-post-impl. **None of them are KV260 measurements yet.**
+post-impl / measured on KV260. **The only KV260 measurements so far are the Session 1
+bring-up checks (below); no paper rows have been copied back.**
 
 ### What the project is
 
@@ -288,6 +289,20 @@ rule in `v2/CLAUDE.md`). xsim may run alongside it. The board workflow
   rows checked only against their producer's sources (Vivado rows: v2/rtl + v2/vivado). All v2/model
   producers re-run @ e9cbb88, results identical, `check_results.py` ALL CLEAN. Post-ROCS checker rules: DECISIONS TODO.
 
+- **Board bring-up + Session 1 (2026-09-30, measured on KV260; code 9e4ca90 / f6afef2 / 7bd7173,
+  results eb5fca3, not pushed):** first run (scripts 11aa4f0) passed every check but ran gos_300 at
+  **199.998 MHz** (PYNQ does not program the Vivado PS PLLs) → archived as
+  `v2/results/board_20260930_gos300_at_200mhz/`, not a 300 MHz result. **D19:** the driver sets
+  pl_clk0 to the closed clock after every overlay load and verifies the read-back ±0.1 MHz;
+  pre-flight requires equality in every session. **D20:** clock of record = PLL read-back for every
+  µs value; fcal is a cross-check (dithered lower-envelope estimator, flag at > 0.1 %).
+  `./session.sh` handles sudo + the PYNQ venv itself (`./session.sh py <script>` for single scripts).
+  **Rerun (deploy eb5fca3, `./session.sh 1 --fresh`): gos_300 fails pre-flight — 300 MHz is not
+  reachable from the boot image's PLLs (PL0 source IOPLL 999.99 MHz: 250 or 333.33) — fallback to
+  gos_250 at 249.9975 MHz read-back; s1.shell / smoke / smoke_slice / fast / fcal all OK, both nets
+  bit- and cycle-exact, fcal −0.0445 % vs read-back.** Results are on the board (`~/gos/results`),
+  not yet copied back. INA260: hwmon `ina260_u14`, 10 mW / 1 mA / 1 mV steps, ~6–7 value changes/s.
+
 ### Final implementation table (post-impl, build fd880d43, from `v2/results/impl_gos.csv`)
 
 | Clock | Complete? | Current RTL? | WNS (ns) | WHS (ns) | CW | LUT / FF / DSP / BRAM36+18 | bit sha256 | Verdict |
@@ -302,7 +317,10 @@ untruncated netlist scan passes.
 
 ### Pending (in order)
 
-1. **KV260 board sessions** (nothing measured on the board yet). Laptop: commit-clean
+1. **KV260 board sessions 2 and 3** (Session 1 done at 250 MHz, state on the board). Open before
+   Session 3: the B2 sweep grid (only 100/111/125/143/167/200/250 MHz reachable; `exp_b2_clock.py`
+   still uses pynq's closest-frequency setter). Open user decision: reprogram a PS PLL to run gos_300.
+   Deploy recipe: Laptop: commit-clean
    tree → `make_board_data.py` → `v2/board/deploy.sh <ip>` (ships gos_300 + gos_250) and
    `v2/dpu/deploy_dpu.sh <ip>`. Board (`cd ~/gos`, tmux, stop packagekit/unattended-upgrades):
    `power_log.py --list-sensors` / `--sample-only` first, then `./session.sh 1`
