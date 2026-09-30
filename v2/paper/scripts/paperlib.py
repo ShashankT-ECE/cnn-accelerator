@@ -53,7 +53,7 @@ DRYRUN_MARK = "DRY RUN -- NOT DATA"
 STATIC_TEXT = [
     "LeNet-5", "CIFAR-10", "INT8", "INT32", "FP32", "KV260", "Cortex-A53", "A53", "SHA-256",
     "sha256", "RAMB36", "RAMB18", "BRAM36", "BRAM18", "DSP48E2", "fp32", "int8",
-    "A1", "A2", "A3", "A4", "A5", "A6", "B1", "B2", "B3", "C1", "C2", "INA260", "p95", "p5",
+    "A1", "A2", "A3", "A4", "A5", "A6", "B1", "B2", "B3", "C1", "C2", "INA260", "p95", "p5", "p50",
     "12 V", "pl\\_clk0", "pl_clk0", "xck26-sfvc784-2LV-c", "e2e", "r2",
     "95PCT CI", "p99",
 ]
@@ -386,8 +386,9 @@ def latex_table(art: Artifact, colspec: str, header: list[str], body: list[list[
         if isinstance(r, str):
             out.append(r)
         else:
-            if len(r) != ncol:
-                raise ValueError(f"{art.name}: row has {len(r)} cells, table has {ncol}: {r}")
+            span = sum(int(m.group(1)) if (m := re.match(r"\\multicolumn\{(\d+)\}", str(x))) else 1 for x in r)
+            if span != ncol:
+                raise ValueError(f"{art.name}: row spans {span} columns, table has {ncol}: {r}")
             out.append(" & ".join(r) + r" \\")
     out.append(bot)
     out.append(r"\end{tabular}")

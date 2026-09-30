@@ -88,7 +88,8 @@ def res(tmp_path):
     d = tmp_path / "results"
     d.mkdir()
     for p in DEFAULT_RESULTS.glob("*.csv"):          # top level only: never the dryrun dir
-        shutil.copy(p, d / p.name)
+        if not p.name.startswith("hw_"):             # board data absent: tests add synthetic hw files
+            shutil.copy(p, d / p.name)
     return d
 
 
@@ -98,7 +99,8 @@ def baseline(tmp_path_factory):
     d = t / "results"
     d.mkdir()
     for p in DEFAULT_RESULTS.glob("*.csv"):
-        shutil.copy(p, d / p.name)
+        if not p.name.startswith("hw_"):
+            shutil.copy(p, d / p.name)
     out = t / "out"
     return d, out, run(d, out)
 
@@ -480,3 +482,53 @@ def test_tables_extra_hook_guarded(res, tmp_path, monkeypatch):
     out = tmp_path / "out"
     m = run(res, out)
     assert not m["failures"]
+
+
+# ---- best CPU baseline / speedups (user decision 2026-09-30: claims only vs the best CPU baseline) ----------
+def _cpu_row(net, kind, th, mode, med, line):
+    return {"net": net, "kind": kind, "threads": str(th), "mode": mode, "median_us": str(med),
+            "status": "ok", "timestamp": "2026-10-01T00:00:00+00:00", "_file": "v2/results/hw_cpu_baseline.csv",
+            "_line": line, "accuracy": ""}
+
+
+def test_best_cpu_is_the_fastest_e2e_configuration():
+    sys.path.insert(0, str(SCRIPTS))
+    import tables
+    rows = []
+    ln = 2
+    for net, vals in (("lenet5", {("cpu_int8_ref", 1): 44800, ("cpu_fp32_numpy", 1): 2170, ("cpu_ort_fp32", 4): 760,
+                                  ("cpu_ort_int8", 1): 880, ("cpu_ort_int8", 4): 700}),
+                      ("cifar10", {("cpu_fp32_numpy", 4): 6800, ("cpu_ort_int8", 4): 1200, ("cpu_ort_fp32", 4): 2000})):
+        for (k, th), v in vals.items():
+            rows.append(_cpu_row(net, k, th, "e2e", v, ln))
+            rows.append(_cpu_row(net, k, th, "compute", v - 100, ln + 1))
+            ln += 2
+    rows.append(dict(_cpu_row("lenet5", "cpu_ort_int8", 1, "accuracy", "", ln), accuracy="98.5"))
+    best = tables._best_cpu(rows)
+    assert best["lenet5"][:2] == ("cpu_ort_int8", "4") and best["cifar10"][:2] == ("cpu_ort_int8", "4")
+    assert best["lenet5"][2]["median_us"] == "700" and best["lenet5"][3]["median_us"] == "600"
+    # a failed / unavailable row never wins
+    bad = dict(_cpu_row("lenet5", "cpu_ort_fp32", 1, "e2e", 1, 99), status="unavailable: onnxruntime not installed")
+    assert tables._best_cpu(rows + [bad])["lenet5"][:2] == ("cpu_ort_int8", "4")
+
+
+def test_a4_labels_board_counter_as_array_busy_fraction(baseline):
+    res, out, m = baseline
+    t = tex(out, "tab_a4_util")
+    assert "Array busy fraction" in t and "Lane util." in t and "lane utilization" in t
+    assert "PE util" not in t
+
+
+def test_real_board_results_generate_without_failures(tmp_path):
+    """The committed board results (whatever is there) go through the whole pipeline."""
+    d = tmp_path / "results"
+    d.mkdir()
+    for p in DEFAULT_RESULTS.glob("*.csv"):
+        shutil.copy(p, d / p.name)
+    if not (d / "hw_cpu_baseline.csv").exists():
+        pytest.skip("no board results committed")
+    out = tmp_path / "out"
+    run(d, out)
+    a5 = tex(out, "tab_a5_cpu")
+    assert "Best CPU baseline" in a5 and "Speedup vs best CPU" in a5
+    assert (out / "tab_percentiles.tex").exists()

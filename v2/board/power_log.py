@@ -701,13 +701,27 @@ def gos_workload(dev, pkg, warmup: int = 20) -> AccelWorkload:
     return AccelWorkload(dev, pkg, warmup)
 
 
-def cpu_workload(runner, xs, warmup: int = 1):
-    """CPU callable from a cpu/cpu_infer runner and its input array (x_nchw or x_f32)."""
+def cpu_workload(runner, xs, warmup: int = 1, phase_cores=None):
+    """CPU callable from a cpu/cpu_infer runner and its input array (x_nchw or x_f32).
+
+    phase_cores (set of core ids, multi-thread CPU kinds): the calling thread is allowed on these
+    cores for the duration of the CPU phase only and its previous affinity is restored after it
+    (the accelerator / control / idle phases stay on the step's pinned measurement core)."""
     n = xs.shape[0]
     step = lambda k: runner(xs[k % n])  # noqa: E731
     for k in range(warmup):
         step(k)
-    return lambda deadline: loop_until(step, deadline)
+    if not phase_cores:
+        return lambda deadline: loop_until(step, deadline)
+
+    def phase(deadline):
+        prev = os.sched_getaffinity(0)
+        os.sched_setaffinity(0, phase_cores)
+        try:
+            return loop_until(step, deadline)
+        finally:
+            os.sched_setaffinity(0, prev)
+    return phase
 
 
 # ---- protocol ----------------------------------------------------------------------------------
@@ -1138,6 +1152,10 @@ def main(argv=None) -> int:
     ap.add_argument("--cpu-kind", default="cpu_int8_ref",
                     help="cpu/cpu_infer kind, or 'none' to skip the CPU phases")
     ap.add_argument("--cpu-threads", type=int, default=1)
+    ap.add_argument("--cpu-cores", default="",
+                    help="cores for the CPU phases (e.g. 0-3): the ORT thread pool is created on "
+                         "them (pool threads inherit the creating thread's affinity) and the "
+                         "calling thread moves onto them during CPU phases only; '' = stay pinned")
     ap.add_argument("--prefix", default=PREFIX_B1)
     ap.add_argument("--tag", default=None, help="output tag (default _<net>; --sample-only _sensorcheck)")
     ap.add_argument("--mock-idle-w", type=float, default=None)
@@ -1187,10 +1205,20 @@ def main(argv=None) -> int:
             from cpu.cpu_infer import make_runner
         except ImportError as e:
             raise SystemExit(f"CPU phases need cpu/cpu_infer.py (or --cpu-kind none): {e}")
-        runner = make_runner(a.cpu_kind, a.net, a.data_dir, a.cpu_threads)
+        import board_env as benv
+        cores = benv.parse_cores(a.cpu_cores) if a.cpu_cores else None
+        home = os.sched_getaffinity(0)
+        if cores:
+            os.sched_setaffinity(0, cores)       # ORT creates its pool threads here
+        try:
+            runner = make_runner(a.cpu_kind, a.net, a.data_dir, a.cpu_threads)
+        finally:
+            os.sched_setaffinity(0, home)
         xs = pkg.x_nchw if a.cpu_kind == "cpu_int8_ref" else pkg.x_f32
-        cpu_fn = cpu_workload(runner, xs)
-        cpu_label = f"{a.cpu_kind} x{a.cpu_threads} threads {a.net}"
+        cpu_fn = cpu_workload(runner, xs, phase_cores=cores)
+        cpu_label = (f"{a.cpu_kind} x{a.cpu_threads} threads {a.net}"
+                     + (f" (cores {a.cpu_cores} during CPU phases; ORT {runner.version})"
+                        if hasattr(runner, "version") else ""))
     durations = {k: v for k, v in (("idle", a.idle_s), ("accel", a.accel_s), ("cpu", a.cpu_s),
                                    ("control", a.control_s)) if v is not None}
     try:

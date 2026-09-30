@@ -17,7 +17,7 @@ is imported (ORT: intra_op_num_threads = threads):
                    cpu_int8_ref, input quantization) -> logits -> argmax prediction;
   * warm-up calls discarded, then ``--runs`` timed calls (>= 100 for paper data),
     cycling over the first ``--runs`` test images; median with the distribution-free
-    order-statistic 95 % CI (../stats.py: median_ci_lo_us / median_ci_hi_us), p5, p95;
+    order-statistic 95 % CI (../stats.py: median_ci_lo_us / median_ci_hi_us), p5, p50 (= median), p95, p99;
   * pinning (EXPERIMENTS.md "Measurement rigor"): each worker process sets its CPU affinity
     before numpy is imported: 1 thread -> --pin-1t cores, more -> --pin-nt cores (read back,
     recorded in cpu_affinity); rows carry session_index / paper_grade / environment columns
@@ -56,7 +56,7 @@ META_COLUMNS = ("timestamp", "git_commit", "git_dirty", "vivado_version", "bitst
                 "board_id", "net", "layer", "clock_mhz", "source", "duration_s",
                 "num_inferences")
 FIELDS = ("kind", "label", "threads", "mode", "median_us", "median_ci_lo_us", "median_ci_hi_us",
-          "ci_coverage", "ci_method", "p5_us", "p95_us", "mean_us", "cpu_affinity", "pin_requested",
+          "ci_coverage", "ci_method", "p5_us", "p50_us", "p95_us", "p99_us", "mean_us", "cpu_affinity", "pin_requested",
           "session_index", "paper_grade", "env_step", "cpu_governor", "cpu_freq_khz",
           "die_temp_start_c", "env_note",
           "runs", "warmup", "accuracy", "correct", "n_images", "acc_batch",
@@ -74,8 +74,9 @@ def _percentiles(ts_ns):
     import stats
     a = np.asarray(ts_ns, dtype=np.float64) / 1e3
     lo, hi, cov = stats.median_ci(a)
-    return {"median_us": float(np.median(a)), "p5_us": float(np.percentile(a, 5)),
-            "p95_us": float(np.percentile(a, 95)), "mean_us": float(a.mean()),
+    return {"median_us": float(np.median(a)), "p50_us": float(np.percentile(a, 50)),
+            "p5_us": float(np.percentile(a, 5)), "p95_us": float(np.percentile(a, 95)),
+            "p99_us": float(np.percentile(a, 99)), "mean_us": float(a.mean()),
             "median_ci_lo_us": "" if lo is None else lo, "median_ci_hi_us": "" if hi is None else hi,
             "ci_coverage": "" if cov is None else round(cov, 4), "ci_method": stats.CI_METHOD_ORDER}
 
@@ -514,7 +515,7 @@ def main() -> int:
                     else:
                         print(f"  {net:8s} {kind:15s} t={th} {r['mode']:8s} median "
                               f"{r['median_us']:10.1f} us  p5 {r['p5_us']:10.1f}  "
-                              f"p95 {r['p95_us']:10.1f}  (runs {r['runs']})", flush=True)
+                              f"p95 {r['p95_us']:10.1f}  p99 {r['p99_us']:10.1f}  (runs {r['runs']})", flush=True)
                     rows.append(row)
 
     out_dir.mkdir(parents=True, exist_ok=True)

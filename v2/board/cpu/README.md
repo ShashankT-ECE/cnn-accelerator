@@ -47,7 +47,7 @@ Laptop numbers are not paper data.
 ## Board
 
 ```bash
-pip install onnxruntime==1.19.2        # optional; same version as the laptop export/verification
+pip install onnxruntime==1.19.2        # installed on the KV260 2026-09-30 (DECISIONS D22: packages added, none changed)
 python3 run_cpu_baselines.py --data-dir ~/gos/data --out-dir ~/gos/results --tag board
 ```
 `--tag board` requires an aarch64 host and refuses (unless `--allow-dirty`) when DEPLOY_INFO.json

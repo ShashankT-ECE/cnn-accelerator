@@ -375,10 +375,12 @@ def build_steps(cfg: Config, sessions, quick: bool = False, window_s: float = 60
 # B1 = the INA260 SOM-rail power protocol (power_log.py), one step per net; the ONLY power source.
 # Phases per repeat idle + {accel, control, cpu} each bracketed by idle phases, the three run
 # phases in a seeded random order per repeat (--order random --order-seed S, recorded), x R + one
-# final idle -> 6R+1 phases (--no-power-control: 4R+1). CPU phases = cpu_int8_ref, 1 thread.
+# final idle -> 6R+1 phases (--no-power-control: 4R+1). CPU phases = onnxruntime INT8, 4 threads on
+# cores 0-3 (user decision 2026-09-30: the CPU condition is the fastest CPU baseline; in the board
+# probe of 2026-09-30 ORT INT8 x4 had the lowest end-to-end time on both nets, see hw_cpu_baseline.csv).
 POWER_HOOK_SCRIPT = "power_log.py"
 POWER_LABEL = "SOM-rail power (INA260)"          # = power_log.LABEL
-B1_CPU_KIND, B1_CPU_THREADS = "cpu_int8_ref", 1
+B1_CPU_KIND, B1_CPU_THREADS, B1_CPU_CORES = "cpu_ort_int8", 4, "0-3"
 B1_POWER_OVERHEAD_S = 60.0     # package verify + load_net + CPU runner build + warm-ups
 B2_PER_CLOCK_OVERHEAD_S = 20.0  # set clock, soft_reset, reload + readback, sensor probe, CSVs
 
@@ -406,6 +408,7 @@ def power_hook_steps(cfg: Config, dev: list, dirty: list, window_s: float, repea
             [POWER_HOOK_SCRIPT, *dev, *(wm or []), *dirty, "--protocol", "--net", net, "--tag", tag,
              "--phase-s", f"{window_s:g}", "--repeats", str(repeats), "--rate-hz", f"{rate_hz:g}",
              "--cpu-kind", B1_CPU_KIND, "--cpu-threads", str(B1_CPU_THREADS),
+             "--cpu-cores", B1_CPU_CORES,
              "--order", "random", "--order-seed", str(order_seed + 10 + i),
              *([] if control else ["--no-control"]), *extra],
             kind="fixed", fixed_s=power_phases(repeats, control) * window_s + B1_POWER_OVERHEAD_S,

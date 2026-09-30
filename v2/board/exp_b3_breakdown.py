@@ -61,7 +61,7 @@ PHASES = ("input_write", "status_clear", "start_done", "start_write", "poll", "l
 CPU_PHASES = ("cpu_compute", "end_to_end")
 IN_E2E = ("input_write", "status_clear", "start_done", "logit_read", "ps_dequant")
 FIELDS = ["phase", "condition", "images", "warmup_discarded", "median_us", "median_ci_lo_us",
-          "median_ci_hi_us", "ci_coverage", "ci_method", "repeats_ok", "p5_us", "p95_us", "p99_us",
+          "median_ci_hi_us", "ci_coverage", "ci_method", "repeats_ok", "p5_us", "p50_us", "p95_us", "p99_us",
           "mean_us", "min_us", "max_us", "in_end_to_end", "write_mode", "host_path", "fast_store",
           "measurement", "logit_mismatches", "polls_median", "soft_reset_clears", "interleave",
           "conditions", "order_seed", "rounds", "block_n", "block_warmup", "block_median_min_us",
@@ -231,7 +231,8 @@ def main(argv=None) -> int:
                            median_us=stats.fmt(s["median"]), median_ci_lo_us=stats.fmt(s["ci_lo"]),
                            median_ci_hi_us=stats.fmt(s["ci_hi"]), ci_coverage=stats.fmt(s["ci_coverage"], 4),
                            ci_method=s["ci_method"], repeats_ok=s["repeats_ok"],
-                           p5_us=stats.fmt(s["p5"]), p95_us=stats.fmt(s["p95"]), p99_us=stats.fmt(s["p99"]),
+                           p5_us=stats.fmt(s["p5"]), p50_us=stats.fmt(s["median"]), p95_us=stats.fmt(s["p95"]),
+                           p99_us=stats.fmt(s["p99"]),
                            mean_us=stats.fmt(s["mean"]), min_us=stats.fmt(s["min"]),
                            max_us=stats.fmt(s["max"]),
                            in_end_to_end=(p in IN_E2E) if c != "cpu" else (p == "cpu_compute"),

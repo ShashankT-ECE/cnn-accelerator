@@ -31,7 +31,7 @@ FIELDS = ["images", "model_cycles", "rtl_cycles", "rtl_single_layer_cycles", "hw
           "hw_min", "hw_max", "hw_distinct", "hw_images_equal_model", "rtl_err_pct",
           "hw_err_pct", "model_us", "hw_us", "hw_us_readback", "hw_mac_active_min",
           "hw_mac_active_max", "hw_stall_max", "wall_us_median", "wall_us_ci_lo", "wall_us_ci_hi",
-          "wall_ci_coverage", "wall_ci_method", "wall_us_p5", "wall_us_p95", "wall_us_p99",
+          "wall_ci_coverage", "wall_ci_method", "wall_us_p5", "wall_us_p50", "wall_us_p95", "wall_us_p99",
           "wall_images", "wall_warmup_discarded", "wall_repeats_ok", "job_errors", *bc.CLOCK_COLS]
 WALL_WARMUP = 50
 
@@ -91,7 +91,8 @@ def cycle_rows(ctx, dev, pkg, idx, clk: float, tag: str = "A2",
                 row.update(wall_us_median=stats.fmt(ws["median"]), wall_us_ci_lo=stats.fmt(ws["ci_lo"]),
                            wall_us_ci_hi=stats.fmt(ws["ci_hi"]),
                            wall_ci_coverage=stats.fmt(ws["ci_coverage"], 4), wall_ci_method=ws["ci_method"],
-                           wall_us_p5=stats.fmt(ws["p5"]), wall_us_p95=stats.fmt(ws["p95"]),
+                           wall_us_p5=stats.fmt(ws["p5"]), wall_us_p50=stats.fmt(ws["median"]),
+                           wall_us_p95=stats.fmt(ws["p95"]),
                            wall_us_p99=stats.fmt(ws["p99"]), wall_images=ws["n"],
                            wall_warmup_discarded=int(good.sum()) - ws["n"],
                            wall_repeats_ok=ws["repeats_ok"])

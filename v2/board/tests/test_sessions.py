@@ -363,8 +363,8 @@ def test_session3_power_steps_ina260_primary(env):
         a = s.argv
         assert a[0] == RS.POWER_HOOK_SCRIPT and "--protocol" in a and "--bit" in a
         assert a[a.index("--net") + 1] == net and a[a.index("--tag") + 1] == f"_{net}"
-        assert a[a.index("--cpu-kind") + 1] == "cpu_int8_ref"
-        assert a[a.index("--cpu-threads") + 1] == "1"
+        assert a[a.index("--cpu-kind") + 1] == "cpu_ort_int8"          # best CPU baseline (ORT INT8)
+        assert a[a.index("--cpu-threads") + 1] == "4" and a[a.index("--cpu-cores") + 1] == "0-3"
         assert a[a.index("--repeats") + 1] == "3" and a[a.index("--phase-s") + 1] == "60"
         assert "mock" not in a and s.out_flag == "--out-dir"
         assert set(s.expect) == {f"hw_b1_power_ina260_{k}_{net}.csv"

@@ -486,3 +486,16 @@ def test_control_requires_accel_workload(dry_ctx):
     with pytest.raises(ValueError):
         pl.run_power_protocol(dry_ctx, "lenet5", None, accel_fn=counting(10), sensor=pl.MockSensor(),
                               phase_s=0.05, repeats=1, control=True)
+
+
+def test_cpu_workload_phase_cores_restore_affinity(monkeypatch):
+    """Multi-thread CPU kinds: the calling thread moves to the phase cores for the phase only."""
+    import os
+    calls = []
+    monkeypatch.setattr(os, "sched_getaffinity", lambda pid: {3})
+    monkeypatch.setattr(os, "sched_setaffinity", lambda pid, cores: calls.append(set(cores)))
+    import numpy as np
+    fn = pl.cpu_workload(lambda x: None, np.zeros((4, 2)), phase_cores={0, 1, 2, 3})
+    calls.clear()
+    fn(pl.time.monotonic() + 0.01 if hasattr(pl, "time") else 0)
+    assert calls[0] == {0, 1, 2, 3} and calls[-1] == {3}
