@@ -110,7 +110,6 @@ import re  # noqa: E402
 import shutil  # noqa: E402
 import socket  # noqa: E402
 import subprocess  # noqa: E402
-import threading  # noqa: E402
 import time  # noqa: E402
 from dataclasses import dataclass  # noqa: E402
 from pathlib import Path  # noqa: E402
@@ -501,10 +500,53 @@ def banner(what: str, s: dict, extra: str = ""):
           f"=====", flush=True)
 
 
+MIN_RUN_RATE_FRACTION = 0.5     # a run phase sampled below this fraction of the idle-phase rate fails the step
+
+
+class UndersampledError(RuntimeError):
+    """A run (non-idle) phase got far fewer INA260 samples than the idle phases: the sampler was starved."""
+
+
+def _sampler_main(sensor, rate_hz: float, q, stop_ev, phase_buf, err_val, avoid_cores):
+    """Sampler PROCESS body: read the sensor at rate_hz until stop_ev, put samples on q, then None.
+
+    Why a process (2026-09-30, B1 check on the KV260): as a thread in the workload's interpreter the
+    sampler was starved by the GIL — 1-14 samples in a 20-30 s accelerator phase (max gap 3.5-7.8 s)
+    instead of 10 Hz, with the tight MMIO loops (fast path) and with the small numpy calls of the PS
+    dequant (safe path). A separate process shares no GIL with the workload, so it can neither be
+    starved nor perturb the workload's interpreter; it is also moved off the workload's core."""
+    try:
+        if avoid_cores:
+            os.sched_setaffinity(0, avoid_cores)
+    except (AttributeError, OSError):
+        pass
+    period = 1.0 / rate_hz
+    nxt = time.monotonic()
+    while not stop_ev.is_set():
+        t, te = time.monotonic(), time.time()
+        ph = phase_buf.value.decode("ascii", "replace")
+        try:
+            r = sensor.read(ph)
+        except Exception:  # noqa: BLE001 - a sensor glitch must not kill the logger
+            r = None
+        if r is None:
+            with err_val.get_lock():
+                err_val.value += 1
+        else:
+            q.put({"t_mono": t, "t_epoch": te, "live_phase": ph, "r": r})
+        nxt += period
+        now = time.monotonic()
+        if nxt < now:          # fell behind: do not burst, restart the schedule (gap recorded)
+            nxt = now
+        stop_ev.wait(nxt - now)
+    q.put(None)
+
+
 class PowerLogger:
-    """Background sampling thread at a fixed rate. Samples carry monotonic + UTC epoch time.
-    Phase windows are opened/closed atomically with the sampler (same lock), so a sample with
-    start <= t < stop was taken while that phase was active."""
+    """Sampling PROCESS at a fixed rate (see _sampler_main). Samples carry monotonic + UTC epoch time
+    (CLOCK_MONOTONIC is system-wide, so the parent's phase stamps and the child's sample times are
+    comparable); a sample with start <= t < stop was taken while that phase was active. The phase
+    label the sensor sees (mock levels) is shared memory updated by begin/end."""
 
     def __init__(self, sensor: Sensor, rate_hz: float = DEFAULT_RATE_HZ):
         if rate_hz <= 0:
@@ -512,30 +554,64 @@ class PowerLogger:
         self.sensor, self.rate_hz = sensor, float(rate_hz)
         self.samples: list[dict] = []
         self.windows: list[dict] = []
-        self.read_errors = 0
-        self._phase = ""
-        self._lock = threading.Lock()
-        self._stop = threading.Event()
-        self._thread: threading.Thread | None = None
+        self._read_errors = 0
+        self._proc = None
+        self._err = None
         self.t_start = self.t_stop = None
 
+    @property
+    def read_errors(self) -> int:
+        return self._err.value if self._err is not None and self._proc is not None else self._read_errors
+
+    def _set_phase(self, name: str):
+        self._phase_buf.value = name.encode("ascii", "replace")[:63]
+
     def start(self):
-        with self._lock:
-            if self._thread is not None:
-                raise RuntimeError("PowerLogger already started")
-            self._stop.clear()
-            self.t_start = time.monotonic()
-            self._thread = threading.Thread(target=self._run, name="power_log", daemon=True)
-            self._thread.start()
+        import multiprocessing as mp
+        if self._proc is not None:
+            raise RuntimeError("PowerLogger already started")
+        mpx = mp.get_context("fork")
+        self._q, self._stop_ev = mpx.Queue(), mpx.Event()
+        self._phase_buf, self._err = mpx.Array("c", 64), mpx.Value("i", 0)
+        try:                      # workload pinned to some cores: run the sampler on the others
+            parent = set(os.sched_getaffinity(0))
+            allc = set(range(os.cpu_count() or 1))
+            others = allc - parent if len(parent) < len(allc) else set()
+        except (AttributeError, OSError):
+            others = set()
+        self.t_start = time.monotonic()
+        self._proc = mpx.Process(target=_sampler_main, name="power_log_sampler", daemon=True,
+                                 args=(self.sensor, self.rate_hz, self._q, self._stop_ev, self._phase_buf,
+                                       self._err, others))
+        self._proc.start()
+
+    def _drain(self) -> bool:
+        """Move the samples the sampler process has queued into self.samples; True once its end marker came."""
+        import queue
+        if self._proc is None:
+            return True
+        while True:
+            try:
+                item = self._q.get_nowait()
+            except queue.Empty:
+                return False
+            if item is None:
+                return True
+            self.samples.append(item)
 
     def stop(self):
-        th = self._thread
-        if th is None:
+        if self._proc is None:
             return
-        self._stop.set()
-        th.join(timeout=10)
+        self._stop_ev.set()
+        deadline = time.monotonic() + 15
+        while not self._drain() and time.monotonic() < deadline:
+            time.sleep(0.01)
+        self._proc.join(timeout=5)
+        if self._proc.is_alive():
+            self._proc.terminate()
         self.t_stop = time.monotonic()
-        self._thread = None
+        self._read_errors = self._err.value
+        self._proc = None
 
     def __enter__(self):
         self.start()
@@ -544,50 +620,45 @@ class PowerLogger:
     def __exit__(self, *exc):
         self.stop()
 
-    def _run(self):
-        period = 1.0 / self.rate_hz
-        nxt = time.monotonic()
-        while not self._stop.is_set():
-            with self._lock:
-                t, te, ph = time.monotonic(), time.time(), self._phase
-                try:
-                    r = self.sensor.read(ph)
-                except Exception:  # noqa: BLE001 - a sensor glitch must not kill the logger
-                    r = None
-                if r is None:
-                    self.read_errors += 1
-                else:
-                    self.samples.append({"t_mono": t, "t_epoch": te, "live_phase": ph, "r": r})
-            nxt += period
-            now = time.monotonic()
-            if nxt < now:          # fell behind: do not burst, restart the schedule (gap recorded)
-                nxt = now
-            self._stop.wait(nxt - now)
-
     def begin(self, phase: str, extra: str = "") -> dict:
-        with self._lock:
-            self._phase = phase
-            s = stamp()
+        self._set_phase(phase)
+        s = stamp()
         banner("START", s, extra)
         return s
 
     def end(self, phase: str, s0: dict, extra: str = "", **info) -> dict:
-        with self._lock:
-            s1 = stamp()
-            self._phase = ""
+        s1 = stamp()
+        self._set_phase("")
         banner("STOP ", s1, extra)
         w = {"phase": phase, "start": s0, "stop": s1, **info}
         self.windows.append(w)
         return w
 
     def window_samples(self, w: dict) -> list[dict]:
+        self._drain()
         a, b = w["start"]["mono"], w["stop"]["mono"]
         return [s for s in self.samples if a <= s["t_mono"] < b]
 
     def overall(self) -> dict:
+        self._drain()
         t0 = self.t_start
         t1 = self.t_stop if self.t_stop is not None else time.monotonic()
         return rate_stats([s["t_mono"] for s in self.samples], t0, t1)
+
+
+def undersampled_phases(logger: "PowerLogger", frac: float = MIN_RUN_RATE_FRACTION) -> list[str]:
+    """Names of run phases whose sample rate is below frac x the median idle-phase rate (the sensor's own
+    update rate limits the idle rate, so the comparison is sensor-independent)."""
+    def rate(w):
+        n = len(logger.window_samples(w))
+        d = w["stop"]["mono"] - w["start"]["mono"]
+        return n / d if d > 0 else 0.0
+    idle = sorted(rate(w) for w in logger.windows if w.get("kind") == "idle")
+    if not idle:
+        return []
+    ref = idle[len(idle) // 2]
+    return [f"{w['phase']}#{w.get('repeat')} ({rate(w):.2f} Hz vs idle {ref:.2f} Hz)"
+            for w in logger.windows if w.get("kind") != "idle" and rate(w) < frac * ref]
 
 
 def rate_stats(ts: list[float], t0: float, t1: float) -> dict:
@@ -1017,6 +1088,7 @@ def run_power_protocol(ctx, net: str, cpu_fn=None, *, accel_fn=None, sensor="aut
                   f"n={st['n']}, {st['rate_hz']:.2f} Hz) images={imgs}", flush=True)
     ov = logger.overall()
     base = _sensor_cols(sensor, logger, ov)
+    starved = undersampled_phases(logger)
     phases, prow = [], []
     for w in logger.windows:
         st = _phase_stats(logger, w)
@@ -1083,11 +1155,15 @@ def run_power_protocol(ctx, net: str, cpu_fn=None, *, accel_fn=None, sensor="aut
                   + (f"; dP_accel-dP_control {_f(s['accel_dp_net_w'], 4)} W, E_sys,net "
                      f"{_f(s['accel_e_sys_net_mj'], 6)} mJ, E_comp,net {_f(s['accel_e_comp_net_mj'], 6)} mJ"
                      if "accel_dp_net_w" in s else ""))
+    if starved and not dry:
+        raise UndersampledError(
+            "run phase(s) sampled far below the idle rate (the sampling thread was starved; mean power of "
+            "these phases is not trustworthy): " + "; ".join(starved))
     return {"label": LABEL, "rail": RAIL, "source": ctx.source, "sensor": sensor.describe(),
             "sensor_backend": sensor.backend, "rate_requested_hz": rate_hz,
             "rate_achieved_hz": ov["rate_hz"], "max_gap_s": ov["max_gap_s"],
             "read_errors": logger.read_errors, "phases": phases, "summary": summ,
-            "files": {k: str(v) for k, v in names.items()}}
+            "files": {k: str(v) for k, v in names.items()}, "undersampled": starved}
 
 
 def sample_only(ctx, seconds: float, sensor: Sensor, rate_hz: float = DEFAULT_RATE_HZ,
@@ -1233,6 +1309,9 @@ def main(argv=None) -> int:
     except SensorUnavailable as e:
         print(f"ERROR: {e}", file=sys.stderr)
         return 3
+    except UndersampledError as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        return 1
     return 0
 
 

@@ -499,3 +499,40 @@ def test_cpu_workload_phase_cores_restore_affinity(monkeypatch):
     calls.clear()
     fn(pl.time.monotonic() + 0.01 if hasattr(pl, "time") else 0)
     assert calls[0] == {0, 1, 2, 3} and calls[-1] == {3}
+
+
+def test_sampler_runs_in_a_separate_process_and_survives_a_busy_workload():
+    """The sampler is a process (no shared GIL): samples arrive at ~the requested rate while the parent
+    spins in pure Python, the phase label reaches the child, stop() drains everything."""
+    import os
+    lg = pl.PowerLogger(pl.MockSensor(levels_w={"idle": 1.0, "accel": 2.0, "cpu": 3.0, "control": 1.5}), 50)
+    with lg:
+        assert lg._proc.pid != os.getpid()
+        s0 = lg.begin("accel")
+        t_end = time.monotonic() + 0.6
+        x = 0
+        while time.monotonic() < t_end:           # GIL-hogging workload
+            x += 1
+        w = lg.end("accel", s0, kind="accel", images=1)
+    ss = lg.window_samples(w)
+    assert len(ss) >= 15                                     # 0.6 s at 50 Hz = 30, well above a starved sampler
+    assert all(s["r"].power_w == pytest.approx(2.0) for s in ss)   # the child saw the phase label
+    assert lg.read_errors == 0 and lg._proc is None and lg.t_stop is not None
+
+
+def test_undersampled_run_phase_is_detected():
+    class L:                                   # 10 Hz idle, a starved accel phase with 3 samples in 10 s
+        def __init__(self):
+            self.windows = [
+                {"phase": "idle_pre", "repeat": 1, "kind": "idle", "start": {"mono": 0.0}, "stop": {"mono": 10.0}},
+                {"phase": "accel", "repeat": 1, "kind": "accel", "start": {"mono": 10.0}, "stop": {"mono": 20.0}},
+                {"phase": "idle_mid", "repeat": 1, "kind": "idle", "start": {"mono": 20.0}, "stop": {"mono": 30.0}}]
+            self.ts = [i * 0.1 for i in range(100)] + [11.0, 14.0, 17.0] + [20.0 + i * 0.1 for i in range(100)]
+
+        def window_samples(self, w):
+            return [t for t in self.ts if w["start"]["mono"] <= t < w["stop"]["mono"]]
+    bad = pl.undersampled_phases(L())
+    assert len(bad) == 1 and bad[0].startswith("accel#1")
+    L2 = L()
+    L2.ts += [10.0 + i * 0.1 for i in range(100)]       # a healthy accel phase
+    assert pl.undersampled_phases(L2) == []
