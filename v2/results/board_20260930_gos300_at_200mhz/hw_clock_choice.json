@@ -1,0 +1,34 @@
+{
+ "ok": false,
+ "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+ "clock_mhz": 299.997009,
+ "fell_back": false,
+ "reason": "gos_300 bitstream at 199.998 MHz: pl_clk0 read back 199.998000 MHz, closed clock 299.997009 MHz \u2014 the smoke test passed at 199.998 MHz; 299.997 MHz was NOT exercised",
+ "attempts": [
+  {
+   "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+   "clock_mhz": 299.997009,
+   "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
+   "start_utc": "2026-09-30T15:37:45+00:00",
+   "ok": true,
+   "reason": "smoke PASS at 199.998 MHz read-back (not at the closed clock)",
+   "duration_s": 13.241,
+   "clock_readback_mhz": 199.998,
+   "ran_at_closed_clock": false
+  }
+ ],
+ "skipped": [],
+ "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
+ "decided_utc": "2026-09-30T15:37:58+00:00",
+ "valid_as_clock_choice": false,
+ "clock_readback_mhz": 199.998,
+ "ran_at_closed_clock": false,
+ "correction": {
+  "corrected_utc_date": "2026-09-30",
+  "decision": "DECISIONS D19",
+  "readback_source": "session_state.json provenance.clock_readback_mhz",
+  "original_file": "hw_clock_choice.original.json",
+  "original_reason": "highest candidate 299.997 MHz passed the smoke test",
+  "original_ok": true
+ }
+}

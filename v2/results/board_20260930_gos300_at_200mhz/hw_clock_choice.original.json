@@ -1,0 +1,21 @@
+{
+ "ok": true,
+ "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+ "clock_mhz": 299.997009,
+ "fell_back": false,
+ "reason": "highest candidate 299.997 MHz passed the smoke test",
+ "attempts": [
+  {
+   "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+   "clock_mhz": 299.997009,
+   "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
+   "start_utc": "2026-09-30T15:37:45+00:00",
+   "ok": true,
+   "reason": "smoke PASS",
+   "duration_s": 13.241
+  }
+ ],
+ "skipped": [],
+ "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
+ "decided_utc": "2026-09-30T15:37:58+00:00"
+}

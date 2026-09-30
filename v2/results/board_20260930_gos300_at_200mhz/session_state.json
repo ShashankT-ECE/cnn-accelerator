@@ -1,0 +1,1325 @@
+{
+ "version": 1,
+ "created_utc": "2026-09-30T15:37:59+00:00",
+ "updated_utc": "2026-09-30T15:38:49+00:00",
+ "provenance": {
+  "backend": "pynq",
+  "source": "hw",
+  "version_hw": "0x474F5302",
+  "build_id_hw": "fd880d43",
+  "build_id_deploy": "fd880d43",
+  "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+  "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
+  "hwh_sha256": "3da22ae42e4fe10fbf506d2eb09ba7c84cfda66980affceb4e2706d1291e9fb9",
+  "closed_clock_mhz": 299.997009,
+  "clock_readback_mhz": 199.998,
+  "clock_requested_mhz": 300,
+  "data_package_sha256": "2daed3c881a34021856b84925f2fd4ccaf77f09aae8a919b572e0970cce3355c",
+  "manifest_sha256": {
+   "lenet5": "7e434b88ba0b4f197fd7e847813732f12e2f54abcaa5c240759cca751d4ec29c",
+   "cifar10": "b4b6835174d15806a98b2fb379702e14a104d0d9e41c34c33c63acf6480d9586"
+  },
+  "scripts_commit": "11aa4f0561d40b905c27206bc0d62eaff2373906",
+  "scripts_dirty": false,
+  "data_dirty": false,
+  "allow_dirty": false,
+  "deploy_origin": "DEPLOY_INFO.json",
+  "preflight_utc": "2026-09-30T15:37:59+00:00",
+  "warnings": [],
+  "session_index": 1,
+  "paper_grade": true,
+  "cpu_freq_khz": 1333333,
+  "bit_choice": {
+   "ok": true,
+   "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+   "clock_mhz": 299.997009,
+   "fell_back": false,
+   "reason": "highest candidate 299.997 MHz passed the smoke test",
+   "attempts": [
+    {
+     "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+     "clock_mhz": 299.997009,
+     "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
+     "start_utc": "2026-09-30T15:37:45+00:00",
+     "ok": true,
+     "reason": "smoke PASS",
+     "duration_s": 13.241
+    }
+   ],
+   "skipped": [],
+   "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
+   "decided_utc": "2026-09-30T15:37:58+00:00"
+  },
+  "env": {
+   "paper_grade": true,
+   "pkg_manager_offenders": [],
+   "cpufreq_before": {
+    "root": "/sys/devices/system/cpu",
+    "fake": false,
+    "policies": {
+     "policy0": {
+      "affected_cpus": "0 1 2 3",
+      "scaling_governor": "userspace",
+      "scaling_min_freq": "333333",
+      "scaling_max_freq": "1333333",
+      "scaling_cur_freq": "1333333",
+      "cpuinfo_min_freq": "333333",
+      "cpuinfo_max_freq": "1333333",
+      "scaling_available_governors": "conservative ondemand userspace powersave performance schedutil",
+      "scaling_available_frequencies": "333333 444444 666666 1333333",
+      "scaling_driver": "cpufreq-dt"
+     }
+    },
+    "cpu_cur_freq_khz": {
+     "0": "1333333",
+     "1": "1333333",
+     "2": "1333333",
+     "3": "1333333"
+    }
+   },
+   "cpufreq_apply": {
+    "ok": true,
+    "errors": [],
+    "target_khz": 1333333,
+    "readback": {
+     "errors": [],
+     "governor": {
+      "policy0": "performance"
+     },
+     "policy_cur_freq_khz": {
+      "policy0": "1333333"
+     },
+     "cpu_cur_freq_khz": {
+      "0": "1333333",
+      "1": "1333333",
+      "2": "1333333",
+      "3": "1333333"
+     }
+    }
+   },
+   "cpu_freq_khz": 1333333,
+   "cpu_governor": "performance",
+   "meas_cores": "3",
+   "cpu1_cores": "3",
+   "cpun_cores": "0-3",
+   "housekeeping_cores": "0-2",
+   "orchestrator_pin": {
+    "requested": "0-2",
+    "readback": "0-2",
+    "ok": true,
+    "error": "",
+    "original": "0-3"
+   },
+   "die_temp": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 35.702,
+     "remote_temp": 35.454,
+     "pl_temp": 34.179
+    },
+    "max_c": 35.702
+   },
+   "fake_tree": false,
+   "paths": {
+    "sysfs_root": "/sys/devices/system/cpu",
+    "proc_root": "/proc",
+    "iio_root": "/sys/bus/iio/devices",
+    "hwmon_root": "/sys/class/hwmon",
+    "fake": false
+   },
+   "warnings": [],
+   "allow_non_paper_grade": false
+  }
+ },
+ "steps": {
+  "s1.shell": {
+   "status": "ok",
+   "title": "shell/memory smoke (test_shell --skip-scratch)",
+   "session": 1,
+   "group": "bringup",
+   "params_key": "[\"test_shell.py\", \"--bit\", \"/home/ubuntu/gos/bit/gos_300/gos_300.bit\", \"--expect-version\", \"0x474F5302\", \"--skip-scratch\", \"--max-fclk0\", \"300.497009\"]",
+   "cmd": [
+    "/usr/local/share/pynq-venv/bin/python3",
+    "/home/ubuntu/gos/test_shell.py",
+    "--bit",
+    "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+    "--expect-version",
+    "0x474F5302",
+    "--skip-scratch",
+    "--max-fclk0",
+    "300.497009"
+   ],
+   "started_utc": "2026-09-30T15:37:59+00:00",
+   "timeout_s": 480.0,
+   "provenance": {
+    "backend": "pynq",
+    "source": "hw",
+    "version_hw": "0x474F5302",
+    "build_id_hw": "fd880d43",
+    "build_id_deploy": "fd880d43",
+    "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+    "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
+    "hwh_sha256": "3da22ae42e4fe10fbf506d2eb09ba7c84cfda66980affceb4e2706d1291e9fb9",
+    "closed_clock_mhz": 299.997009,
+    "clock_readback_mhz": 199.998,
+    "clock_requested_mhz": 300,
+    "data_package_sha256": "2daed3c881a34021856b84925f2fd4ccaf77f09aae8a919b572e0970cce3355c",
+    "manifest_sha256": {
+     "lenet5": "7e434b88ba0b4f197fd7e847813732f12e2f54abcaa5c240759cca751d4ec29c",
+     "cifar10": "b4b6835174d15806a98b2fb379702e14a104d0d9e41c34c33c63acf6480d9586"
+    },
+    "scripts_commit": "11aa4f0561d40b905c27206bc0d62eaff2373906",
+    "scripts_dirty": false,
+    "data_dirty": false,
+    "allow_dirty": false,
+    "deploy_origin": "DEPLOY_INFO.json",
+    "preflight_utc": "2026-09-30T15:37:59+00:00",
+    "warnings": [],
+    "session_index": 1,
+    "paper_grade": true,
+    "cpu_freq_khz": 1333333,
+    "bit_choice": {
+     "ok": true,
+     "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+     "clock_mhz": 299.997009,
+     "fell_back": false,
+     "reason": "highest candidate 299.997 MHz passed the smoke test",
+     "attempts": [
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+       "clock_mhz": 299.997009,
+       "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
+       "start_utc": "2026-09-30T15:37:45+00:00",
+       "ok": true,
+       "reason": "smoke PASS",
+       "duration_s": 13.241
+      }
+     ],
+     "skipped": [],
+     "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
+     "decided_utc": "2026-09-30T15:37:58+00:00"
+    },
+    "env": {
+     "paper_grade": true,
+     "pkg_manager_offenders": [],
+     "cpufreq_before": {
+      "root": "/sys/devices/system/cpu",
+      "fake": false,
+      "policies": {
+       "policy0": {
+        "affected_cpus": "0 1 2 3",
+        "scaling_governor": "userspace",
+        "scaling_min_freq": "333333",
+        "scaling_max_freq": "1333333",
+        "scaling_cur_freq": "1333333",
+        "cpuinfo_min_freq": "333333",
+        "cpuinfo_max_freq": "1333333",
+        "scaling_available_governors": "conservative ondemand userspace powersave performance schedutil",
+        "scaling_available_frequencies": "333333 444444 666666 1333333",
+        "scaling_driver": "cpufreq-dt"
+       }
+      },
+      "cpu_cur_freq_khz": {
+       "0": "1333333",
+       "1": "1333333",
+       "2": "1333333",
+       "3": "1333333"
+      }
+     },
+     "cpufreq_apply": {
+      "ok": true,
+      "errors": [],
+      "target_khz": 1333333,
+      "readback": {
+       "errors": [],
+       "governor": {
+        "policy0": "performance"
+       },
+       "policy_cur_freq_khz": {
+        "policy0": "1333333"
+       },
+       "cpu_cur_freq_khz": {
+        "0": "1333333",
+        "1": "1333333",
+        "2": "1333333",
+        "3": "1333333"
+       }
+      }
+     },
+     "cpu_freq_khz": 1333333,
+     "cpu_governor": "performance",
+     "meas_cores": "3",
+     "cpu1_cores": "3",
+     "cpun_cores": "0-3",
+     "housekeeping_cores": "0-2",
+     "orchestrator_pin": {
+      "requested": "0-2",
+      "readback": "0-2",
+      "ok": true,
+      "error": "",
+      "original": "0-3"
+     },
+     "die_temp": {
+      "source": "iio iio:device0 (ams)",
+      "channels_c": {
+       "ps_temp": 35.702,
+       "remote_temp": 35.454,
+       "pl_temp": 34.179
+      },
+      "max_c": 35.702
+     },
+     "fake_tree": false,
+     "paths": {
+      "sysfs_root": "/sys/devices/system/cpu",
+      "proc_root": "/proc",
+      "iio_root": "/sys/bus/iio/devices",
+      "hwmon_root": "/sys/class/hwmon",
+      "fake": false
+     },
+     "warnings": [],
+     "allow_non_paper_grade": false
+    }
+   },
+   "outputs": {},
+   "log": "logs/s1.shell.log",
+   "required": true,
+   "die_temp_start": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 36.138,
+     "remote_temp": 34.941,
+     "pl_temp": 33.899
+    },
+    "max_c": 36.138
+   },
+   "run_env": {
+    "session_index": 1,
+    "paper_grade": true,
+    "cpu_governor": "performance",
+    "cpu_freq_khz": 1333333,
+    "f_req_mhz": 300,
+    "note": "paper-grade environment",
+    "step_id": "s1.shell",
+    "die_temp_start_c": 36.138
+   },
+   "affinity": {
+    "requested": "3",
+    "readback": "3",
+    "ok": true
+   },
+   "finished_utc": "2026-09-30T15:38:07+00:00",
+   "duration_s": 7.316,
+   "exit_code": 0,
+   "die_temp_end": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 35.018,
+     "remote_temp": 35.935,
+     "pl_temp": 33.899
+    },
+    "max_c": 35.935
+   },
+   "log_sha256": "f83394d5d642936fb372373fe06ddd6f3b670e1532ff9596f3a5eee8cdba8f61"
+  },
+  "s1.smoke": {
+   "status": "ok",
+   "title": "core smoke (VERSION/BUILD_ID, LeNet+CIFAR bit/cycle-exact, refused job)",
+   "session": 1,
+   "group": "bringup",
+   "params_key": "[\"test_core_smoke.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_300/gos_300.bit\", \"--max-fclk0\", \"300.497009\"]",
+   "cmd": [
+    "/usr/local/share/pynq-venv/bin/python3",
+    "/home/ubuntu/gos/test_core_smoke.py",
+    "--backend",
+    "pynq",
+    "--data-dir",
+    "/home/ubuntu/gos/data",
+    "--bit",
+    "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+    "--max-fclk0",
+    "300.497009"
+   ],
+   "started_utc": "2026-09-30T15:38:07+00:00",
+   "timeout_s": 480.0,
+   "provenance": {
+    "backend": "pynq",
+    "source": "hw",
+    "version_hw": "0x474F5302",
+    "build_id_hw": "fd880d43",
+    "build_id_deploy": "fd880d43",
+    "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+    "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
+    "hwh_sha256": "3da22ae42e4fe10fbf506d2eb09ba7c84cfda66980affceb4e2706d1291e9fb9",
+    "closed_clock_mhz": 299.997009,
+    "clock_readback_mhz": 199.998,
+    "clock_requested_mhz": 300,
+    "data_package_sha256": "2daed3c881a34021856b84925f2fd4ccaf77f09aae8a919b572e0970cce3355c",
+    "manifest_sha256": {
+     "lenet5": "7e434b88ba0b4f197fd7e847813732f12e2f54abcaa5c240759cca751d4ec29c",
+     "cifar10": "b4b6835174d15806a98b2fb379702e14a104d0d9e41c34c33c63acf6480d9586"
+    },
+    "scripts_commit": "11aa4f0561d40b905c27206bc0d62eaff2373906",
+    "scripts_dirty": false,
+    "data_dirty": false,
+    "allow_dirty": false,
+    "deploy_origin": "DEPLOY_INFO.json",
+    "preflight_utc": "2026-09-30T15:37:59+00:00",
+    "warnings": [],
+    "session_index": 1,
+    "paper_grade": true,
+    "cpu_freq_khz": 1333333,
+    "bit_choice": {
+     "ok": true,
+     "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+     "clock_mhz": 299.997009,
+     "fell_back": false,
+     "reason": "highest candidate 299.997 MHz passed the smoke test",
+     "attempts": [
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+       "clock_mhz": 299.997009,
+       "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
+       "start_utc": "2026-09-30T15:37:45+00:00",
+       "ok": true,
+       "reason": "smoke PASS",
+       "duration_s": 13.241
+      }
+     ],
+     "skipped": [],
+     "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
+     "decided_utc": "2026-09-30T15:37:58+00:00"
+    },
+    "env": {
+     "paper_grade": true,
+     "pkg_manager_offenders": [],
+     "cpufreq_before": {
+      "root": "/sys/devices/system/cpu",
+      "fake": false,
+      "policies": {
+       "policy0": {
+        "affected_cpus": "0 1 2 3",
+        "scaling_governor": "userspace",
+        "scaling_min_freq": "333333",
+        "scaling_max_freq": "1333333",
+        "scaling_cur_freq": "1333333",
+        "cpuinfo_min_freq": "333333",
+        "cpuinfo_max_freq": "1333333",
+        "scaling_available_governors": "conservative ondemand userspace powersave performance schedutil",
+        "scaling_available_frequencies": "333333 444444 666666 1333333",
+        "scaling_driver": "cpufreq-dt"
+       }
+      },
+      "cpu_cur_freq_khz": {
+       "0": "1333333",
+       "1": "1333333",
+       "2": "1333333",
+       "3": "1333333"
+      }
+     },
+     "cpufreq_apply": {
+      "ok": true,
+      "errors": [],
+      "target_khz": 1333333,
+      "readback": {
+       "errors": [],
+       "governor": {
+        "policy0": "performance"
+       },
+       "policy_cur_freq_khz": {
+        "policy0": "1333333"
+       },
+       "cpu_cur_freq_khz": {
+        "0": "1333333",
+        "1": "1333333",
+        "2": "1333333",
+        "3": "1333333"
+       }
+      }
+     },
+     "cpu_freq_khz": 1333333,
+     "cpu_governor": "performance",
+     "meas_cores": "3",
+     "cpu1_cores": "3",
+     "cpun_cores": "0-3",
+     "housekeeping_cores": "0-2",
+     "orchestrator_pin": {
+      "requested": "0-2",
+      "readback": "0-2",
+      "ok": true,
+      "error": "",
+      "original": "0-3"
+     },
+     "die_temp": {
+      "source": "iio iio:device0 (ams)",
+      "channels_c": {
+       "ps_temp": 35.702,
+       "remote_temp": 35.454,
+       "pl_temp": 34.179
+      },
+      "max_c": 35.702
+     },
+     "fake_tree": false,
+     "paths": {
+      "sysfs_root": "/sys/devices/system/cpu",
+      "proc_root": "/proc",
+      "iio_root": "/sys/bus/iio/devices",
+      "hwmon_root": "/sys/class/hwmon",
+      "fake": false
+     },
+     "warnings": [],
+     "allow_non_paper_grade": false
+    }
+   },
+   "outputs": {},
+   "log": "logs/s1.smoke.log",
+   "required": true,
+   "die_temp_start": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 35.531,
+     "remote_temp": 34.521,
+     "pl_temp": 33.86
+    },
+    "max_c": 35.531
+   },
+   "run_env": {
+    "session_index": 1,
+    "paper_grade": true,
+    "cpu_governor": "performance",
+    "cpu_freq_khz": 1333333,
+    "f_req_mhz": 300,
+    "note": "paper-grade environment",
+    "step_id": "s1.smoke",
+    "die_temp_start_c": 35.531
+   },
+   "affinity": {
+    "requested": "3",
+    "readback": "3",
+    "ok": true
+   },
+   "finished_utc": "2026-09-30T15:38:14+00:00",
+   "duration_s": 7.62,
+   "exit_code": 0,
+   "die_temp_end": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 36.029,
+     "remote_temp": 35.562,
+     "pl_temp": 33.324
+    },
+    "max_c": 36.029
+   },
+   "log_sha256": "c2eba06651426291c52967e70be72255446d1a76f1ff00b8363c08ad855fe900"
+  },
+  "s1.smoke_slice": {
+   "status": "ok",
+   "title": "core smoke with --write-mode slice (informational)",
+   "session": 1,
+   "group": "bringup",
+   "params_key": "[\"test_core_smoke.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_300/gos_300.bit\", \"--max-fclk0\", \"300.497009\", \"--write-mode\", \"slice\"]",
+   "cmd": [
+    "/usr/local/share/pynq-venv/bin/python3",
+    "/home/ubuntu/gos/test_core_smoke.py",
+    "--backend",
+    "pynq",
+    "--data-dir",
+    "/home/ubuntu/gos/data",
+    "--bit",
+    "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+    "--max-fclk0",
+    "300.497009",
+    "--write-mode",
+    "slice"
+   ],
+   "started_utc": "2026-09-30T15:38:14+00:00",
+   "timeout_s": 480.0,
+   "provenance": {
+    "backend": "pynq",
+    "source": "hw",
+    "version_hw": "0x474F5302",
+    "build_id_hw": "fd880d43",
+    "build_id_deploy": "fd880d43",
+    "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+    "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
+    "hwh_sha256": "3da22ae42e4fe10fbf506d2eb09ba7c84cfda66980affceb4e2706d1291e9fb9",
+    "closed_clock_mhz": 299.997009,
+    "clock_readback_mhz": 199.998,
+    "clock_requested_mhz": 300,
+    "data_package_sha256": "2daed3c881a34021856b84925f2fd4ccaf77f09aae8a919b572e0970cce3355c",
+    "manifest_sha256": {
+     "lenet5": "7e434b88ba0b4f197fd7e847813732f12e2f54abcaa5c240759cca751d4ec29c",
+     "cifar10": "b4b6835174d15806a98b2fb379702e14a104d0d9e41c34c33c63acf6480d9586"
+    },
+    "scripts_commit": "11aa4f0561d40b905c27206bc0d62eaff2373906",
+    "scripts_dirty": false,
+    "data_dirty": false,
+    "allow_dirty": false,
+    "deploy_origin": "DEPLOY_INFO.json",
+    "preflight_utc": "2026-09-30T15:37:59+00:00",
+    "warnings": [],
+    "session_index": 1,
+    "paper_grade": true,
+    "cpu_freq_khz": 1333333,
+    "bit_choice": {
+     "ok": true,
+     "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+     "clock_mhz": 299.997009,
+     "fell_back": false,
+     "reason": "highest candidate 299.997 MHz passed the smoke test",
+     "attempts": [
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+       "clock_mhz": 299.997009,
+       "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
+       "start_utc": "2026-09-30T15:37:45+00:00",
+       "ok": true,
+       "reason": "smoke PASS",
+       "duration_s": 13.241
+      }
+     ],
+     "skipped": [],
+     "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
+     "decided_utc": "2026-09-30T15:37:58+00:00"
+    },
+    "env": {
+     "paper_grade": true,
+     "pkg_manager_offenders": [],
+     "cpufreq_before": {
+      "root": "/sys/devices/system/cpu",
+      "fake": false,
+      "policies": {
+       "policy0": {
+        "affected_cpus": "0 1 2 3",
+        "scaling_governor": "userspace",
+        "scaling_min_freq": "333333",
+        "scaling_max_freq": "1333333",
+        "scaling_cur_freq": "1333333",
+        "cpuinfo_min_freq": "333333",
+        "cpuinfo_max_freq": "1333333",
+        "scaling_available_governors": "conservative ondemand userspace powersave performance schedutil",
+        "scaling_available_frequencies": "333333 444444 666666 1333333",
+        "scaling_driver": "cpufreq-dt"
+       }
+      },
+      "cpu_cur_freq_khz": {
+       "0": "1333333",
+       "1": "1333333",
+       "2": "1333333",
+       "3": "1333333"
+      }
+     },
+     "cpufreq_apply": {
+      "ok": true,
+      "errors": [],
+      "target_khz": 1333333,
+      "readback": {
+       "errors": [],
+       "governor": {
+        "policy0": "performance"
+       },
+       "policy_cur_freq_khz": {
+        "policy0": "1333333"
+       },
+       "cpu_cur_freq_khz": {
+        "0": "1333333",
+        "1": "1333333",
+        "2": "1333333",
+        "3": "1333333"
+       }
+      }
+     },
+     "cpu_freq_khz": 1333333,
+     "cpu_governor": "performance",
+     "meas_cores": "3",
+     "cpu1_cores": "3",
+     "cpun_cores": "0-3",
+     "housekeeping_cores": "0-2",
+     "orchestrator_pin": {
+      "requested": "0-2",
+      "readback": "0-2",
+      "ok": true,
+      "error": "",
+      "original": "0-3"
+     },
+     "die_temp": {
+      "source": "iio iio:device0 (ams)",
+      "channels_c": {
+       "ps_temp": 35.702,
+       "remote_temp": 35.454,
+       "pl_temp": 34.179
+      },
+      "max_c": 35.702
+     },
+     "fake_tree": false,
+     "paths": {
+      "sysfs_root": "/sys/devices/system/cpu",
+      "proc_root": "/proc",
+      "iio_root": "/sys/bus/iio/devices",
+      "hwmon_root": "/sys/class/hwmon",
+      "fake": false
+     },
+     "warnings": [],
+     "allow_non_paper_grade": false
+    }
+   },
+   "outputs": {},
+   "log": "logs/s1.smoke_slice.log",
+   "required": false,
+   "die_temp_start": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 34.972,
+     "remote_temp": 34.816,
+     "pl_temp": 33.744
+    },
+    "max_c": 34.972
+   },
+   "run_env": {
+    "session_index": 1,
+    "paper_grade": true,
+    "cpu_governor": "performance",
+    "cpu_freq_khz": 1333333,
+    "f_req_mhz": 300,
+    "note": "paper-grade environment",
+    "step_id": "s1.smoke_slice",
+    "die_temp_start_c": 34.972
+   },
+   "affinity": {
+    "requested": "3",
+    "readback": "3",
+    "ok": true
+   },
+   "finished_utc": "2026-09-30T15:38:22+00:00",
+   "duration_s": 7.57,
+   "exit_code": 0,
+   "die_temp_end": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 35.78,
+     "remote_temp": 34.785,
+     "pl_temp": 33.752
+    },
+    "max_c": 35.78
+   },
+   "log_sha256": "188cccd9806f6a9c9fe81eba17e46ccf8a624520c5a15a403f7eecde531305dd"
+  },
+  "s1.fast": {
+   "status": "ok",
+   "title": "fast host path bring-up check (ACT0 fast write + per-word readback, CSR block reads; core smoke on the fast path) (informational)",
+   "session": 1,
+   "group": "bringup",
+   "params_key": "[\"test_core_smoke.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_300/gos_300.bit\", \"--max-fclk0\", \"300.497009\", \"--host-path\", \"fast\", \"--fast-store\", \"block\"]",
+   "cmd": [
+    "/usr/local/share/pynq-venv/bin/python3",
+    "/home/ubuntu/gos/test_core_smoke.py",
+    "--backend",
+    "pynq",
+    "--data-dir",
+    "/home/ubuntu/gos/data",
+    "--bit",
+    "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+    "--max-fclk0",
+    "300.497009",
+    "--host-path",
+    "fast",
+    "--fast-store",
+    "block"
+   ],
+   "started_utc": "2026-09-30T15:38:22+00:00",
+   "timeout_s": 480.0,
+   "provenance": {
+    "backend": "pynq",
+    "source": "hw",
+    "version_hw": "0x474F5302",
+    "build_id_hw": "fd880d43",
+    "build_id_deploy": "fd880d43",
+    "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+    "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
+    "hwh_sha256": "3da22ae42e4fe10fbf506d2eb09ba7c84cfda66980affceb4e2706d1291e9fb9",
+    "closed_clock_mhz": 299.997009,
+    "clock_readback_mhz": 199.998,
+    "clock_requested_mhz": 300,
+    "data_package_sha256": "2daed3c881a34021856b84925f2fd4ccaf77f09aae8a919b572e0970cce3355c",
+    "manifest_sha256": {
+     "lenet5": "7e434b88ba0b4f197fd7e847813732f12e2f54abcaa5c240759cca751d4ec29c",
+     "cifar10": "b4b6835174d15806a98b2fb379702e14a104d0d9e41c34c33c63acf6480d9586"
+    },
+    "scripts_commit": "11aa4f0561d40b905c27206bc0d62eaff2373906",
+    "scripts_dirty": false,
+    "data_dirty": false,
+    "allow_dirty": false,
+    "deploy_origin": "DEPLOY_INFO.json",
+    "preflight_utc": "2026-09-30T15:37:59+00:00",
+    "warnings": [],
+    "session_index": 1,
+    "paper_grade": true,
+    "cpu_freq_khz": 1333333,
+    "bit_choice": {
+     "ok": true,
+     "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+     "clock_mhz": 299.997009,
+     "fell_back": false,
+     "reason": "highest candidate 299.997 MHz passed the smoke test",
+     "attempts": [
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+       "clock_mhz": 299.997009,
+       "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
+       "start_utc": "2026-09-30T15:37:45+00:00",
+       "ok": true,
+       "reason": "smoke PASS",
+       "duration_s": 13.241
+      }
+     ],
+     "skipped": [],
+     "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
+     "decided_utc": "2026-09-30T15:37:58+00:00"
+    },
+    "env": {
+     "paper_grade": true,
+     "pkg_manager_offenders": [],
+     "cpufreq_before": {
+      "root": "/sys/devices/system/cpu",
+      "fake": false,
+      "policies": {
+       "policy0": {
+        "affected_cpus": "0 1 2 3",
+        "scaling_governor": "userspace",
+        "scaling_min_freq": "333333",
+        "scaling_max_freq": "1333333",
+        "scaling_cur_freq": "1333333",
+        "cpuinfo_min_freq": "333333",
+        "cpuinfo_max_freq": "1333333",
+        "scaling_available_governors": "conservative ondemand userspace powersave performance schedutil",
+        "scaling_available_frequencies": "333333 444444 666666 1333333",
+        "scaling_driver": "cpufreq-dt"
+       }
+      },
+      "cpu_cur_freq_khz": {
+       "0": "1333333",
+       "1": "1333333",
+       "2": "1333333",
+       "3": "1333333"
+      }
+     },
+     "cpufreq_apply": {
+      "ok": true,
+      "errors": [],
+      "target_khz": 1333333,
+      "readback": {
+       "errors": [],
+       "governor": {
+        "policy0": "performance"
+       },
+       "policy_cur_freq_khz": {
+        "policy0": "1333333"
+       },
+       "cpu_cur_freq_khz": {
+        "0": "1333333",
+        "1": "1333333",
+        "2": "1333333",
+        "3": "1333333"
+       }
+      }
+     },
+     "cpu_freq_khz": 1333333,
+     "cpu_governor": "performance",
+     "meas_cores": "3",
+     "cpu1_cores": "3",
+     "cpun_cores": "0-3",
+     "housekeeping_cores": "0-2",
+     "orchestrator_pin": {
+      "requested": "0-2",
+      "readback": "0-2",
+      "ok": true,
+      "error": "",
+      "original": "0-3"
+     },
+     "die_temp": {
+      "source": "iio iio:device0 (ams)",
+      "channels_c": {
+       "ps_temp": 35.702,
+       "remote_temp": 35.454,
+       "pl_temp": 34.179
+      },
+      "max_c": 35.702
+     },
+     "fake_tree": false,
+     "paths": {
+      "sysfs_root": "/sys/devices/system/cpu",
+      "proc_root": "/proc",
+      "iio_root": "/sys/bus/iio/devices",
+      "hwmon_root": "/sys/class/hwmon",
+      "fake": false
+     },
+     "warnings": [],
+     "allow_non_paper_grade": false
+    }
+   },
+   "outputs": {},
+   "log": "logs/s1.fast.log",
+   "required": false,
+   "die_temp_start": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 35.562,
+     "remote_temp": 34.319,
+     "pl_temp": 33.69
+    },
+    "max_c": 35.562
+   },
+   "run_env": {
+    "session_index": 1,
+    "paper_grade": true,
+    "cpu_governor": "performance",
+    "cpu_freq_khz": 1333333,
+    "f_req_mhz": 300,
+    "note": "paper-grade environment",
+    "step_id": "s1.fast",
+    "die_temp_start_c": 35.562
+   },
+   "affinity": {
+    "requested": "3",
+    "readback": "3",
+    "ok": true
+   },
+   "finished_utc": "2026-09-30T15:38:30+00:00",
+   "duration_s": 8.169,
+   "exit_code": 0,
+   "die_temp_end": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 35.236,
+     "remote_temp": 34.474,
+     "pl_temp": 33.565
+    },
+    "max_c": 35.236
+   },
+   "log_sha256": "a3b51adc21b6b07a0684d165f5ac00f06134b30cb18fdfad8dfc9a2c761173cd"
+  },
+  "s1.fcal": {
+   "status": "ok",
+   "title": "PL clock calibration: f_meas (cycle counter vs CLOCK_MONOTONIC_RAW, 8 s)",
+   "session": 1,
+   "group": "fcal",
+   "params_key": "[\"exp_fclk_cal.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_300/gos_300.bit\", \"--write-mode\", \"elem\", \"--seconds\", \"8\", \"--tag\", \"_s1\", \"--seed\", \"953258510\"]",
+   "cmd": [
+    "/usr/local/share/pynq-venv/bin/python3",
+    "/home/ubuntu/gos/exp_fclk_cal.py",
+    "--backend",
+    "pynq",
+    "--data-dir",
+    "/home/ubuntu/gos/data",
+    "--bit",
+    "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+    "--write-mode",
+    "elem",
+    "--seconds",
+    "8",
+    "--tag",
+    "_s1",
+    "--seed",
+    "953258510",
+    "--out-dir",
+    "/home/ubuntu/gos/results/.staging/s1.fcal"
+   ],
+   "started_utc": "2026-09-30T15:38:30+00:00",
+   "timeout_s": 300.0,
+   "provenance": {
+    "backend": "pynq",
+    "source": "hw",
+    "version_hw": "0x474F5302",
+    "build_id_hw": "fd880d43",
+    "build_id_deploy": "fd880d43",
+    "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+    "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
+    "hwh_sha256": "3da22ae42e4fe10fbf506d2eb09ba7c84cfda66980affceb4e2706d1291e9fb9",
+    "closed_clock_mhz": 299.997009,
+    "clock_readback_mhz": 199.998,
+    "clock_requested_mhz": 300,
+    "data_package_sha256": "2daed3c881a34021856b84925f2fd4ccaf77f09aae8a919b572e0970cce3355c",
+    "manifest_sha256": {
+     "lenet5": "7e434b88ba0b4f197fd7e847813732f12e2f54abcaa5c240759cca751d4ec29c",
+     "cifar10": "b4b6835174d15806a98b2fb379702e14a104d0d9e41c34c33c63acf6480d9586"
+    },
+    "scripts_commit": "11aa4f0561d40b905c27206bc0d62eaff2373906",
+    "scripts_dirty": false,
+    "data_dirty": false,
+    "allow_dirty": false,
+    "deploy_origin": "DEPLOY_INFO.json",
+    "preflight_utc": "2026-09-30T15:37:59+00:00",
+    "warnings": [],
+    "session_index": 1,
+    "paper_grade": true,
+    "cpu_freq_khz": 1333333,
+    "bit_choice": {
+     "ok": true,
+     "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+     "clock_mhz": 299.997009,
+     "fell_back": false,
+     "reason": "highest candidate 299.997 MHz passed the smoke test",
+     "attempts": [
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+       "clock_mhz": 299.997009,
+       "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
+       "start_utc": "2026-09-30T15:37:45+00:00",
+       "ok": true,
+       "reason": "smoke PASS",
+       "duration_s": 13.241
+      }
+     ],
+     "skipped": [],
+     "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
+     "decided_utc": "2026-09-30T15:37:58+00:00"
+    },
+    "env": {
+     "paper_grade": true,
+     "pkg_manager_offenders": [],
+     "cpufreq_before": {
+      "root": "/sys/devices/system/cpu",
+      "fake": false,
+      "policies": {
+       "policy0": {
+        "affected_cpus": "0 1 2 3",
+        "scaling_governor": "userspace",
+        "scaling_min_freq": "333333",
+        "scaling_max_freq": "1333333",
+        "scaling_cur_freq": "1333333",
+        "cpuinfo_min_freq": "333333",
+        "cpuinfo_max_freq": "1333333",
+        "scaling_available_governors": "conservative ondemand userspace powersave performance schedutil",
+        "scaling_available_frequencies": "333333 444444 666666 1333333",
+        "scaling_driver": "cpufreq-dt"
+       }
+      },
+      "cpu_cur_freq_khz": {
+       "0": "1333333",
+       "1": "1333333",
+       "2": "1333333",
+       "3": "1333333"
+      }
+     },
+     "cpufreq_apply": {
+      "ok": true,
+      "errors": [],
+      "target_khz": 1333333,
+      "readback": {
+       "errors": [],
+       "governor": {
+        "policy0": "performance"
+       },
+       "policy_cur_freq_khz": {
+        "policy0": "1333333"
+       },
+       "cpu_cur_freq_khz": {
+        "0": "1333333",
+        "1": "1333333",
+        "2": "1333333",
+        "3": "1333333"
+       }
+      }
+     },
+     "cpu_freq_khz": 1333333,
+     "cpu_governor": "performance",
+     "meas_cores": "3",
+     "cpu1_cores": "3",
+     "cpun_cores": "0-3",
+     "housekeeping_cores": "0-2",
+     "orchestrator_pin": {
+      "requested": "0-2",
+      "readback": "0-2",
+      "ok": true,
+      "error": "",
+      "original": "0-3"
+     },
+     "die_temp": {
+      "source": "iio iio:device0 (ams)",
+      "channels_c": {
+       "ps_temp": 35.702,
+       "remote_temp": 35.454,
+       "pl_temp": 34.179
+      },
+      "max_c": 35.702
+     },
+     "fake_tree": false,
+     "paths": {
+      "sysfs_root": "/sys/devices/system/cpu",
+      "proc_root": "/proc",
+      "iio_root": "/sys/bus/iio/devices",
+      "hwmon_root": "/sys/class/hwmon",
+      "fake": false
+     },
+     "warnings": [],
+     "allow_non_paper_grade": false
+    }
+   },
+   "outputs": {
+    "hw_fclk_cal_s1.csv": "bd911764ea35e911755617154307fc196bcaf0bc3cdd9a1c2e0f0385bd92b399",
+    "hw_fclk_cal_s1.npz": "1d14566fa4c269c256e9c6718f5109aaf15a0aed930f975181ef34d6eada02ee"
+   },
+   "log": "logs/s1.fcal.log",
+   "required": true,
+   "die_temp_start": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 35.702,
+     "remote_temp": 35.562,
+     "pl_temp": 33.511
+    },
+    "max_c": 35.702
+   },
+   "run_env": {
+    "session_index": 1,
+    "paper_grade": true,
+    "cpu_governor": "performance",
+    "cpu_freq_khz": 1333333,
+    "f_req_mhz": 300,
+    "note": "paper-grade environment",
+    "step_id": "s1.fcal",
+    "die_temp_start_c": 35.702
+   },
+   "affinity": {
+    "requested": "3",
+    "readback": "3",
+    "ok": true
+   },
+   "finished_utc": "2026-09-30T15:38:49+00:00",
+   "duration_s": 18.645,
+   "exit_code": 0,
+   "die_temp_end": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 36.153,
+     "remote_temp": 34.319,
+     "pl_temp": 33.775
+    },
+    "max_c": 36.153
+   },
+   "log_sha256": "1c403b0fced6b0d4ec33a1872f65e67fab5db55de7542106fd50e8053708482e"
+  }
+ },
+ "invocations": [
+  {
+   "utc": "2026-09-30T15:37:59+00:00",
+   "args": {
+    "sessions": [
+     1
+    ],
+    "backend": "pynq",
+    "resume": false,
+    "fresh": false,
+    "session_index": 1,
+    "budget_min": null,
+    "step_timeout_min": null,
+    "quick": false,
+    "plan": false,
+    "steps": null,
+    "allow_dirty": false,
+    "allow_non_paper_grade": false,
+    "bit": null,
+    "fallback_bits": null,
+    "dryrun_fail_smoke_mhz": null,
+    "data_dir": "/home/ubuntu/gos/data",
+    "results_dir": null,
+    "window_s": null,
+    "gap_s": null,
+    "fcal_s": null,
+    "b2_images": 100,
+    "power_repeats": 3,
+    "b2_power_repeats": 3,
+    "power_rate_hz": 10.0,
+    "write_mode": "elem",
+    "host_path": "safe",
+    "fast_store": "block",
+    "no_power_control": false,
+    "no_b3_cpu": false,
+    "meas_cores": "3",
+    "cpu1_cores": "3",
+    "cpun_cores": "0-3",
+    "cpu_freq_khz": null,
+    "sysfs_root": null,
+    "proc_root": null,
+    "iio_root": null,
+    "hwmon_root": null,
+    "board_id": null,
+    "clock_tol_mhz": 0.5,
+    "min_free_mb": 1000.0,
+    "no_bringup_check": false
+   },
+   "session_log": "logs/run_sessions_20260930_153745.log",
+   "preflight": {
+    "backend": "pynq",
+    "source": "hw",
+    "version_hw": "0x474F5302",
+    "build_id_hw": "fd880d43",
+    "build_id_deploy": "fd880d43",
+    "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+    "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
+    "hwh_sha256": "3da22ae42e4fe10fbf506d2eb09ba7c84cfda66980affceb4e2706d1291e9fb9",
+    "closed_clock_mhz": 299.997009,
+    "clock_readback_mhz": 199.998,
+    "clock_requested_mhz": 300,
+    "data_package_sha256": "2daed3c881a34021856b84925f2fd4ccaf77f09aae8a919b572e0970cce3355c",
+    "manifest_sha256": {
+     "lenet5": "7e434b88ba0b4f197fd7e847813732f12e2f54abcaa5c240759cca751d4ec29c",
+     "cifar10": "b4b6835174d15806a98b2fb379702e14a104d0d9e41c34c33c63acf6480d9586"
+    },
+    "scripts_commit": "11aa4f0561d40b905c27206bc0d62eaff2373906",
+    "scripts_dirty": false,
+    "data_dirty": false,
+    "allow_dirty": false,
+    "deploy_origin": "DEPLOY_INFO.json",
+    "preflight_utc": "2026-09-30T15:37:59+00:00",
+    "warnings": [],
+    "session_index": 1,
+    "paper_grade": true,
+    "cpu_freq_khz": 1333333,
+    "bit_choice": {
+     "ok": true,
+     "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+     "clock_mhz": 299.997009,
+     "fell_back": false,
+     "reason": "highest candidate 299.997 MHz passed the smoke test",
+     "attempts": [
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+       "clock_mhz": 299.997009,
+       "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
+       "start_utc": "2026-09-30T15:37:45+00:00",
+       "ok": true,
+       "reason": "smoke PASS",
+       "duration_s": 13.241
+      }
+     ],
+     "skipped": [],
+     "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
+     "decided_utc": "2026-09-30T15:37:58+00:00"
+    },
+    "env": {
+     "paper_grade": true,
+     "pkg_manager_offenders": [],
+     "cpufreq_before": {
+      "root": "/sys/devices/system/cpu",
+      "fake": false,
+      "policies": {
+       "policy0": {
+        "affected_cpus": "0 1 2 3",
+        "scaling_governor": "userspace",
+        "scaling_min_freq": "333333",
+        "scaling_max_freq": "1333333",
+        "scaling_cur_freq": "1333333",
+        "cpuinfo_min_freq": "333333",
+        "cpuinfo_max_freq": "1333333",
+        "scaling_available_governors": "conservative ondemand userspace powersave performance schedutil",
+        "scaling_available_frequencies": "333333 444444 666666 1333333",
+        "scaling_driver": "cpufreq-dt"
+       }
+      },
+      "cpu_cur_freq_khz": {
+       "0": "1333333",
+       "1": "1333333",
+       "2": "1333333",
+       "3": "1333333"
+      }
+     },
+     "cpufreq_apply": {
+      "ok": true,
+      "errors": [],
+      "target_khz": 1333333,
+      "readback": {
+       "errors": [],
+       "governor": {
+        "policy0": "performance"
+       },
+       "policy_cur_freq_khz": {
+        "policy0": "1333333"
+       },
+       "cpu_cur_freq_khz": {
+        "0": "1333333",
+        "1": "1333333",
+        "2": "1333333",
+        "3": "1333333"
+       }
+      }
+     },
+     "cpu_freq_khz": 1333333,
+     "cpu_governor": "performance",
+     "meas_cores": "3",
+     "cpu1_cores": "3",
+     "cpun_cores": "0-3",
+     "housekeeping_cores": "0-2",
+     "orchestrator_pin": {
+      "requested": "0-2",
+      "readback": "0-2",
+      "ok": true,
+      "error": "",
+      "original": "0-3"
+     },
+     "die_temp": {
+      "source": "iio iio:device0 (ams)",
+      "channels_c": {
+       "ps_temp": 35.702,
+       "remote_temp": 35.454,
+       "pl_temp": 34.179
+      },
+      "max_c": 35.702
+     },
+     "fake_tree": false,
+     "paths": {
+      "sysfs_root": "/sys/devices/system/cpu",
+      "proc_root": "/proc",
+      "iio_root": "/sys/bus/iio/devices",
+      "hwmon_root": "/sys/class/hwmon",
+      "fake": false
+     },
+     "warnings": [],
+     "allow_non_paper_grade": false
+    }
+   }
+  }
+ ],
+ "timing": {
+  "s1.shell": {
+   "backend": "pynq",
+   "params_key": "[\"test_shell.py\", \"--bit\", \"/home/ubuntu/gos/bit/gos_300/gos_300.bit\", \"--expect-version\", \"0x474F5302\", \"--skip-scratch\", \"--max-fclk0\", \"300.497009\"]",
+   "duration_s": 7.316,
+   "images": 0,
+   "fixed_s": 0.0,
+   "rate_s": null
+  },
+  "s1.smoke": {
+   "backend": "pynq",
+   "params_key": "[\"test_core_smoke.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_300/gos_300.bit\", \"--max-fclk0\", \"300.497009\"]",
+   "duration_s": 7.62,
+   "images": 0,
+   "fixed_s": 0.0,
+   "rate_s": null
+  },
+  "s1.smoke_slice": {
+   "backend": "pynq",
+   "params_key": "[\"test_core_smoke.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_300/gos_300.bit\", \"--max-fclk0\", \"300.497009\", \"--write-mode\", \"slice\"]",
+   "duration_s": 7.57,
+   "images": 0,
+   "fixed_s": 0.0,
+   "rate_s": null
+  },
+  "s1.fast": {
+   "backend": "pynq",
+   "params_key": "[\"test_core_smoke.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_300/gos_300.bit\", \"--max-fclk0\", \"300.497009\", \"--host-path\", \"fast\", \"--fast-store\", \"block\"]",
+   "duration_s": 8.169,
+   "images": 0,
+   "fixed_s": 0.0,
+   "rate_s": null
+  },
+  "s1.fcal": {
+   "backend": "pynq",
+   "params_key": "[\"exp_fclk_cal.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_300/gos_300.bit\", \"--write-mode\", \"elem\", \"--seconds\", \"8\", \"--tag\", \"_s1\", \"--seed\", \"953258510\"]",
+   "duration_s": 18.645,
+   "images": 0,
+   "fixed_s": 18.0,
+   "rate_s": null
+  }
+ },
+ "order_seed": 953258410
+}
