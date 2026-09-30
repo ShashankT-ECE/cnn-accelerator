@@ -1171,6 +1171,11 @@ def make_parser() -> argparse.ArgumentParser:
     g = ap.add_mutually_exclusive_group()
     g.add_argument("--resume", action="store_true", help="(default) skip verified completed steps")
     g.add_argument("--fresh", action="store_true", help="archive state + outputs, start over")
+    ap.add_argument("--idle-ref-s", type=float, default=0.0,
+                    help="no-overlay idle reference: INA260 SOM-rail idle power sampled for this many seconds "
+                         "right after the environment pre-flight and BEFORE any bitstream is loaded (run it "
+                         "first after a fresh boot: a loaded PL configuration cannot be unloaded) -> "
+                         "hw_nooverlay_idle_{samples,phases}.csv, paper-grade environment rules as every step")
     ap.add_argument("--session-index", type=int, choices=(1, 2, 3), default=1,
                     help="repeatability campaign index (rows tagged; K >= 2 -> <results>/rep<K>/)")
     ap.add_argument("--budget-min", type=float, default=None, help="time budget for this invocation")
@@ -1289,6 +1294,28 @@ def main(argv=None, open_backend=open_backend_default, verify_data=bc.verify_man
         lock_f.close()
 
 
+def run_idle_ref(a, rd: Path, envp: dict, say) -> list:
+    """No-overlay idle reference (before any bitstream is loaded in this boot): power_log.sample_only
+    with the same environment rules as a step (paper_grade from the environment pre-flight)."""
+    import power_log as pl
+    try:
+        sensor, plog = pl.discover("auto", allow_hw=True, allow_mock=False)
+    except pl.SensorUnavailable as e:
+        say(f"[session] idle reference: no sensor ({e}); skipped")
+        return []
+    os.environ[bc.RUN_ENV_VAR] = json.dumps({
+        "session_index": a.session_index, "paper_grade": envp["paper_grade"],
+        "cpu_governor": envp["cpu_governor"], "cpu_freq_khz": envp["cpu_freq_khz"],
+        "note": "no-overlay idle reference (before any bitstream load)"}, default=str)
+    try:
+        ctx = pl.SensorOnlyContext(bc.SOURCE_HW, rd, getattr(a, "board_id", None), a.allow_dirty)
+        say(f"[session] no-overlay idle reference: {a.idle_ref_s:g} s, {pl.LABEL}, {sensor.describe()}")
+        pl.sample_only(ctx, a.idle_ref_s, sensor, getattr(a, "power_rate_hz", 10.0), "hw_nooverlay_idle", "")
+    finally:
+        os.environ.pop(bc.RUN_ENV_VAR, None)
+    return [rd / "hw_nooverlay_idle_samples.csv", rd / "hw_nooverlay_idle_phases.csv"]
+
+
 def _smoke_runner(a, cfg0: Config, board_dir, data_dir, rd, open_backend, verify_data, say,
                   info, meas_cores):
     """run_smoke(entry) for clock_fallback.choose: pre-flight of that bitstream + core smoke."""
@@ -1355,6 +1382,10 @@ def _main(a, board_dir, data_dir, rd, window_s, gap_s, say, lock_fd, open_backen
         say(str(e))
         say("[session] nothing was run.")
         return 3
+
+    idle_ref_files = []
+    if a.idle_ref_s > 0 and not a.plan and not dry:
+        idle_ref_files = run_idle_ref(a, rd, envp, say)
 
     # -- bitstream: recorded choice / clock fallback / single --------------------------------
     cands = bit_candidates(a, board_dir, info)
@@ -1427,7 +1458,7 @@ def _main(a, board_dir, data_dir, rd, window_s, gap_s, say, lock_fd, open_backen
         if a.plan:
             say(f"[session] --plan: would archive existing results ({why}) and start a new state")
         elif state_path.exists() or any(rd.glob("hw_*")) or (rd / ".staging").exists():
-            keep = [sess_log, *(rd / "logs").glob("fallback_smoke_*.log")]
+            keep = [sess_log, *(rd / "logs").glob("fallback_smoke_*.log"), *idle_ref_files]
             ar = archive_everything(rd, why, keep=keep)
             if ar.moved:
                 say(f"[session] {why}: archived {len(ar.moved)} entries -> {ar.root.relative_to(rd)}")

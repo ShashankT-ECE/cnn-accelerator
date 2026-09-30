@@ -55,7 +55,7 @@ STATIC_TEXT = [
     "sha256", "RAMB36", "RAMB18", "BRAM36", "BRAM18", "DSP48E2", "fp32", "int8",
     "A1", "A2", "A3", "A4", "A5", "A6", "B1", "B2", "B3", "C1", "C2", "INA260", "p95", "p5", "p50",
     "12 V", "pl\\_clk0", "pl_clk0", "xck26-sfvc784-2LV-c", "e2e", "r2",
-    "95PCT CI", "p99",
+    "95PCT CI", "p99", "DPUCZDX8G",
 ]
 
 

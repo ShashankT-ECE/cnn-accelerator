@@ -56,7 +56,7 @@ META_COLUMNS = ("timestamp", "git_commit", "git_dirty", "vivado_version", "bitst
                 "board_id", "net", "layer", "clock_mhz", "source", "duration_s",
                 "num_inferences")
 FIELDS = ("kind", "label", "threads", "mode", "median_us", "median_ci_lo_us", "median_ci_hi_us",
-          "ci_coverage", "ci_method", "p5_us", "p50_us", "p95_us", "p99_us", "mean_us", "cpu_affinity", "pin_requested",
+          "ci_coverage", "ci_method", "p5_us", "p50_us", "p95_us", "p99_us", "mean_us", "min_us", "max_us", "cpu_affinity", "pin_requested",
           "session_index", "paper_grade", "env_step", "cpu_governor", "cpu_freq_khz",
           "die_temp_start_c", "env_note",
           "runs", "warmup", "accuracy", "correct", "n_images", "acc_batch",
@@ -77,6 +77,7 @@ def _percentiles(ts_ns):
     return {"median_us": float(np.median(a)), "p50_us": float(np.percentile(a, 50)),
             "p5_us": float(np.percentile(a, 5)), "p95_us": float(np.percentile(a, 95)),
             "p99_us": float(np.percentile(a, 99)), "mean_us": float(a.mean()),
+            "min_us": float(a.min()), "max_us": float(a.max()),
             "median_ci_lo_us": "" if lo is None else lo, "median_ci_hi_us": "" if hi is None else hi,
             "ci_coverage": "" if cov is None else round(cov, 4), "ci_method": stats.CI_METHOD_ORDER}
 

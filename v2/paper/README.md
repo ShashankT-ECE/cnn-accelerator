@@ -25,6 +25,9 @@ Rules enforced by the code (`scripts/paperlib.py`):
 
 | output | content | sources |
 |---|---|---|
+| `tab_percentiles.tex` | p50 / p95 / p99 and spread (max − min) of every timing condition: accelerator fast (primary) / safe, DPU e2e + runner, best CPU, every CPU configuration | hw_b3_breakdown*, hw_a2_a3_cycles, hw_dpu_latency, hw_cpu_baseline |
+| `tab_efficiency.tex` | images/s, GOPS, GOPS per MAC lane and per DSP: accelerator vs DPU (vs best CPU); DPU per-DSP `n/a` (overlay metadata has no resource counts) | board_efficiency.csv, dpu_overlay_params.csv |
+| `tab_power_compare.tex` | SOM-rail absolute power and ΔP above own-overlay idle, accelerator vs DPU, + no-overlay reference idle | hw_b1_power_ina260_summary*, hw_dpu_power_ina260_summary*, hw_nooverlay_idle_phases.csv |
 | `tab_t1_impl.tex` | A6/T1: LUT/FF/LUTRAM/DSP/RAMB, gos_core share, WNS/WHS, pl_clk0 req./actual, BUILD_ID, bitstream SHA-256 prefix; one column per clock that met timing (D14), all post-implementation; **250 MHz = the performance clock run on the KV260 (⋆, DECISIONS D21); the 300 MHz column is marked post-implementation only (‡) with a footnote on the PLL constraint** (`paperdata.PERFORMANCE_CLOCK_MHZ`, `clock_notes`); the same marks appear on the computed-latency rows of `tab_a2_latency.tex`, and `fig_b2_clock` plots only clocks the board can run | impl_gos.csv (post_impl) |
 | `tab_a1_accuracy.tex` | A1: FP32/INT8 accuracy of record, RTL bit-exact images, KV260 mismatches/accuracy | reference_accuracy.csv (model; r2 cross-checked with cifar10_r2_accuracy.csv), rtl_network.csv (rtl_sim), hw_a1_accuracy.csv (hw) |
 | `tab_a2_latency.tex` | A2: total cycles model/RTL/KV260, µs at each post-impl clock (RTL cycles / f, computed), KV260 PL µs at the read-back clock (clock of record, DECISIONS D20), f_meas cross-check, read-back clock, wall-clock median [95% CI] | cycle_model, rtl_network, impl_gos, hw_a2_a3_cycles |

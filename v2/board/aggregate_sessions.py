@@ -39,7 +39,11 @@ METRICS = [
      ("accel_p_idle_w", "accel_dp_w", "control_dp_w", "accel_dp_net_w", "cpu_dp_w",
       "accel_energy_per_image_mj", "accel_e_comp_mj", "cpu_energy_per_image_mj")),
     ("hw_cpu_baseline.csv", lambda r: r.get("mode") in ("compute", "e2e") and r.get("status") == "ok",
-     ("net", "kind", "threads", "mode"), ("median_us",)),
+     ("net", "kind", "threads", "mode"), ("median_us", "p95_us", "p99_us")),   # incl. ORT INT8 x4 (best CPU)
+    ("hw_dpu_latency.csv", None, ("net", "metric"), ("p50", "p95", "p99")),
+    ("hw_dpu_accuracy.csv", None, ("net",), ("accuracy_pct",)),
+    ("hw_dpu_power_ina260_summary_*.csv", lambda r: r.get("row_kind") == "mean", ("net",),
+     ("accel_p_idle_w", "accel_p_run_w", "accel_dp_w", "accel_energy_per_image_mj")),
 ]
 FIELDS = ["metric_file", "metric", "key", "n_sessions", "session_indices", "per_session",
           "mean", "between_sd", "min", "max", "range", "cv_pct", "input_git_commits",

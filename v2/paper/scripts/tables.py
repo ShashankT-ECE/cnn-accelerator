@@ -285,41 +285,68 @@ def _best_cpu(cpu: list[dict]) -> dict:
     return out
 
 
-def _best_cpu_rows(art: Artifact, c: Ctx, cpu: list[dict], b3l: dict) -> list:
+def _dpu_lat(art: Artifact) -> dict:
+    """{(net, metric): latest hw_dpu_latency.csv row} (metric: dpu_runner / pre / post / end_to_end)."""
+    return latest(art.rows("hw_dpu_latency.csv", hw=True) or [], lambda r: (r["net"], r["metric"]))
+
+
+def _spread(art: Artifact, r: dict | None, hi: str = "max_us", lo: str = "min_us") -> str:
+    """max - min of a row (computed from two CSV cells); '--' if a column is absent."""
+    if not r or r.get(hi) in ("", None) or r.get(lo) in ("", None):
+        return "--"
+    return div_sub(at(r, hi), at(r, lo)).fmt(art, "f1")
+
+
+def div_sub(a: V, b: V) -> V:
+    return V(a.value - b.value, f"computed max-min, max={a.origin}, min={b.origin}")
+
+
+def _best_cpu_rows(art: Artifact, c: Ctx, cpu: list[dict], b3l: dict, fast: dict) -> list:
     """A5 rows: the best CPU baseline per net, its accuracy, and the accelerator speedups against
-    it (computed from CSV cells)."""
+    it (computed from CSV cells); fast host path = primary accelerator number, the safe path is
+    returned as a footnote string. Also ours-vs-DPU ratios."""
     mc = lambda txt: f"\\multicolumn{{2}}{{c}}{{{txt}}}"  # noqa: E731
     if not cpu:
-        return []
+        return [], ""
     best = _best_cpu(cpu)
-    fast = latest(art.rows("hw_b3_breakdown_fast.csv", hw=True) or [], lambda r: (r["net"], r["phase"]))
+    dl = _dpu_lat(art)
     rows = [r"\midrule"]
-    lab, acc, sp_e, sp_f, sp_c = [], [], [], [], []
+    lab, acc, sp_e, sp_c, vd_e, vd_c = [], [], [], [], [], []
+    safe_txt = []
     for net in NETS:
         if net not in best:
             ph = art.placeholder(f"A5 best CPU {net}: hw_cpu_baseline.csv")
-            for l in (lab, acc, sp_e, sp_f, sp_c):
+            for l in (lab, acc, sp_e, sp_c, vd_e, vd_c):
                 l.append(mc(ph))
             continue
         kind, th, re2e, rcomp, racc = best[net]
         lab.append(mc(art.label(f"{CPU_KINDS.get(kind, tex_escape(kind))}, {th}~thr.",
                                 f"hw_cpu_baseline.csv:{re2e['_line']}:kind,threads")))
         acc.append(mc(art.cell(racc, "accuracy", "f2") if racc and racc.get("accuracy") else "--"))
-        a_safe, a_fast = b3l.get((net, "end_to_end")), fast.get((net, "end_to_end"))
-        a_pl = b3l.get((net, "pl_compute"))
+        a_fast, a_safe = fast.get((net, "end_to_end")), b3l.get((net, "end_to_end"))
+        a_pl = b3l.get((net, "pl_compute")) or fast.get((net, "pl_compute"))
         cpu_e2e = at(re2e, "median_us")
-        sp_e.append(mc(div(cpu_e2e, at(a_safe, "median_us"), "best CPU e2e / accel e2e (safe)").fmt(art, "f2")
-                       + "$\\times$" if a_safe else art.placeholder(f"A5 {net}: accelerator e2e")))
-        sp_f.append(mc(div(cpu_e2e, at(a_fast, "median_us"), "best CPU e2e / accel e2e (fast)").fmt(art, "f2")
-                       + "$\\times$" if a_fast else art.placeholder(f"A5 {net}: accelerator e2e fast")))
+        ph = lambda what: mc(art.placeholder(what))  # noqa: E731
+        sp_e.append(mc(div(cpu_e2e, at(a_fast, "median_us"), "best CPU e2e / accel e2e (fast)").fmt(art, "f2")
+                       + "$\\times$") if a_fast else ph(f"A5 {net}: accelerator e2e fast"))
         sp_c.append(mc(div(at(rcomp, "median_us"), at(a_pl, "median_us"), "best CPU compute / PL compute").fmt(art, "f2")
-                       + "$\\times$" if (rcomp and a_pl) else art.placeholder(f"A5 {net}: compute speedup")))
+                       + "$\\times$") if (rcomp and a_pl) else ph(f"A5 {net}: compute speedup"))
+        if a_safe:
+            safe_txt.append(f"{pretty_net(net)} "
+                            + div(cpu_e2e, at(a_safe, "median_us"), "best CPU e2e / accel e2e (safe)").fmt(art, "f2")
+                            + "$\\times$")
+        d_e, d_r = dl.get((net, "end_to_end")), dl.get((net, "dpu_runner"))
+        vd_e.append(mc(div(at(d_e, "p50"), at(a_fast, "median_us"), "DPU e2e p50 / accel e2e (fast)").fmt(art, "f2")
+                       + "$\\times$") if (d_e and a_fast) else ph(f"A5 {net}: DPU e2e"))
+        vd_c.append(mc(div(at(d_r, "p50"), at(a_pl, "median_us"), "DPU runner p50 / PL compute").fmt(art, "f2")
+                       + "$\\times$") if (d_r and a_pl) else ph(f"A5 {net}: DPU compute"))
     rows += [["Best CPU baseline", "", *lab], ["\\quad accuracy (\\%)", "", *acc],
-             ["Speedup vs best CPU, e2e, safe host path", "", *sp_e],
-             ["Speedup vs best CPU, e2e, fast host path", "", *sp_f],
-             ["Speedup vs best CPU, comp.\\ (PL counter)", "", *sp_c]]
-    return rows
-
+             ["Speedup vs best CPU, e2e", "", *sp_e],
+             ["Speedup vs best CPU, comp.\\ (PL counter)", "", *sp_c],
+             r"\midrule",
+             ["DPU time / accelerator time, e2e", "", *vd_e],
+             ["DPU time / accelerator time, comp.", "", *vd_c]]
+    return rows, "; ".join(safe_txt)
 
 
 def a5_cpu(c: Ctx) -> Artifact:
@@ -346,21 +373,30 @@ def a5_cpu(c: Ctx) -> Artifact:
         for k, lab in CPU_KINDS.items():
             body.append(f"{lab} & -- & \\multicolumn{{4}}{{c}}"
                         f"{{{art.placeholder(f'A5 {k}: hw_cpu_baseline.csv (cpu_board)')}}} \\\\")
-    fp = [f"Accelerator ({c.board_label} PL)", "--"]
+    fast = latest(art.rows("hw_b3_breakdown_fast.csv", hw=True) or [], lambda r: (r["net"], r["phase"]))
+    fp = [f"Accelerator, fast host path ({c.board_label})", "--"]
     for net in NETS:
         for ph in ("pl_compute", "end_to_end"):
-            r = b3l.get((net, ph))
+            r = fast.get((net, ph)) or b3l.get((net, ph))
             fp.append(ci(art, r, "median_us", "median_ci_lo_us", "median_ci_hi_us", "f1") if r
                       else art.placeholder(f"A5 FPGA {net} {ph}"))
+    dl = _dpu_lat(art)
+    dp = ["DPU (Vitis AI, vai\\_q INT8), p50", "--"]
+    for net in NETS:
+        for met in ("dpu_runner", "end_to_end"):
+            r = dl.get((net, met))
+            dp.append(art.cell(r, "p50", "f1") if r else art.placeholder(f"A5 DPU {net} {met}"))
     body.append(r"\midrule")
     body.append(fp)
-    body += _best_cpu_rows(art, c, cpu, b3l)
+    body.append(dp)
+    extra_rows, safe_note = _best_cpu_rows(art, c, cpu, b3l, fast)
+    body += extra_rows
     hdr = [r"& & \multicolumn{2}{c}{LeNet-5 (\textmu s)} & \multicolumn{2}{c}{CIFAR-10 (\textmu s)} \\",
            r"\cmidrule(lr){3-4}\cmidrule(l){5-6}",
            r"Implementation & thr. & comp. & e2e & comp. & e2e"]
     return c.table(art, "@{}lrrrrr@{}", hdr, body,
-                   "A5 same-board baseline: median [95\\% CI] time per image on the KV260 Cortex-A53 vs "
-                   "the accelerator.",
+                   "A5 same-board baselines: median [95\\% CI] time per image on the KV260 Cortex-A53, "
+                   "the accelerator (fast host path) and the DPU.",
                    "tab:cpu",
                    notes=["CPU: hw\\_cpu\\_baseline.csv (source cpu\\_board; median over runs, warm-up "
                           "discarded, distribution-free order-statistic 95\\% CI; workers pinned; p50/p95/p99 "
@@ -370,6 +406,12 @@ def a5_cpu(c: Ctx) -> Artifact:
                           "is given in the speedup rows). CPU e2e additionally includes the input "
                           "preprocessing from the stored raw image (the accelerator e2e starts from the "
                           "stored INT8 activation image), so comp.\\ is the like-for-like comparison. "
+                          + ("Safe host path (per-word MMIO; footnote): e2e speedup vs best CPU " + safe_note + ". "
+                             if safe_note else "")
+                          + "The DPU rows are the AMD DPU (DPUCZDX8G, prebuilt pynq-dpu overlay) running a vai\\_q "
+                          "quantization of the same FP32 nets (hw\\_dpu\\_latency.csv; comp. = VART runner "
+                          "time, e2e = input conversion + runner + argmax); DPU/accelerator ratios above "
+                          "unity mean the accelerator is faster. "
                           "\\emph{Best CPU baseline} = the CPU configuration with the lowest e2e median per "
                           "net over all kinds and thread counts of the table; every speedup is computed "
                           "against it only (a value below unity means the CPU is faster). ORT INT8 is "
@@ -579,6 +621,11 @@ REPEAT_METRICS = [   # (metric file glob, metric, key filter, label, fmt)
     ("hw_a2_a3_cycles.csv", "wall_us_median", {}, "A2 wall-clock/image, median (\\textmu s)", "f1"),
     ("hw_b3_breakdown.csv", "median_us", {"phase": "end_to_end"}, "B3 end-to-end safe, median (\\textmu s)", "f1"),
     ("hw_b3_breakdown_fast.csv", "median_us", {"phase": "end_to_end"}, "B3 end-to-end fast, median (\\textmu s)", "f1"),
+    ("hw_cpu_baseline.csv", "median_us", {"kind": "cpu_ort_int8", "threads": "4", "mode": "e2e"},
+     "ORT INT8, four threads, e2e, median (\\textmu s)", "f1"),
+    ("hw_cpu_baseline.csv", "p99_us", {"kind": "cpu_ort_int8", "threads": "4", "mode": "e2e"},
+     "ORT INT8, four threads, e2e, p99 (\\textmu s)", "f1"),
+    ("hw_dpu_latency.csv", "p50", {"metric": "end_to_end"}, "DPU e2e, p50 (\\textmu s)", "f1"),
     ("hw_b1_power_ina260_summary_*.csv", "accel_dp_w", {}, "B1 $\\Delta P$ accel.\\ (W)", "f3"),
     ("hw_b1_power_ina260_summary_*.csv", "accel_energy_per_image_mj", {}, "B1 $E_\\mathrm{sys}$ accel.\\ (mJ)", "f3"),
     ("hw_b1_power_ina260_summary_*.csv", "accel_e_comp_mj", {}, "B1 $E_\\mathrm{comp}$ accel.\\ (mJ)", "f4"),
@@ -625,54 +672,152 @@ def repeatability(c: Ctx) -> Artifact:
 
 # --------------------------------------------------------------------------------------------
 def percentiles(c: Ctx) -> Artifact:
-    """p50 / p95 / p99 of the per-image time of every measured condition (p50 = median)."""
+    """p50 / p95 / p99 and spread (max - min) of the per-image time of every measured condition
+    (p50 = median): accelerator (fast host path first, safe path below), DPU, CPU baselines."""
     art = c.art("tab_percentiles")
-    cells = lambda r, cols: [art.cell(r, col, "f1") if r and r.get(col) else "--" for col in cols]  # noqa: E731
     body = []
 
-    def add(label, rowmap, cols):
+    def add(label, rowmap, cols, hi="max_us", lo="min_us"):
         line = [label]
         for net in NETS:
             r = rowmap(net)
-            line += cells(r, cols) if r else [art.placeholder(f"percentiles {label} {net}")] * 3
+            if not r:
+                line += [art.placeholder(f"percentiles {label} {net}")] * 4
+                continue
+            line += [art.cell(r, col, "f1") if r.get(col) else "--" for col in cols] + [_spread(art, r, hi, lo)]
         body.append(line)
-    cols_b3 = ("p50_us", "p95_us", "p99_us")
-    cols_cpu = ("p50_us", "p95_us", "p99_us")
+    cols = ("p50_us", "p95_us", "p99_us")
     safe = latest(art.rows("hw_b3_breakdown.csv", hw=True) or [], lambda r: (r["net"], r["phase"]))
     fast = latest(art.rows("hw_b3_breakdown_fast.csv", hw=True) or [], lambda r: (r["net"], r["phase"]))
     b3c = latest(art.rows("hw_b3_breakdown_cpu.csv", hw=True) or [], lambda r: (r["net"], r["phase"]))
     a2 = {n: latest(art.rows("hw_a2_a3_cycles.csv", hw=True, net=n) or [], lambda r: r["layer"]).get("total")
           for n in NETS}
+    dl = _dpu_lat(art)
     cpu = latest([r for r in (art.rows("hw_cpu_baseline.csv", hw=True) or [])
                   if r.get("mode") == "e2e" and r.get("status", "ok") == "ok"],
                  lambda r: (r["net"], r["kind"], r["threads"]))
-    add(f"Accelerator e2e, safe host path ({c.board_label})", lambda n: safe.get((n, "end_to_end")), cols_b3)
-    add(f"Accelerator e2e, fast host path ({c.board_label})", lambda n: fast.get((n, "end_to_end")), cols_b3)
-    add("Accelerator wall-clock (A2 run, safe)", lambda n: a2[n], ("wall_us_p50", "wall_us_p95", "wall_us_p99"))
+    add(f"Accelerator e2e, fast host path ({c.board_label})", lambda n: fast.get((n, "end_to_end")), cols)
+    add("DPU e2e (pre + runner + post)", lambda n: dl.get((n, "end_to_end")), ("p50", "p95", "p99"), "max", "min")
+    add("DPU runner only", lambda n: dl.get((n, "dpu_runner")), ("p50", "p95", "p99"), "max", "min")
+    best = _best_cpu(list(cpu.values())) if cpu else {}
+    if best:
+        (kind, th) = next(iter(best.values()))[:2]
+        r0 = next((r for k, r in cpu.items() if k[1] == kind and k[2] == th), None)
+        add(art.label(f"Best CPU: {CPU_KINDS[kind]}, {th}~thr.\\ e2e", f"hw_cpu_baseline.csv:{r0['_line']}:kind,threads")
+            if r0 else "Best CPU", lambda n, kind=kind, th=th: cpu.get((n, kind, th)), cols)
     body.append(r"\midrule")
+    add(f"Accelerator e2e, safe host path ({c.board_label})", lambda n: safe.get((n, "end_to_end")), cols)
+    add("Accelerator wall-clock (A2 run, safe)", lambda n: a2[n], ("wall_us_p50", "wall_us_p95", "wall_us_p99"),
+        "wall_us_max", "wall_us_min")
     for kind in CPU_KINDS:
         for th in sorted({k[2] for k in cpu if k[1] == kind}, key=inum):
             r0 = next(r for k, r in cpu.items() if k[1] == kind and k[2] == th)
             add(art.label(f"{CPU_KINDS[kind]}, {th}~thr.\\ e2e", f"hw_cpu_baseline.csv:{r0['_line']}:kind,threads"),
-                lambda n, kind=kind, th=th: cpu.get((n, kind, th)), cols_cpu)
+                lambda n, kind=kind, th=th: cpu.get((n, kind, th)), cols)
     rb = next(iter(b3c.values()), None)
-    add(art.label(f"CPU INT8 ref., {rb['condition'].split()[-1].lstrip('x')}~thr.\\ (B3 interleaved)",
+    add(art.label(f"CPU INT8 ref., {rb['condition'].split()[-1].lstrip('x').rstrip(')')}~thr.\\ (B3 interleaved)",
                   f"hw_b3_breakdown_cpu.csv:{rb['_line']}:condition") if rb else "CPU (B3 interleaved)",
-        lambda n: b3c.get((n, "end_to_end")), cols_b3)
-    rs0 = next(iter(safe.values()), None)
+        lambda n: b3c.get((n, "end_to_end")), cols)
+    rs0 = next(iter(fast.values()), None)
     rc0 = next(iter(cpu.values()), None)
-    hdr = [r"& \multicolumn{3}{c}{LeNet-5 (\textmu s)} & \multicolumn{3}{c}{CIFAR-10 (\textmu s)} \\",
-           r"\cmidrule(lr){2-4}\cmidrule(l){5-7}",
-           r"Condition & p50 & p95 & p99 & p50 & p95 & p99"]
-    return c.table(art, "@{}l" + "r" * 6 + "@{}", hdr, body,
-                   "Per-image time percentiles p50 / p95 / p99 of every measured condition.", "tab:pct",
-                   notes=["p50 = median. Sources: hw\\_b3\\_breakdown*.csv (kept images per condition: "
-                          + (art.cell(rs0, "images", "int") if rs0 and rs0.get("images") else "--") + ", interleaved), "
-                          "hw\\_a2\\_a3\\_cycles.csv (A2 wall-clock, one image per call), "
+    rd0 = next(iter(dl.values()), None)
+    hdr = [r"& \multicolumn{4}{c}{LeNet-5 (\textmu s)} & \multicolumn{4}{c}{CIFAR-10 (\textmu s)} \\",
+           r"\cmidrule(lr){2-5}\cmidrule(l){6-9}",
+           r"Condition & p50 & p95 & p99 & spread & p50 & p95 & p99 & spread"]
+    return c.table(art, "@{}l" + "r" * 8 + "@{}", hdr, body,
+                   "Per-image time percentiles p50 / p95 / p99 and spread (max $-$ min) of every measured condition.",
+                   "tab:pct",
+                   notes=["p50 = median; spread = slowest minus fastest timed image. The fast host path is the primary "
+                          "accelerator number, the safe host path is listed below the rule. Sources: "
+                          "hw\\_b3\\_breakdown*.csv (kept images per condition: "
+                          + (art.cell(rs0, "images", "int") if rs0 and rs0.get("images") else "--")
+                          + ", interleaved), hw\\_a2\\_a3\\_cycles.csv (A2 wall-clock, one image per call), "
+                          "hw\\_dpu\\_latency.csv (DPU, images per net: "
+                          + (art.cell(rd0, "n", "int") if rd0 and rd0.get("n") else "--") + "), "
                           "hw\\_cpu\\_baseline.csv (timed runs per configuration: "
-                          + (art.cell(rc0, "runs", "int") if rc0 and rc0.get("runs") else "--") + "; p99 is then close to the "
-                          "maximum and only indicative)."], wide=True)
+                          + (art.cell(rc0, "runs", "int") if rc0 and rc0.get("runs") else "--")
+                          + "; p99 is then close to the maximum and only indicative)."], wide=True)
 
 
-ALL = [t1_impl, a1_accuracy, a2_latency, a3_cycles, a4_util, a5_cpu, percentiles, b1_power, b2_clock, b3_breakdown,
+# --------------------------------------------------------------------------------------------
+def power_compare(c: Ctx) -> Artifact:
+    """B1 vs DPU SOM-rail power: absolute power and delta above each system's OWN-overlay idle, energy/image;
+    the no-overlay (fresh boot) idle reference as a single row."""
+    art = c.art("tab_power_compare")
+    ours = {e["net"]: e for e in power_summaries(art, "hw_b1_power_ina260")}
+    dpu = {e["net"]: e for e in power_summaries(art, "hw_dpu_power_ina260")}
+    ref = latest(art.rows("hw_nooverlay_idle_phases.csv", hw=True) or [], lambda r: "ref").get("ref")
+    body = []
+
+    def block(title, ents, cpu_kind=False):
+        body.append(f"\\multicolumn{{3}}{{@{{}}l}}{{\\emph{{{title}}}}} \\\\")
+        for text, col, fmt, scale in (("$P_\\mathrm{idle}$, own overlay loaded (W)", "accel_p_idle_w", "f3", 1.0),
+                                      ("$P$ running, absolute (W)", "accel_p_run_w", "f3", 1.0),
+                                      ("$\\Delta P$ above own idle (W)", "accel_dp_w", "f3", 1.0),
+                                      ("Time/image (ms)", "accel_time_per_image_s", "f3", 1000.0),
+                                      ("Energy/image (mJ)", "accel_energy_per_image_mj", "f3", 1.0)):
+            body.append([text] + [pm(art, ents[n], col, fmt, scale) if n in ents
+                                  else art.placeholder(f"power compare {title} {n}") for n in NETS])
+    block(f"Accelerator ({c.board_label}, gos build loaded, host loop included)", ours)
+    block("DPU (prebuilt pynq-dpu overlay loaded, end-to-end loop)", dpu)
+    body.append(r"\midrule")
+    body.append(["$P_\\mathrm{idle}$, no overlay (fresh boot) (W)"]
+                + [f"\\multicolumn{{2}}{{c}}{{{art.cell(ref, 'power_mean_w', 'f3') if ref and ref.get('power_mean_w') else art.placeholder('no-overlay idle reference: hw_nooverlay_idle_phases.csv')}}}"])
+    return c.table(art, "@{}lrr@{}", ["Quantity & LeNet-5 & CIFAR-10"], body,
+                   f"SOM-rail power ({INA_LABEL}) of the accelerator and the DPU: absolute power and $\\Delta P$ above "
+                   "each system's own-overlay idle.", "tab:powercmp",
+                   notes=["Each $\\Delta P$ is above the idle power measured with that system's own bitstream loaded "
+                          "(mean of the idle phases bracketing the run phases); the two idle levels differ because the "
+                          "loaded PL configuration differs, so compare absolute power and $\\Delta P$ together. The "
+                          "no-overlay reference is the idle SOM-rail power right after a boot, before any bitstream was "
+                          "loaded. $P_\\mathrm{run}$ / time and energy are per image of the measured loop (accelerator: "
+                          "host loop of the selected host path; DPU: input conversion + runner + argmax). Source: "
+                          "hw\\_b1\\_power\\_ina260\\_summary*.csv, hw\\_dpu\\_power\\_ina260\\_summary*.csv, "
+                          "hw\\_nooverlay\\_idle\\_phases.csv. Measured on the KV260."])
+
+
+# --------------------------------------------------------------------------------------------
+def efficiency(c: Ctx) -> Artifact:
+    """Throughput and efficiency: images/s, GOPS, GOPS per MAC lane, GOPS per DSP (board_efficiency.csv)."""
+    art = c.art("tab_efficiency")
+    rows = latest(art.rows("board_efficiency.csv") or [], lambda r: (r["net"], r["system"]))
+    params = {r["name"]: r for r in (art.rows("dpu_overlay_params.csv") or [])}
+    body = []
+    lab = {"ours_pl": "Accelerator, PL counter", "ours_e2e_fast": "Accelerator, e2e fast host path",
+           "dpu_runner": "DPU, runner only", "dpu_e2e": "DPU, e2e",
+           "cpu_compute": "Best CPU, compute", "cpu_e2e": "Best CPU, e2e"}
+
+    def cell(net, sysname, col, fmt):
+        r = rows.get((net, sysname))
+        if not r:
+            return art.placeholder(f"efficiency {net} {sysname}: board_efficiency.csv")
+        return art.cell(r, col, fmt) if r.get(col) else "n/a"
+    for sysname, text in lab.items():
+        for colname, title, fmt in (("images_per_s", "images/s", "f0"), ("gops", "GOPS", "f2"),
+                                    ("gops_per_mac_lane", "GOPS / MAC lane", "f4"), ("gops_per_dsp", "GOPS / DSP", "f3"),
+                                    ("images_per_s_per_dsp", "images/s / DSP", "f1")):
+            if sysname.startswith("cpu") and colname not in ("images_per_s", "gops"):
+                continue
+            body.append([f"{text}: {title}"] + [cell(n, sysname, colname, fmt) for n in NETS])
+    body.append(r"\midrule")
+    body.append(["MAC lanes (ours / DPU)"] + [f"{cell(n, 'ours_pl', 'mac_lanes', 'int')} / {cell(n, 'dpu_runner', 'mac_lanes', 'int')}"
+                                              for n in NETS])
+    hw = params.get("mac_lanes")
+    return c.table(art, "@{}lrr@{}", ["Quantity & LeNet-5 & CIFAR-10"], body,
+                   "Throughput and efficiency per image: accelerator vs DPU (vs best CPU).", "tab:eff",
+                   notes=["GOPS = twice the MACs per image (cycle\\_model.csv) divided by the time, the same operation count for "
+                          "every system (same network architecture; the DPU runs the vai\\_q quantization of the "
+                          "FP32 net). MAC lanes: accelerator eight-by-eight PEs (one DSP48E2 MAC each), DPU = "
+                          "ARCH\\_PP $\\times$ ARCH\\_ICP $\\times$ ARCH\\_OCP from the overlay's "
+                          + (art.label(tex_escape(hw["hwh_file"].split("/")[-1]), f"dpu_overlay_params.csv:{hw['_line']}:hwh_file")
+                             if hw else "hwh")
+                          + " (dpu\\_overlay\\_params.csv). DSP: accelerator from impl\\_gos.csv (post-implementation); "
+                          "\\emph{n/a}: the DPU overlay's hwh and xclbin carry no resource counts (no DSP/LUT/FF/BRAM "
+                          "figure can be read from them), so per-DSP efficiency is given for the accelerator only and "
+                          "per-MAC-lane efficiency for both. A MAC lane is not a DSP: the DPU packs INT8 MACs in "
+                          "DSP48E2 slices. Source: board\\_efficiency.csv (derived from committed board results)."])
+
+
+ALL = [t1_impl, a1_accuracy, a2_latency, a3_cycles, a4_util, a5_cpu, percentiles, efficiency, b1_power, power_compare,
+       b2_clock, b3_breakdown,
        repeatability, verification]

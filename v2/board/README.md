@@ -93,7 +93,7 @@ Options: `--budget-min N`, `--resume` (default) / `--fresh`, `--quick` (200 imag
 `--n 200`, CPU `--quick`, 30 s windows), `--plan`, `--steps s2.A1 s3.B2` (subset),
 `--step-timeout-min M`, `--write-mode {elem,slice}`, `--host-path {safe,fast}` (A1-A4, B1, B2; default
 safe; fast requires `s1.fast` OK in the same state, else those steps are BLOCKED = failed, nothing
-run), `--fast-store {block,words32}`, `--no-power-control` (B1 without control phases), `--window-s/--gap-s` (B1/B2 INA260 phase
+run), `--fast-store {block,words32}`, `--idle-ref-s N` (**no-overlay idle reference**: INA260 idle power sampled for N s right after the environment pre-flight and before any bitstream is loaded — use it on the first invocation after a fresh boot; `hw_nooverlay_idle_{samples,phases}.csv`, DECISIONS D23), `--no-power-control` (B1 without control phases), `--window-s/--gap-s` (B1/B2 INA260 phase
 length / B2 gap, default 60/10 s; `--quick` 30 s), `--power-repeats`, `--b2-power-repeats`
 (default 3 each), `--power-rate-hz` (default 10), `--b2-images`, `--fcal-s` (calibration wall time,
 default 8 s), `--no-b3-cpu`, `--session-index {1,2,3}` (results of 2/3 in `results/rep<K>/`),

@@ -531,4 +531,9 @@ def test_real_board_results_generate_without_failures(tmp_path):
     run(d, out)
     a5 = tex(out, "tab_a5_cpu")
     assert "Best CPU baseline" in a5 and "Speedup vs best CPU" in a5
-    assert (out / "tab_percentiles.tex").exists()
+    for n in ("tab_percentiles", "tab_efficiency", "tab_power_compare"):
+        assert (out / f"{n}.tex").exists(), n
+    pct = tex(out, "tab_percentiles")
+    assert "spread" in pct and "DPU" in pct and pct.index("fast host path") < pct.index("safe host path")
+    eff = tex(out, "tab_efficiency")
+    assert "MAC lane" in eff and "n/a" in eff or "TBD" in eff

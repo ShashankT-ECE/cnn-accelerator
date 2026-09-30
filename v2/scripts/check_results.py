@@ -31,6 +31,10 @@ PRODUCER_SOURCES = {
     "ooc_synth.csv": ("v2/rtl", "v2/vivado"),      # ooc_all.sh + ooc_collect.py
     # make_dpu_package.py / export_data.py / vai_quantize.py: v2/dpu + net_config, common, r2 checkpoint
     "dpu_model_accuracy.csv": ("v2/model/common.py", "v2/model/net_config.py", "v2/model/retrain"),
+    # board-result analyses (v2/scripts/regen_board_analysis.sh): their inputs are committed board CSVs,
+    # so only their own code (+ the metadata helper) can make a row stale
+    "dpu_overlay_params.csv": ("v2/analysis/dpu_overlay_params.py", "v2/analysis/_setup.py", "v2/model/common.py"),
+    "board_efficiency.csv": ("v2/analysis/board_efficiency.py", "v2/analysis/_setup.py", "v2/model/common.py"),
 }
 # dpu_model_accuracy.csv (D16 amendment 2, 2026-09-30): the laptop producer code under v2/dpu
 # (make_dpu_package.py, export_data.py, vai_quantize.py, run_docker.sh and their helpers) — NOT the
