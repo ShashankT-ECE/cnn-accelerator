@@ -450,3 +450,17 @@ def test_aggregate_refuses_wrong_session_index(tmp_path):
            [{"source": "dryrun_model", "session_index": 3, "net": "lenet5", "phase": "x", "median_us": 1}])
     with pytest.raises(SystemExit, match="session_index"):
         AG.aggregate(root)
+
+
+def test_deploy_info_follows_the_loaded_bitstream(capsys):
+    """Fallback to the 250 MHz build: no SHA warning, per-bitstream fields of the loaded one."""
+    info = {"bit": "bit/gos_300/gos_300.bit", "bit_sha256": "a" * 64, "bit_clock_mhz": 299.997009,
+            "bit_clock_requested_mhz": 300, "commit": "abc",
+            "bits": [{"bit": "bit/gos_300/gos_300.bit", "bit_sha256": "a" * 64, "bit_clock_mhz": 299.997009,
+                      "bit_clock_requested_mhz": 300},
+                     {"bit": "bit/gos_250/gos_250.bit", "bit_sha256": "b" * 64, "bit_clock_mhz": 249.997498,
+                      "bit_clock_requested_mhz": 250}]}
+    got = bc.deploy_info_for_sha(info, "b" * 64)
+    assert got["bit_sha256"] == "b" * 64 and got["bit_clock_mhz"] == 249.997498
+    assert got["bit_clock_requested_mhz"] == 250 and got["commit"] == "abc"
+    assert bc.deploy_info_for_sha(info, "c" * 64) is info          # unknown bitstream: still warned

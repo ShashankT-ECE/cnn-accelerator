@@ -297,6 +297,15 @@ def add_common_args(ap: argparse.ArgumentParser, nets: bool = True):
     return ap
 
 
+def deploy_info_for_sha(info: dict, bit_sha256: str) -> dict:
+    """DEPLOY_INFO with the per-bitstream fields (bit, hwh, SHA256s, build_id, closed clock, WNS)
+    of the deployed bitstream whose SHA256 is bit_sha256; unchanged if none matches."""
+    for e in info.get("bits", []):
+        if e.get("bit_sha256") == bit_sha256:
+            return {**info, **e}
+    return info
+
+
 def closed_clock_for(bit, info: dict | None = None) -> float | None:
     """The closed (timing-met) pl_clk0 of a bitstream in MHz: summary.json beside it
     (pl_clk0_mhz_actual), else the DEPLOY_INFO entry of that file name; None if unknown."""
@@ -360,6 +369,9 @@ class RunContext:
         self.board_id = args.board_id or (board_id_default() if be.kind == "pynq" else "")
         if be.kind == "pynq":
             self.bitstream_sha256 = be.bit_sha256
+            # several bitstreams are deployed (300 + 250 MHz fallback): the top-level DEPLOY_INFO
+            # fields describe the first one; use the entry of the bitstream actually loaded
+            self.info = deploy_info_for_sha(self.info, be.bit_sha256)
             dep_sha = self.info.get("bit_sha256")
             if dep_sha and dep_sha != be.bit_sha256:
                 print(f"WARNING: loaded bitstream SHA256 {be.bit_sha256[:12]} != DEPLOY_INFO "

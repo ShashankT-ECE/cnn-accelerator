@@ -191,9 +191,12 @@ def test_dry_run_refused_outside_dryrun_and_clock_check(tmp_path):
                 "--expect-clock-mhz", "300", "--out-dir", str(tmp_path / "dryrun")])
 
 
-def test_session_soak_step():
-    opts = {"backend": "pynq", "data_dir": "data", "bit": "bit/gos_300.bit", "closed_mhz": 299.997009,
-            "results_dir": "results", "host_path": "safe"}
+def test_session_soak_step(tmp_path, monkeypatch):
+    # independent of the working directory: a relative "data" picked up a locally built
+    # v2/board/data/shapes/ (then s2.shapes is registered) when pytest ran from v2/board
+    monkeypatch.chdir(tmp_path)
+    opts = {"backend": "pynq", "data_dir": str(tmp_path / "data"), "bit": "bit/gos_300.bit",
+            "closed_mhz": 299.997009, "results_dir": "results", "host_path": "safe"}
     st = X.soak_step(opts)
     assert st["id"] == "s3.soak" and st["session"] == 3 and st["group"] == "soak"
     assert st["cmd"][0] == "exp_soak.py" and "--bit" in st["cmd"]
