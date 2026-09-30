@@ -15,7 +15,7 @@ cat <<EOF
 Deployed to $USER_@$HOST:~/gos/dpu/. On the board:
   source /etc/profile.d/pynq_venv.sh
   python3 -c "import pynq_dpu; print(pynq_dpu.__file__)"        # pynq-dpu 2.5 installed?
-  cd ~/gos/dpu && sudo -E python3 dpu_session.py --limit 200 --no-power --out-dir ~/gos/results/dpu_quick
-  sudo -E python3 dpu_session.py                                 # full: 10k/net + INA260 power
+  cd ~/gos/dpu && ~/gos/session.sh py dpu_session.py --limit 200 --no-power --out-dir ~/gos/results/dpu_quick
+  ~/gos/session.sh py dpu_session.py                                 # full: 10k/net + INA260 power
 Copy back: rsync -av $USER_@$HOST:gos/results/hw_dpu_* v2/results/
 EOF

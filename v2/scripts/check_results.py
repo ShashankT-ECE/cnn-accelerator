@@ -32,11 +32,18 @@ PRODUCER_SOURCES = {
     # make_dpu_package.py / export_data.py / vai_quantize.py: v2/dpu + net_config, common, r2 checkpoint
     "dpu_model_accuracy.csv": ("v2/model/common.py", "v2/model/net_config.py", "v2/model/retrain"),
 }
+# dpu_model_accuracy.csv (D16 amendment 2, 2026-09-30): the laptop producer code under v2/dpu
+# (make_dpu_package.py, export_data.py, vai_quantize.py, run_docker.sh and their helpers) — NOT the
+# documentation (*.md) and NOT the board-side files the producer never executes (dpu_session.py is
+# only copied into the package, deploy_dpu.sh only ships it, tests/). A command fix in the docs
+# must not make model-accuracy rows stale (it did on 2026-09-30, commit 7bd7173).
+DPU_MODEL_SOURCES = ("v2/dpu", ":(exclude)v2/dpu/*.md", ":(exclude)v2/dpu/dpu_session.py",
+                     ":(exclude)v2/dpu/deploy_dpu.sh", ":(exclude)v2/dpu/tests")
 # CSVs whose producer lives outside SOURCE_PATHS: those sources are compared too (only for these CSVs,
 # so older rows of other CSVs are not made stale by a folder that did not exist when they were produced).
 EXTRA_SOURCES = {"schedule_ablation.csv": ("v2/analysis",), "projection_16x16.csv": ("v2/analysis",),
                  "utilization_model.csv": ("v2/analysis",), "rtl_full10k.csv": ("v2/fullsim",),
-                 "dpu_model_accuracy.csv": ("v2/dpu",), "shapes_rtl.csv": ("v2/shapes",),
+                 "dpu_model_accuracy.csv": DPU_MODEL_SOURCES, "shapes_rtl.csv": ("v2/shapes",),
                  "limits_rtl.csv": ("v2/shapes",)}
 
 

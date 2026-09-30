@@ -4,9 +4,9 @@
 On the board (after v2/board/deploy.sh AND v2/dpu/deploy_dpu.sh; files in ~/gos/dpu/):
 
     source /etc/profile.d/pynq_venv.sh
-    cd ~/gos/dpu && sudo -E python3 dpu_session.py                  # both nets, all 10k, + power
-    sudo -E python3 dpu_session.py --nets lenet5 --no-power          # accuracy + latency only
-    sudo -E python3 dpu_session.py --power-only --phase-s 60 --repeats 3
+    cd ~/gos/dpu && ~/gos/session.sh py dpu_session.py                  # both nets, all 10k, + power
+    ~/gos/session.sh py dpu_session.py --nets lenet5 --no-power          # accuracy + latency only
+    ~/gos/session.sh py dpu_session.py --power-only --phase-s 60 --repeats 3
 
 Laptop dry run (no pynq_dpu; fake runner + mock sensor; writes only under results/dryrun/dpu/):
 
