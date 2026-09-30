@@ -179,6 +179,14 @@ class MmioBackend:
     def set_fclk0(self, mhz: float) -> float:
         raise NotImplementedError
 
+    def set_fclk0_exact(self, mhz: float, tol: float = 0.1) -> float:
+        """Set pl_clk0 and verify the read-back within tol (GosError otherwise). Backends without
+        PLL dividers (dry run) set the nominal clock."""
+        rb = self.set_fclk0(mhz)
+        if abs(rb - float(mhz)) > tol:
+            raise GosError(f"pl_clk0 read back {rb:.6f} MHz != requested {float(mhz):.6f} MHz (+-{tol})")
+        return rb
+
     def info(self) -> dict:
         return {"backend": self.kind}
 
@@ -421,9 +429,16 @@ class GosDevice:
         return self.be.fclk0_mhz()
 
     def set_fclk0(self, mhz: float) -> float:
-        """Request pl_clk0 = mhz; returns the read-back actual frequency."""
+        """Request pl_clk0 = mhz; returns the read-back actual frequency. On the KV260 pynq picks
+        the CLOSEST reachable frequency (possibly above the request): use set_fclk0_exact."""
         self._require_idle()
         return self.be.set_fclk0(mhz)
+
+    def set_fclk0_exact(self, mhz: float, tol: float = FCLK_SET_TOL_MHZ) -> float:
+        """Set pl_clk0 = mhz only if the PLL dividers reach it within tol, verify the read-back
+        (GosError otherwise, nothing written when unreachable); returns the read-back."""
+        self._require_idle()
+        return self.be.set_fclk0_exact(mhz, tol)
 
     # -- CSR helpers ------------------------------------------------------------------
     @property

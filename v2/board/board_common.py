@@ -547,25 +547,22 @@ def rtl_cycles_for(pkg: Package) -> dict:
 
 CLOCK_TOL_MHZ = 0.5          # read-back vs closed-clock tolerance (PLL rounding, e.g. 199.998001)
 FCLK_SET_TOL_MHZ = 0.1       # pl_clk0 set to the closed clock: read-back must be within this (= gos_driver)
-B2_MIN_MHZ, B2_MAX_MHZ, B2_STEP_MHZ = 100.0, 300.0, 25.0   # EXPERIMENTS.md B2 (user, 2026-09-29)
-B2_GRID = tuple(B2_MIN_MHZ + i * B2_STEP_MHZ
-                for i in range(int(round((B2_MAX_MHZ - B2_MIN_MHZ) / B2_STEP_MHZ)) + 1))  # 9 points
+# B2 sweep (DECISIONS D21): only clocks the board can produce EXACTLY. PYNQ does not reprogram the
+# PS PLLs; pl_clk0 = (PL0 source PLL of the boot image) / (div0 x div1). On the KV260 Kria-PYNQ
+# image the source is the IOPLL at 999.99 MHz (pynq's 33.333 MHz reference arithmetic), so the
+# reachable clocks up to 250 MHz are 999.99 / {10, 9, 8, 7, 6, 5, 4}.
+B2_SRC_PLL_MHZ = 999.99
+B2_DIVISORS = (10, 9, 8, 7, 6, 5, 4)
 
 
-def b2_sweep_clocks(closed_mhz: float, tol: float = CLOCK_TOL_MHZ) -> list[float]:
-    """B2 sweep = 100..300 MHz in 25 MHz steps (9 points), set at runtime via PYNQ on the deployed
-    bitstream, capped at its closed pl_clk0: a grid point within tol of the closed clock is
-    requested AT the closed clock (e.g. 299.997009 instead of 300); points above it are dropped.
-    The PS PLL may not hit every grid point exactly; the read-back clock is recorded and used."""
+def b2_sweep_clocks(closed_mhz: float, tol: float = FCLK_SET_TOL_MHZ,
+                    src_mhz: float = B2_SRC_PLL_MHZ) -> list[float]:
+    """B2 sweep = the exactly reachable clocks src / d, d in B2_DIVISORS (99.999, 111.11, 124.99875,
+    142.855714, 166.665, 199.998, 249.9975 MHz: "100, 111, 125, 143, 167, 200, 250"), ascending,
+    capped at the bitstream's closed pl_clk0 (+ tol). Each is set with the divider-computing
+    setter (gos_driver.set_fclk0_exact) and the read-back must equal it within tol."""
     closed = float(closed_mhz)
-    out = []
-    for c in B2_GRID:
-        if c > closed + tol:
-            continue
-        v = round(min(c, closed), 6)
-        if v not in out:
-            out.append(v)
-    return out
+    return [c for c in (round(src_mhz / d, 6) for d in B2_DIVISORS) if c <= closed + tol]
 
 
 def one(s):

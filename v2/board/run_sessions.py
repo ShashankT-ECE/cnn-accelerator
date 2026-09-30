@@ -348,7 +348,7 @@ def build_steps(cfg: Config, sessions, quick: bool = False, window_s: float = 60
                           expect=("hw_a4_util.csv",), requires=need, group="A4"))
     if 3 in sessions:
         w = ["--window-s", f"{window_s:g}", "--gap-s", f"{gap_s:g}"]
-        clocks = bc.b2_sweep_clocks(closed, cfg.clock_tol)
+        clocks = bc.b2_sweep_clocks(closed)
         steps.append(fcal(3))
         steps += power_hook_steps(cfg, dev, dirty, window_s, power_repeats, power_rate_hz,
                                   [*wm, *hp], control=power_control, requires=need,

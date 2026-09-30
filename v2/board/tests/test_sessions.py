@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 
 import board_common as bc
+import gos_driver as D
 import run_sessions as RS
 
 BUILD = "c88e71a0"
@@ -319,19 +320,22 @@ def test_dry_run_preflight_says_dry_run(env):
 
 
 # ---- B2 sweep ---------------------------------------------------------------------------------
+B2_ALL = [99.999, 111.11, 124.99875, 142.855714, 166.665, 199.998, 249.9975]
+
+
 @pytest.mark.parametrize("closed, expect", [
-    (199.998001, [100.0, 125.0, 150.0, 175.0, 199.998001]),
-    (249.997498, [100.0, 125.0, 150.0, 175.0, 200.0, 225.0, 249.997498]),
-    (250.0, [100.0, 125.0, 150.0, 175.0, 200.0, 225.0, 250.0]),
-    (240.0, [100.0, 125.0, 150.0, 175.0, 200.0, 225.0]),
-    (299.997009, [100.0, 125.0, 150.0, 175.0, 200.0, 225.0, 250.0, 275.0, 299.997009]),
-    (300.0, [100.0, 125.0, 150.0, 175.0, 200.0, 225.0, 250.0, 275.0, 300.0]),
-    (150.0, [100.0, 125.0, 150.0]),
+    (199.998001, B2_ALL[:6]),
+    (249.997498, B2_ALL),                       # the performance build: 100 ... 250 (7 points)
+    (240.0, B2_ALL[:6]),
+    (299.997009, B2_ALL),                       # 300 MHz is not reachable: never in the sweep
+    (150.0, B2_ALL[:4]),
 ])
 def test_b2_sweep_clocks(closed, expect):
     got = bc.b2_sweep_clocks(closed)
     assert got == expect
-    assert max(got) <= closed
+    assert max(got) <= closed + bc.FCLK_SET_TOL_MHZ
+    for c in got:                               # every point is an exact divider of the source PLL
+        assert D.best_pl_dividers(bc.B2_SRC_PLL_MHZ, c)[2] == pytest.approx(c, abs=1e-6)
 
 
 def test_b2_step_uses_sweep_and_closed_clock(env):
@@ -339,14 +343,13 @@ def test_b2_step_uses_sweep_and_closed_clock(env):
     steps = {s.id: s for s in RS.build_steps(cfg, [3])}
     argv = steps["s3.B2"].argv
     i = argv.index("--clocks")
-    assert argv[i + 1:argv.index("--max-mhz")] == ["100.000000", "125.000000", "150.000000", "175.000000",
-                                                   "200.000000", "225.000000", "249.997498"]
+    assert argv[i + 1:argv.index("--max-mhz")] == [f"{c:.6f}" for c in B2_ALL]
     assert argv[argv.index("--max-mhz") + 1] == "249.997498"
     assert argv[argv.index("--power-repeats") + 1] == "3" and "--with-meter" not in argv
     assert steps["s3.B2"].group == "sweep"
     exp = steps["s3.B2"].expect
     assert "hw_b2_clock.csv" in exp
-    for tag in ("100mhz", "150mhz", "200mhz", "250mhz"):
+    for tag in ("100mhz", "111mhz", "125mhz", "143mhz", "167mhz", "200mhz", "250mhz"):
         for k in ("samples", "phases", "summary"):
             assert f"hw_b2_power_ina260_{k}_lenet5_{tag}.csv" in exp
     assert "mock" not in argv                                      # hw: real sensor only
@@ -399,7 +402,7 @@ def test_power_step_estimates_realistic(env):
     est2, _ = RS.estimate(steps["s3.B2"], {"timing": {}}, "pynq")
     per_clock = 3 * 3 * 60 + RS.B2_PER_CLOCK_OVERHEAD_S
     b2 = steps["s3.B2"].argv
-    n_clk = b2.index("--max-mhz") - b2.index("--clocks") - 1       # 25 MHz grid capped at the closed clock
+    n_clk = b2.index("--max-mhz") - b2.index("--clocks") - 1       # reachable clocks capped at the closed clock
     assert n_clk == len(bc.b2_sweep_clocks(float(b2[b2.index("--max-mhz") + 1])))
     assert est2 == pytest.approx(n_clk * per_clock + n_clk * 100 * RS.DEFAULT_RATE_S["pynq"]
                                  + RS.STEP_OVERHEAD_S)

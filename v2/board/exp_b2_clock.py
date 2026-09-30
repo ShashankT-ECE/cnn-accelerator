@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
-"""B2 clock sweep: pl_clk0 = 100..300 MHz in 25 MHz steps (9 points), set at runtime, <= closed clock.
+"""B2 clock sweep: pl_clk0 at the exactly reachable clocks 100, 111, 125, 143, 167, 200, 250 MHz, <= closed clock.
 
-    ./session.sh py exp_b2_clock.py [--clocks 100 150 200] [--max-mhz 200] [--net lenet5]
+    ./session.sh py exp_b2_clock.py [--clocks 99.999 199.998] [--max-mhz 249.997498] [--net lenet5]
                                     [--images 100] [--window-s 60] [--power-repeats 3]
                                     [--rate-hz 10]
     python3 exp_b2_clock.py --backend model --window-s 2 --sensor mock   # dry run -> results/dryrun/
 
 The timing-closed frequency comes from --max-mhz or DEPLOY_INFO.json 'bit_clock_mhz' (the
-Vivado-reported pl_clk0 of the deployed build). Default sweep (board_common.b2_sweep_clocks):
-100, 125, ..., 300 MHz (25 MHz steps), capped at the closed clock (the
-top point is requested at the closed clock itself). A requested clock above it (+0.5 MHz
-tolerance) is skipped and logged, never run; a read-back above it aborts the sweep. Per clock: set pl_clk0 (pynq Clocks.fclk0_mhz), read it back,
+Vivado-reported pl_clk0 of the deployed build). Default sweep (board_common.b2_sweep_clocks,
+DECISIONS D21): the clocks the board's PL0 source PLL divides down to EXACTLY — 999.99 MHz /
+{10, 9, 8, 7, 6, 5, 4} = 99.999, 111.11, 124.99875, 142.855714, 166.665, 199.998, 249.9975 MHz —
+capped at the closed clock. A requested clock above it (+0.1 MHz) is skipped and logged, never
+run. Per clock: set pl_clk0 with the divider-computing setter of the driver
+(GosDevice.set_fclk0_exact: nothing is written unless the dividers reach the request within
+0.1 MHz; pynq's own setter would pick the closest frequency, possibly above the closed clock) and
+REQUIRE read-back == requested within 0.1 MHz (else the sweep aborts, nothing run at that clock),
 soft_reset + reload the net (WGT/QPARAM/DESC with readback), A2 on --images images (cycles must
 equal the model at every clock: consistency check), then the power at this clock with the SAME
 INA260 SOM-rail logger as B1 (power_log.run_power_protocol) in a REDUCED protocol: accelerator
@@ -49,10 +53,11 @@ import time  # noqa: E402
 from pathlib import Path  # noqa: E402
 
 import board_common as bc  # noqa: E402
+import gos_driver as D  # noqa: E402
 import exp_a2_a3_cycles as a2  # noqa: E402
 import power_log as pl  # noqa: E402
 
-FIELDS = ["clock_requested_mhz", "clock_readback_mhz", "max_closed_mhz", "images",
+FIELDS = ["clock_requested_mhz", "clock_readback_mhz", "clock_readback_equal", "max_closed_mhz", "images",
           "model_total_cycles", "hw_total_cycles", "hw_min", "hw_max", "cycles_equal_model",
           "latency_us", "wall_us_median", "wall_us_p95",
           "power_label", "ina260_backend", "ina260_repeats", "ina260_p_idle_w", "ina260_p_accel_w",
@@ -303,18 +308,22 @@ def main(argv=None) -> int:
     try:
         for req in a.clocks:
             row = None
-            if req > max_mhz + bc.CLOCK_TOL_MHZ:
+            if req > max_mhz + bc.FCLK_SET_TOL_MHZ:
                 print(f"[B2] SKIP {req:g} MHz: above the closed clock {max_mhz} MHz")
                 row = ctx.meta(a.net, "all", "", 0, clock_mhz="")
                 row.update(clock_requested_mhz=req, max_closed_mhz=max_mhz,
                            skipped_reason=f"above closed clock {max_mhz} MHz")
                 rows.append(row)
                 continue
-            actual = dev.set_fclk0(req)
-            print(f"[B2] pl_clk0 requested {req:g} MHz -> read back {actual:.6f} MHz")
-            if actual > max_mhz + bc.CLOCK_TOL_MHZ:
+            try:
+                actual = dev.set_fclk0_exact(req, bc.FCLK_SET_TOL_MHZ)
+            except D.GosError as e:
+                raise SystemExit(f"[B2] ABORT at {req:g} MHz: {e}; nothing run at this clock") from None
+            print(f"[B2] pl_clk0 requested {req:.6f} MHz -> read back {actual:.6f} MHz "
+                  f"(== requested within {bc.FCLK_SET_TOL_MHZ} MHz: PASS)")
+            if actual > max_mhz + bc.FCLK_SET_TOL_MHZ:
                 raise SystemExit(f"[B2] ABORT: read-back pl_clk0 {actual:.6f} MHz > closed clock "
-                                 f"{max_mhz} MHz (+{bc.CLOCK_TOL_MHZ}); nothing run at this clock")
+                                 f"{max_mhz} MHz (+{bc.FCLK_SET_TOL_MHZ}); nothing run at this clock")
             dev.soft_reset()
             dev.load_net(pkg)
             t0 = time.perf_counter()
@@ -346,6 +355,7 @@ def main(argv=None) -> int:
                            clock_mhz=actual)
             f = pl._f
             row.update(clock_requested_mhz=req, clock_readback_mhz=f"{actual:.6f}",
+                       clock_readback_equal=abs(actual - req) <= bc.FCLK_SET_TOL_MHZ,
                        max_closed_mhz=max_mhz, images=tot["images"],
                        model_total_cycles=tot["model_cycles"], hw_total_cycles=tot["hw_cycles"],
                        hw_min=tot["hw_min"], hw_max=tot["hw_max"], cycles_equal_model=cyc_ok,
@@ -367,8 +377,11 @@ def main(argv=None) -> int:
                        layers_equal_model=all(x["hw_images_equal_model"] == x["images"] for x in crows))
             rows.append(row)
     finally:
-        back = dev.set_fclk0(clk0)
-        print(f"[B2] restored pl_clk0 to {back:.6f} MHz (was {clk0:.6f})")
+        try:
+            back = dev.set_fclk0_exact(clk0, bc.FCLK_SET_TOL_MHZ)
+            print(f"[B2] restored pl_clk0 to {back:.6f} MHz (was {clk0:.6f})")
+        except D.GosError as e:       # the next overlay load sets and verifies the clock anyway (D19)
+            print(f"[B2] WARNING: pl_clk0 not restored to {clk0:.6f} MHz: {e}")
     cyc, per_req, ident_ok = cycle_identity(per_clock)
     ok &= ident_ok
     for r in rows:

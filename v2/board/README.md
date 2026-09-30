@@ -21,7 +21,7 @@ Board-side code needs only **numpy + pynq** and the files in this directory plus
 | `exp_b3_breakdown.py` | B3 host-side phase times, **interleaved conditions** (`--conditions safe fast cpu`: randomized blocks, seed recorded; ≥1000 kept per condition, warm-up discarded; median + 95 % CI) → `hw_b3_breakdown.csv` (safe), `hw_b3_breakdown_fast.csv` (fast, after the fast-path check), `hw_b3_breakdown_cpu.csv` (CPU INT8 reference, 1 thread) |
 | `power_log.py` | **B1/B2 power (the only power source):** on-board INA260 SOM-rail (VCC_SOM) logger + protocol (B1: accel / control / cpu, each bracketed by idle, seeded random order per repeat, ×3 + idle), energy two ways (E_sys, E_comp at the read-back clock) + duty cycle, sensor check, sensor probe |
 | `exp_b1_power.py` | B1 entry point: runs the `power_log.py` protocol for each net (thin wrapper) |
-| `exp_b2_clock.py` | B2 pl_clk0 sweep (≤ closed clock): cycles == model, latency, INA260 idle/accel/idle per clock, cycle identity + power-vs-clock fit (other owner; see "Publication extras") |
+| `exp_b2_clock.py` | B2 pl_clk0 sweep over the exactly reachable clocks (100, 111, 125, 143, 167, 200, 250 MHz ≤ closed clock; exact setter, read-back equality): cycles == model, latency, INA260 idle/accel/idle per clock, cycle identity + power-vs-clock fit (other owner; see "Publication extras") |
 | `exp_fclk_cal.py` | **PL clock cross-check** f_meas (not the clock of record): cycle counter vs CLOCK_MONOTONIC_RAW, differential LeNet/CIFAR lower-envelope estimator with dithered poll phase, fold t-interval, flag if > 0.1 % off the read-back → `hw_fclk_cal_s<N>.csv` |
 | `stats.py` | warm-up discard, median + distribution-free 95 % CI, p95, randomized block order, between-session statistics |
 | `board_env.py` | environment pre-flight: cpufreq governor + fixed frequency, pinning, package-manager check, AMS die temperature; fake sysfs/proc trees for laptop tests / dry runs |
@@ -147,11 +147,14 @@ timeout: `--step-timeout-min` or max(5 min, 3 × estimate + 2 min), capped by th
 the step's process group gets SIGINT (B2 restores pl_clk0 in its `finally`), then SIGTERM, then
 SIGKILL.
 
-**B2 sweep:** 100–300 MHz in 25 MHz steps (9 points on the 300 MHz bitstream, pl_clk0 set at runtime via PYNQ; the per-clock INA260 protocol makes B2 ≈ 9 × 9.3 min ≈ 84 min at default settings)
-(`board_common.b2_sweep_clocks`), capped at the bitstream's closed clock (DEPLOY_INFO
-`bit_clock_mhz` = summary.json `pl_clk0_mhz_actual`): the top point is requested at the closed
-clock itself (e.g. 199.998001, 249.997498), never above; a read-back above closed + 0.5 MHz aborts
-the sweep. Each row records requested, read-back and closed clock.
+**B2 sweep (DECISIONS D21):** the exactly reachable clocks 99.999, 111.11, 124.99875, 142.855714,
+166.665, 199.998, 249.9975 MHz (= IOPLL 999.99 MHz / 10 … 4; "100, 111, 125, 143, 167, 200, 250";
+`board_common.b2_sweep_clocks`), capped at the bitstream's closed clock (DEPLOY_INFO
+`bit_clock_mhz` = summary.json `pl_clk0_mhz_actual`); 7 points on gos_250, the per-clock INA260
+protocol makes B2 ≈ 7 × 9.3 min ≈ 65 min at default settings. Each clock is set with the driver's
+divider-computing setter (`GosDevice.set_fclk0_exact`) and read-back == requested (±0.1 MHz) is
+required, else the sweep aborts. Each row records requested, read-back (`clock_readback_equal`)
+and closed clock. The fit P = P_static + k·f uses these 7 read-back frequencies (5 dof).
 
 **Session 3 power (INA260 SOM-rail, the only power source):** `run_sessions.power_hook_steps` (block
 `POWER HOOK`) schedules one `power_log.py --protocol --net <net> --tag _<net>` step per net
@@ -340,7 +343,8 @@ pred = bc.predict(r.logits, pkg.dequant)                 # PS float32 dequant + 
   (`gos_driver.set_fclk0_exact`; never pynq's `Clocks.fclk0_mhz = x`, which picks the closest
   reachable frequency — 333.33 MHz for a 300 MHz request). With the boot image's PLLs (PL0 source
   IOPLL = 999.99 MHz) 250 MHz is reachable and 300 MHz is not: gos_300 fails its pre-flight and
-  Session 1 falls back to gos_250. The B2 sweep grid is limited the same way (open, before Session 3).
+  Session 1 falls back to gos_250 = the performance clock (D21). The B2 sweep uses only the
+  exactly reachable clocks (D21).
 - **PYNQ API:** `pynq.Overlay(bit)` with the `.hwh` beside it; `pynq.MMIO(base, size)` with
   `.read/.write` (32-bit) and `.array` (numpy uint32 view); `pynq.ps.Clocks.fclk0_mhz` get/set.
   These are what `test_shell.py` already uses; `.array` is used for the default `elem` write mode
@@ -359,8 +363,8 @@ pred = bc.predict(r.logits, pkg.dequant)                 # PS float32 dequant + 
   written). Rail coverage: see "VCC_SOM coverage (INA260)" below.
 - **board_id:** `--board-id` / `$GOS_BOARD_ID`, else device-tree model + first 8 chars of
   `/etc/machine-id`.
-- **Clock sweep:** runtime pl_clk0 changes via PYNQ are assumed to work (EXPERIMENTS B2 says to
-  verify at bring-up; fallback: one bitstream per clock). After each change the driver
+- **Clock sweep:** runtime pl_clk0 changes through the PL0 dividers work (250 MHz set and read
+  back at bring-up, 2026-09-30); only integer divisions of the 999.99 MHz IOPLL exist (D21). After each change the driver
   soft-resets and reloads + reads back WGT/QPARAM/DESC.
 - **cpufreq / AMS paths (to confirm at bring-up):** `/sys/devices/system/cpu/cpufreq/policy*`
   (cpufreq-dt; the target is the highest `scaling_available_frequencies` entry), AMS temperatures

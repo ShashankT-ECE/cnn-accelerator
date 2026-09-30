@@ -93,8 +93,9 @@ def test_dry_run_sweep_fit_and_refit(tmp_path):
                  "--mock-slope-w-per-mhz", "0.002", "--out-dir", str(out)])
     assert rc == 0
     clk = list(csv.DictReader(open(out / "hw_b2_clock.csv")))
-    assert [float(r["clock_requested_mhz"]) for r in clk] == [100.0, 125.0, 150.0, 175.0, 200.0, 225.0,
-                                                                249.997498]
+    assert [float(r["clock_requested_mhz"]) for r in clk] == [99.999, 111.11, 124.99875, 142.855714,
+                                                                166.665, 199.998, 249.9975]
+    assert all(r["clock_readback_equal"] == "True" for r in clk)      # read-back == requested
     assert all(r["cycle_check"] == "PASS" and r["cycles_identical_across_clocks"] == "True" for r in clk)
     cyc = list(csv.DictReader(open(out / "hw_b2_cycles.csv")))
     assert len(cyc) == 7 * 6 and all(r["cycle_check"] == "PASS" for r in cyc)
@@ -114,3 +115,17 @@ def test_mock_slope_refused_on_hardware_paths(tmp_path):
                 "--out-dir", str(tmp_path / "dryrun")])
     with pytest.raises(SystemExit):
         B.main(["--fit-only", "--in-dir", str(tmp_path / "empty"), "--out-dir", str(tmp_path / "dryrun")])
+
+
+def test_sweep_aborts_when_a_clock_is_not_reached(tmp_path, monkeypatch):
+    """The divider-computing setter refuses / the read-back differs -> abort, nothing run there."""
+    import gos_driver as D
+    import gos_model_backend as MB
+
+    def stuck(self, mhz, tol=0.1):
+        raise D.GosError(f"pl_clk0 {mhz:.6f} MHz is not reachable on this board")
+    monkeypatch.setattr(MB.ModelBackend, "set_fclk0_exact", stuck, raising=False)
+    with pytest.raises(SystemExit, match="ABORT at .*not reachable"):
+        B.main(["--backend", "model", "--allow-dirty", "--clock-mhz", "249.997498", "--max-mhz", "249.997498",
+                "--images", "2", "--window-s", "0.2", "--power-repeats", "1", "--sensor", "mock",
+                "--out-dir", str(tmp_path / "dryrun")])
