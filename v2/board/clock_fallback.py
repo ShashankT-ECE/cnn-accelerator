@@ -20,7 +20,7 @@ Returns {"ok", "bit", "clock_mhz", "fell_back", "reason", "attempts": [...], "sk
 "policy", "decided_utc"}. fell_back = the chosen bitstream is not the highest candidate.
 
 CLI (board, after deploy; writes the decision JSON, exit 0 = a bitstream was chosen):
-    sudo -E python3 clock_fallback.py --bits bit/gos_300.bit:299.997009 bit/gos_250.bit:249.997498 \
+    ./session.sh py clock_fallback.py --bits bit/gos_300.bit:299.997009 bit/gos_250.bit:249.997498 \
         [--allow-lower] [--smoke-timeout-s 300] [--out results/hw_clock_choice.json]
     python3 clock_fallback.py --backend model --bits ... --out ../results/dryrun/hw_clock_choice.json
 The closed clock of each entry may be omitted (bit/gos_300.bit): it is then read from the

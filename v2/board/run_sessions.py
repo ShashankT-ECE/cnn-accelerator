@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """V2 board sessions orchestrator: one command per session, resumable, time-budgeted, pre-flighted.
 
-    sudo -E ./session.sh 1|2|3|all [--session-index 1|2|3] [--budget-min N] [--resume|--fresh]
+    ./session.sh 1|2|3|all [--session-index 1|2|3] [--budget-min N] [--resume|--fresh]
                                     [--quick] [--plan]
     ./session.sh all --backend model --allow-dirty          # laptop dry run -> v2/results/dryrun/
 

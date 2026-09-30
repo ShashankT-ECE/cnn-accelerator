@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """B2 clock sweep: pl_clk0 = 100..300 MHz in 25 MHz steps (9 points), set at runtime, <= closed clock.
 
-    sudo -E python3 exp_b2_clock.py [--clocks 100 150 200] [--max-mhz 200] [--net lenet5]
+    ./session.sh py exp_b2_clock.py [--clocks 100 150 200] [--max-mhz 200] [--net lenet5]
                                     [--images 100] [--window-s 60] [--power-repeats 3]
                                     [--rate-hz 10]
     python3 exp_b2_clock.py --backend model --window-s 2 --sensor mock   # dry run -> results/dryrun/

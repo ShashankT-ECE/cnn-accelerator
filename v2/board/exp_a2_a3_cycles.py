@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A2 latency + A3 three-way cycle agreement (model / RTL simulation / accelerator).
 
-    sudo -E python3 exp_a2_a3_cycles.py [--nets ...] [--limit N]
+    ./session.sh py exp_a2_a3_cycles.py [--nets ...] [--limit N]
     python3 exp_a2_a3_cycles.py --backend model       # dry run -> results/dryrun/
 
 Runs every image (default) and reads LAYER_CYC[l] and TOTAL_CYC after each job. Per net and layer

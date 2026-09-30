@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """B3 end-to-end breakdown: host-side time per phase, interleaved conditions, median + 95 % CI.
 
-    sudo -E python3 exp_b3_breakdown.py [--nets ...] [--n 1000] [--conditions safe fast cpu]
+    ./session.sh py exp_b3_breakdown.py [--nets ...] [--n 1000] [--conditions safe fast cpu]
                                         [--block-n 50] [--block-warmup 5] [--seed S]
-    sudo -E python3 exp_b3_breakdown.py --host-path fast        # one condition (old usage)
+    ./session.sh py exp_b3_breakdown.py --host-path fast        # one condition (old usage)
     python3 exp_b3_breakdown.py --backend model                 # dry run -> results/dryrun/
     python3 exp_b3_breakdown.py --backend mock --conditions safe fast   # laptop MockMMIO
 

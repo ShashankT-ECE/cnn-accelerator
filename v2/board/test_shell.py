@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """KV260 / PYNQ smoke test of the V2 PL shell (Step 4 empty shell; reusable for the real design).
 
-    sudo -E python3 test_shell.py [--bit gos_shell.bit] [--expect-version 0x474F5300]
+    ./session.sh py test_shell.py [--bit gos_shell.bit] [--expect-version 0x474F5300]
                                   [--seed 1] [--skip-scratch] [--mems ACT0,ACT1,WGT,QPARAM]
                                   [--set-fclk0 MHZ]
     python3 test_shell.py --backend model --expect-version 0x474F5302 --skip-scratch   # dry run

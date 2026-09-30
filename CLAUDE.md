@@ -235,7 +235,7 @@ v2/vivado/build_gos.sh <200|250|300> # full bitstream (Vivado)              -> i
 .venv/bin/python v2/scripts/verification_stats.py   # verification_stats.csv (after all producers)
 .venv/bin/python v2/paper/scripts/make_all.py       # paper tables/figures -> v2/paper/generated/
 .venv/bin/python -m pytest v2/board/tests v2/paper/tests v2/analysis v2/scripts/tests
-# board (on the KV260, cd ~/gos): sudo -E ./session.sh 1|2|3|all [--budget-min N]   (see v2/board/README.md)
+# board (on the KV260, cd ~/gos): ./session.sh 1|2|3|all [--budget-min N]   (see v2/board/README.md)
 ```
 Full step-by-step reproduction: `v2/REPRODUCE.md`. Analyses (`v2/analysis/*.py`) run
 inside `regen_results.sh`.
@@ -305,7 +305,7 @@ untruncated netlist scan passes.
 1. **KV260 board sessions** (nothing measured on the board yet). Laptop: commit-clean
    tree → `make_board_data.py` → `v2/board/deploy.sh <ip>` (ships gos_300 + gos_250) and
    `v2/dpu/deploy_dpu.sh <ip>`. Board (`cd ~/gos`, tmux, stop packagekit/unattended-upgrades):
-   `power_log.py --list-sensors` / `--sample-only` first, then `sudo -E ./session.sh 1`
+   `power_log.py --list-sensors` / `--sample-only` first, then `./session.sh 1`
    (smoke at 300, auto-fallback 250), `2`, `3`; repeat with `--session-index 2|3` for
    repeatability; `dpu_session.py` for the DPU baseline.
 2. Copy results back (`rsync ... v2/results/`), `check_results.py`, separate results commit,

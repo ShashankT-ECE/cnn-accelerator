@@ -35,10 +35,15 @@ Board-side code needs only **numpy + pynq** and the files in this directory plus
 
 ## Prerequisites
 
-- **Board:** KV260 with Ubuntu 22.04 + Kria-PYNQ (pynq 3.x, its Python with numpy). MMIO needs
-  root: run every board script as `sudo -E python3 ...` (`-E` keeps the PYNQ environment, e.g.
-  `XILINX_XRT`; on Kria-PYNQ you may need `source /etc/profile.d/pynq_venv.sh` first so that
-  `python3` is the PYNQ venv). The board needs no git checkout.
+- **Board:** KV260 with Ubuntu 22.04 + Kria-PYNQ (pynq 3.x, its Python with numpy); user with
+  passwordless sudo. **One command: `./session.sh ...`** from a plain login shell in `~/gos` — the
+  script re-executes itself under `sudo -E` if it is not root and sources
+  `/etc/profile.d/pynq_venv.sh` as root (PYNQ venv `python3`, `XILINX_XRT`, and the venv `bin` on
+  PATH, where pynq finds `xclbinutil` when it loads an overlay). Single scripts run the same way:
+  `./session.sh py <script.py> [args]`. Do **not** use `sudo -E python3 ...` / `sudo -E ./...`
+  with a sourced venv: sudo's `secure_path` drops the venv from PATH, so `python3` is the system
+  one ("No module named 'pynq'") and, with only the interpreter fixed, the overlay load fails on a
+  missing `t.xclbin` (found at bring-up, 2026-09-30). The board needs no git checkout.
 - **Laptop:** the repo venv `~/cnn-accelerator/.venv` (numpy, torch, torchvision, pytest), the
   MNIST / CIFAR-10 test sets under `data/raw/`, the built bitstream (`v2/vivado/out/gos_200/`),
   `rsync` + `ssh` access to the board as `ubuntu`.
@@ -58,24 +63,24 @@ v2/board/deploy.sh <board-ip>            # ships gos_300 + gos_250 (+ .hwh, .sha
 ### On the board: one command per session (`ssh ubuntu@<board-ip>`, `cd ~/gos`)
 
 Run inside `tmux` (an ssh drop then does not stop the run; if the orchestrator does receive
-SIGHUP/SIGTERM it stops the running step cleanly and saves the state). On Kria-PYNQ first
-`source /etc/profile.d/pynq_venv.sh` so that `python3` is the PYNQ venv.
+SIGHUP/SIGTERM it stops the running step cleanly and saves the state). `./session.sh` sets up
+sudo and the PYNQ environment itself (Prerequisites); nothing has to be sourced first.
 
 ```bash
-sudo -E ./session.sh 1 --plan                       # pre-flight + plan only, runs nothing
-sudo -E ./session.sh 1                              # Session 1: bring-up           (~5 min)
-sudo -E ./session.sh 2 --quick --results-dir results/quick   # optional first pass (200 images)
-sudo -E ./session.sh 2 --budget-min 120             # Session 2: A1-A4, B3, CPU
-sudo -E python3 power_log.py --list-sensors        # before Session 3: which INA260 path exists
-sudo -E python3 power_log.py --sample-only --seconds 20   # real sensor update rate (value changes)
-sudo -E ./session.sh 3                              # Session 3: B1 INA260 power (both nets) + B2 sweep + soak
-sudo -E ./session.sh all --budget-min 240           # or everything in one go
+./session.sh 1 --plan                       # pre-flight + plan only, runs nothing
+./session.sh 1                              # Session 1: bring-up           (~5 min)
+./session.sh 2 --quick --results-dir results/quick   # optional first pass (200 images)
+./session.sh 2 --budget-min 120             # Session 2: A1-A4, B3, CPU
+./session.sh py power_log.py --list-sensors        # before Session 3: which INA260 path exists
+./session.sh py power_log.py --sample-only --seconds 20   # real sensor update rate (value changes)
+./session.sh 3                              # Session 3: B1 INA260 power (both nets) + B2 sweep + soak
+./session.sh all --budget-min 240           # or everything in one go
 # repeatability: the whole campaign again on two other days, then combine
-sudo -E ./session.sh all --session-index 2          # -> results/rep2/
-sudo -E ./session.sh all --session-index 3          # -> results/rep3/
+./session.sh all --session-index 2          # -> results/rep2/
+./session.sh all --session-index 3          # -> results/rep3/
 python3 aggregate_sessions.py                       # -> results/hw_repeatability.csv
 # interrupted / out of time?  run the SAME command again: verified steps are skipped
-# new bitstream / data / scripts?  sudo -E ./session.sh all --fresh   (old outputs archived)
+# new bitstream / data / scripts?  ./session.sh all --fresh   (old outputs archived)
 ```
 
 | session | steps (ids) | what |
@@ -192,7 +197,7 @@ and the calibration); a step with a built-in id replaces it. The time budget def
 steps first.
 
 The individual scripts remain usable by hand (`--nets`, `--limit N`, `--timeout-s`,
-`--write-mode`, `--out-dir`), e.g. `sudo -E python3 test_core_smoke.py --write-mode slice`.
+`--write-mode`, `--out-dir`), e.g. `./session.sh py test_core_smoke.py --write-mode slice`.
 Expected board time is dominated by Python MMIO (per image: input writes 256 / 768 32-bit stores,
 ~25 CSR reads); the first run records the real per-step durations for the next estimates.
 
@@ -283,7 +288,7 @@ numpy/libc choose — an unaligned or unsupported access can raise SIGBUS or cor
 3. `exp_b3_breakdown.py --host-path fast` repeats the ACT0/CSR check before measuring and writes
    nothing if it fails; `s2.B3fast` always measures the fast path (when `s1.fast` passed) next to
    the safe `s2.B3`, so B3 reports both.
-4. If `block` fails but you want to try `words32`: `sudo -E python3 test_core_smoke.py --host-path
+4. If `block` fails but you want to try `words32`: `./session.sh py test_core_smoke.py --host-path
    fast --fast-store words32`, then `session.sh ... --fast-store words32` (the steps' parameters
    change, so `s1.fast` reruns with it).
 

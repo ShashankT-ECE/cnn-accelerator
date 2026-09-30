@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """B1 entry point: the INA260 SOM-rail power protocol for each net (thin wrapper of power_log.py).
 
-    sudo -E python3 exp_b1_power.py [--nets lenet5 cifar10] [power_log.py protocol options]
+    ./session.sh py exp_b1_power.py [--nets lenet5 cifar10] [power_log.py protocol options]
     python3 exp_b1_power.py --backend model --phase-s 2 --sensor mock   # dry run -> results/dryrun/
 
 B1 power is measured ONLY with the on-board INA260 on the SOM rail (VCC_SOM), label

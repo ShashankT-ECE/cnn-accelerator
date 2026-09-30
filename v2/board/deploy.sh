@@ -123,11 +123,11 @@ if [ "$PRINT" = 1 ]; then WHAT="PRINT-ONLY (nothing copied) — target"; else WH
 cat <<MSG
 
 $WHAT $R:~/$DEST (commit ${COMMIT:0:8}, dirty=$DIRTY, bitstreams:$NAMES).
-On the board (ssh $R; tmux; source /etc/profile.d/pynq_venv.sh), cd ~/$DEST, then:
-  Pre-flight: sudo -E ./session.sh all --plan
-  Session 1:  sudo -E ./session.sh 1        (clock fallback: first bitstream, else the next; choice recorded)
-  Session 2:  sudo -E ./session.sh 2 [--budget-min N]
-  Session 3:  sudo -E ./session.sh 3        (B1/B2 power = on-board INA260 SOM-rail logger only)
+On the board (ssh $R; tmux), cd ~/$DEST, then (session.sh handles sudo + the PYNQ venv itself):
+  Pre-flight: ./session.sh all --plan
+  Session 1:  ./session.sh 1        (clock fallback: first bitstream, else the next; choice recorded)
+  Session 2:  ./session.sh 2 [--budget-min N]
+  Session 3:  ./session.sh 3        (B1/B2 power = on-board INA260 SOM-rail logger only)
   Repeat on other days with --session-index 2 / 3, then: python3 aggregate_sessions.py
   (rerun the same command to resume; --fresh after a redeploy with other bitstreams)
 Copy results back (laptop):

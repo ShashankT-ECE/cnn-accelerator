@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A3-general: seeded random multi-layer jobs on the accelerator (bit- and cycle-exact vs model / RTL sim).
 
-    sudo -E python3 exp_shapes.py [--shapes-dir data/shapes] [--budget-s 900] [--order-seed S]
+    ./session.sh py exp_shapes.py [--shapes-dir data/shapes] [--budget-s 900] [--order-seed S]
     python3 exp_shapes.py --backend model --out-dir ../results/dryrun/shapes     # laptop dry run
     python3 exp_shapes.py verify [data/shapes]                                   # shipped-set check
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """B1/B2 SOM-rail power logger: on-board INA260 (VCC_SOM), sampled remotely on the KV260.
 
-    sudo -E python3 power_log.py --list-sensors                    # probe only, writes nothing
-    sudo -E python3 power_log.py --sample-only --seconds 10        # sensor check (CSV + stats)
-    sudo -E python3 power_log.py --protocol --net lenet5 [--phase-s 60] [--repeats 3]
+    ./session.sh py power_log.py --list-sensors                    # probe only, writes nothing
+    ./session.sh py power_log.py --sample-only --seconds 10        # sensor check (CSV + stats)
+    ./session.sh py power_log.py --protocol --net lenet5 [--phase-s 60] [--repeats 3]
                                  [--rate-hz 10] [--cpu-kind cpu_int8_ref] [--cpu-threads 1]
     python3 power_log.py --protocol --backend model --phase-s 2    # dry run -> results/dryrun/
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A1 correctness: every test image of each net on the accelerator vs the golden model.
 
-    sudo -E python3 exp_a1_accuracy.py [--nets lenet5 cifar10] [--limit N]
+    ./session.sh py exp_a1_accuracy.py [--nets lenet5 cifar10] [--limit N]
     python3 exp_a1_accuracy.py --backend model        # dry run -> results/dryrun/
 
 Per net: images run, images whose INT32 logits differ from golden_logits (and the number of

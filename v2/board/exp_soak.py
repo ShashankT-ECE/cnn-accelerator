@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Soak test: back-to-back inference for --duration-s (default 30 min) at the deployed clock.
 
-    sudo -E python3 exp_soak.py [--duration-s 1800] [--nets lenet5 cifar10] [--block-s 60]
+    ./session.sh py exp_soak.py [--duration-s 1800] [--nets lenet5 cifar10] [--block-s 60]
                                 [--clock-choice results/hw_clock_choice.json] [--expect-clock-mhz F]
     python3 exp_soak.py --backend model --duration-s 20 --bucket-s 5    # dry run -> results/dryrun/
 

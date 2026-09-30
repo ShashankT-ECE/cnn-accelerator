@@ -2,7 +2,7 @@
 """Per-layer cycle spread over all 10k test images per net (A3 determinism, expected spread 0).
 
 Board / dry run (per net, every image: LAYER_CYC[l] + TOTAL_CYC):
-    sudo -E python3 exp_layer_spread.py [--nets ...] [--npz-dir results] [--rerun] [--limit N]
+    ./session.sh py exp_layer_spread.py [--nets ...] [--npz-dir results] [--rerun] [--limit N]
     python3 exp_layer_spread.py --backend model [--npz-dir ../results/dryrun]   # -> results/dryrun/
 RTL-sim equivalent (laptop analysis only, read-only on the full-10k Verilator shard logs):
     .venv/bin/python v2/board/exp_layer_spread.py --rtl-sim [--run-dir v2/build/fullsim/runs/<tag>/verilator]

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Smoke test of the real gos_ core on the KV260 (or a dry run with --backend model).
 
-    sudo -E python3 test_core_smoke.py [--bit bit/gos_200.bit] [--img 0] [--max-fclk0 200.5]
+    ./session.sh py test_core_smoke.py [--bit bit/gos_200.bit] [--img 0] [--max-fclk0 200.5]
     python3 test_core_smoke.py --backend model          # laptop dry run (dryrun_model)
 
 Checks, in order (each prints PASS/FAIL; exit 0 only if all pass):

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A4 utilization: MAC_ACTIVE / cycles per layer and per net vs the theoretical (model) value.
 
-    sudo -E python3 exp_a4_util.py [--nets ...] [--limit N]      (default 1000 images)
+    ./session.sh py exp_a4_util.py [--nets ...] [--limit N]      (default 1000 images)
     python3 exp_a4_util.py --backend model                       # dry run -> results/dryrun/
 
 What is measured and what is derived (be explicit in the paper):
