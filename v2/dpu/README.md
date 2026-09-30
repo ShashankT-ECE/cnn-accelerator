@@ -86,10 +86,10 @@ On the board (`ssh ubuntu@<board-ip>`, inside tmux):
 ```bash
 source /etc/profile.d/pynq_venv.sh
 python3 -c "import pynq_dpu; print(pynq_dpu.__file__)"   # Kria-PYNQ installs pynq-dpu 2.5
-~/gos/session.sh py ~/gos/power_log.py --list-sensors
+sudo -E python3 ~/gos/power_log.py --list-sensors
 cd ~/gos/dpu
-~/gos/session.sh py dpu_session.py --limit 200 --no-power --out-dir ~/gos/results/dpu_quick   # smoke
-~/gos/session.sh py dpu_session.py            # both nets: 10k images each + INA260 power (~2 x 9.5 min)
+sudo -E python3 dpu_session.py --limit 200 --no-power --out-dir ~/gos/results/dpu_quick   # smoke
+sudo -E python3 dpu_session.py            # both nets: 10k images each + INA260 power (~2 x 9.5 min)
 ```
 Copy back with `rsync -av ubuntu@<board-ip>:gos/results/hw_dpu_* v2/results/`, then
 `v2/scripts/check_results.py` and a separate results commit.
