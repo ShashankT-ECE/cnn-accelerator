@@ -296,8 +296,27 @@ def add_common_args(ap: argparse.ArgumentParser, nets: bool = True):
     return ap
 
 
+def closed_clock_for(bit, info: dict | None = None) -> float | None:
+    """The closed (timing-met) pl_clk0 of a bitstream in MHz: summary.json beside it
+    (pl_clk0_mhz_actual), else the DEPLOY_INFO entry of that file name; None if unknown."""
+    bit = Path(bit)
+    try:
+        v = json.loads((bit.parent / "summary.json").read_text()).get("pl_clk0_mhz_actual")
+        if v is not None:
+            return float(v)
+    except (OSError, ValueError):
+        pass
+    info = deploy_info() if info is None else info
+    for e in [*info.get("bits", []), info]:
+        if e.get("bit") and Path(str(e["bit"])).name == bit.name and e.get("bit_clock_mhz") is not None:
+            return float(e["bit_clock_mhz"])
+    return None
+
+
 def open_device(args):
-    """GosDevice for args.backend; returns (dev, backend)."""
+    """GosDevice for args.backend; returns (dev, backend). pynq: after the overlay is loaded,
+    pl_clk0 is set to the bitstream's closed clock and the read-back verified within
+    FCLK_SET_TOL_MHZ (gos_driver.set_fclk0_exact); unknown closed clock or a mismatch is an error."""
     import gos_driver as D
     info = deploy_info()
     if args.backend == "pynq":
@@ -307,8 +326,12 @@ def open_device(args):
         bit = Path(bit)
         if not bit.is_absolute() and not bit.exists():
             bit = BOARD_DIR / bit
+        target = closed_clock_for(bit, info)
+        if target is None:
+            raise SystemExit(f"ERROR: closed pl_clk0 of {bit} unknown (no summary.json beside it, "
+                             "no DEPLOY_INFO entry): refusing to run at an unverified clock")
         try:
-            be = D.PynqBackend(bit, download=not args.no_download)
+            be = D.PynqBackend(bit, download=not args.no_download, clock_mhz=target)
         except D.GosError as e:
             raise SystemExit(f"ERROR: {e}") from None
     else:
@@ -517,6 +540,7 @@ def rtl_cycles_for(pkg: Package) -> dict:
 
 
 CLOCK_TOL_MHZ = 0.5          # read-back vs closed-clock tolerance (PLL rounding, e.g. 199.998001)
+FCLK_SET_TOL_MHZ = 0.1       # pl_clk0 set to the closed clock: read-back must be within this (= gos_driver)
 B2_MIN_MHZ, B2_MAX_MHZ, B2_STEP_MHZ = 100.0, 300.0, 25.0   # EXPERIMENTS.md B2 (user, 2026-09-29)
 B2_GRID = tuple(B2_MIN_MHZ + i * B2_STEP_MHZ
                 for i in range(int(round((B2_MAX_MHZ - B2_MIN_MHZ) / B2_STEP_MHZ)) + 1))  # 9 points

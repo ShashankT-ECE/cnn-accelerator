@@ -83,6 +83,12 @@ def main(argv=None) -> int:
     fclk = dev.fclk0_mhz()
     ok &= check(fclk <= a.max_fclk0, f"pl_clk0 {fclk:.3f} MHz <= {a.max_fclk0} MHz "
                 f"({'readback' if be.kind == 'pynq' else 'nominal'})")
+    target = getattr(be, "clock_target_mhz", None)
+    if be.kind == "pynq":
+        ok &= check(target is not None and abs(fclk - target) <= D.FCLK_SET_TOL_MHZ,
+                    f"pl_clk0 {fclk:.6f} MHz read back == closed clock {target} MHz "
+                    f"(+-{D.FCLK_SET_TOL_MHZ}; set after the overlay load, was "
+                    f"{getattr(be, 'clock_loaded_mhz', float('nan')):.6f} MHz)")
     st = dev.status()
     print(f"  STATUS at start = 0x{st:X}")
     print(f"  host path: {dev.host_path_desc}")

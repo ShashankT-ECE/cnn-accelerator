@@ -234,16 +234,67 @@ class DevMemWindow:
         self.array[off >> 2] = val & 0xFFFF_FFFF
 
 
+FCLK_SET_TOL_MHZ = 0.1       # pl_clk0 read back vs the target (the bitstream's closed clock)
+_CRL_APB_BASE, _OFF_PL0_REF_CTRL = 0xFF5E0000, 0xC0     # ZynqMP CRL_APB.PL0_REF_CTRL (read only here)
+
+
+def best_pl_dividers(src_mhz: float, target_mhz: float, width: int = 6) -> tuple[int, int, float]:
+    """(div0, div1, f) with f = src / (div0 * div1) closest to target; two width-bit dividers
+    (1 .. 2^width - 1). A tie goes to the lower frequency."""
+    best = None
+    for d0 in range(1, 1 << width):
+        for d1 in range(1, d0 + 1):
+            if d1 >= (1 << width):
+                break
+            f = src_mhz / (d0 * d1)
+            key = (abs(f - target_mhz), f, d1)            # same product: div1 as small as possible
+            if best is None or key < best[0]:
+                best = (key, d0, d1, f)
+    return best[1], best[2], best[3]
+
+
+def set_fclk0_exact(clocks, mmio_cls, mhz: float, tol: float = FCLK_SET_TOL_MHZ) -> float:
+    """Set pl_clk0 to mhz and verify the read-back within tol, else raise GosError.
+
+    pynq's `Clocks.fclk0_mhz = x` silently programs the CLOSEST frequency the current source PLL
+    can divide down to (e.g. 333.33 MHz for a 300 MHz request on a 1000 MHz PLL), which may be
+    above the timing-closed clock. Here the dividers are computed first from the source-PLL
+    frequency (= read-back x the dividers in CRL_APB.PL0_REF_CTRL) and NOTHING is written unless
+    the result is within tol of the target. Returns the read-back clock."""
+    v = mmio_cls(_CRL_APB_BASE, 0x100).read(_OFF_PL0_REF_CTRL)
+    d0, d1 = (v >> 8) & 0x3F, (v >> 16) & 0x3F
+    now = float(clocks.fclk0_mhz)
+    if not d0 or not d1:
+        raise GosError(f"pl_clk0: PL0_REF_CTRL 0x{v:08X} has a zero divider")
+    src = now * d0 * d1
+    n0, n1, f = best_pl_dividers(src, float(mhz))
+    if abs(f - float(mhz)) > tol:
+        raise GosError(f"pl_clk0 {float(mhz):.6f} MHz is not reachable on this board: source PLL "
+                       f"{src:.3f} MHz (PL0_REF_CTRL SRCSEL {v & 7}), nearest {f:.6f} MHz "
+                       f"(div {n0} x {n1}), tolerance +-{tol} MHz; pl_clk0 left at {now:.6f} MHz")
+    clocks.set_pl_clk(0, div0=n0, div1=n1)
+    rb = float(clocks.fclk0_mhz)
+    if abs(rb - float(mhz)) > tol:
+        raise GosError(f"pl_clk0 read back {rb:.6f} MHz != target {float(mhz):.6f} MHz "
+                       f"(+-{tol} MHz) after setting div {n0} x {n1}")
+    return rb
+
+
 class PynqBackend(MmioBackend):
     """KV260 via PYNQ: Overlay(<name>.bit) with <name>.hwh side by side; pynq.MMIO windows.
 
     pynq is imported here (lazily) so that importing this module never needs it.
+
+    clock_mhz: the bitstream's closed pl_clk0. PYNQ on the KV260 does not program the PS PLLs of
+    the Vivado design (it only copies the .hwh dividers onto the boot image's PLLs), so after the
+    overlay is loaded pl_clk0 is set to clock_mhz and the read-back must be within
+    FCLK_SET_TOL_MHZ, else GosError (set_fclk0_exact). None: the clock is left as PYNQ set it.
     """
 
     kind = "pynq"
     source = "hw"
 
-    def __init__(self, bit: str | Path, download: bool = True):
+    def __init__(self, bit: str | Path, download: bool = True, clock_mhz: float | None = None):
         try:
             from pynq import MMIO, Overlay  # noqa: WPS433 (lazy on purpose)
             from pynq.ps import Clocks
@@ -257,7 +308,12 @@ class PynqBackend(MmioBackend):
         self.bit_sha256 = sha256_file(bit)
         self.hwh_sha256 = sha256_file(hwh)
         self._Clocks = Clocks
+        self._MMIO = MMIO
         self.overlay = Overlay(str(bit), download=download)
+        self.clock_loaded_mhz = float(Clocks.fclk0_mhz)      # as PYNQ left it after the load
+        self.clock_target_mhz = None if clock_mhz is None else float(clock_mhz)
+        if clock_mhz is not None:
+            self.set_fclk0_exact(clock_mhz)
         csr = MMIO(CSR_BASE, CSR_SIZE)
         mems = {n: MMIO(b, s) for n, (b, s) in MEMS.items()}
         super().__init__(csr, mems)
@@ -269,9 +325,13 @@ class PynqBackend(MmioBackend):
         self._Clocks.fclk0_mhz = float(mhz)
         return self.fclk0_mhz()
 
+    def set_fclk0_exact(self, mhz: float, tol: float = FCLK_SET_TOL_MHZ) -> float:
+        return set_fclk0_exact(self._Clocks, self._MMIO, mhz, tol)
+
     def info(self) -> dict:
         return {"backend": self.kind, "bit": str(self.bit), "bit_sha256": self.bit_sha256,
-                "hwh_sha256": self.hwh_sha256}
+                "hwh_sha256": self.hwh_sha256, "clock_target_mhz": self.clock_target_mhz,
+                "clock_after_load_mhz": self.clock_loaded_mhz}
 
     def fast_windows(self) -> FastWindows:
         """pynq MMIO.array views (mapped once by pynq at construction); if a pynq version has no

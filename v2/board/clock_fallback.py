@@ -97,6 +97,13 @@ def choose(ctx, bits: list[dict], run_smoke, *, allow_lower: bool = False,
             ok = run_smoke(b)
             att["ok"] = ok is True
             att["reason"] = "smoke PASS" if att["ok"] else f"smoke FAIL (returned {ok!r})"
+            # optional facts the runner leaves on the entry: the pl_clk0 actually read back during
+            # the smoke (must equal the closed clock) and why a pre-flight failed
+            for k in ("clock_readback_mhz", "detail"):
+                if isinstance(b, dict) and b.get(k) is not None:
+                    att[k] = b[k]
+            if att.get("detail") and not att["ok"]:
+                att["reason"] += f": {att['detail']}"
         except (TimeoutError, subprocess.TimeoutExpired) as e:
             att["reason"] = f"smoke TIMEOUT: {e}"
         except KeyboardInterrupt:

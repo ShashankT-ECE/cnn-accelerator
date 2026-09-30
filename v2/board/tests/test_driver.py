@@ -1,6 +1,7 @@
 """Driver unit tests against the simulated register map (gos_sim) — no hardware, no pynq."""
 import subprocess
 import sys
+import types
 from pathlib import Path
 
 import numpy as np
@@ -354,3 +355,50 @@ def test_model_backend_fast_path_bit_exact_if_available():
     r = dev.infer(pkg.x_act[3])
     assert np.array_equal(r.logits, pkg.golden_logits[3])
     assert r.layer_cyc == [L["cycles"] for L in pkg.model_cycles["layers"]]
+
+
+# ---- pl_clk0 exact set (2026-09-30: pynq set 333.33 MHz for a 300 MHz request) -------------------
+class _FakeClocks:
+    """pynq.ps.Clocks look-alike: source PLL src MHz, dividers d0 x d1."""
+
+    def __init__(self, src=999.99, d0=5, d1=1, stuck=False):
+        self.src, self.d0, self.d1, self.stuck, self.writes = src, d0, d1, stuck, []
+
+    @property
+    def fclk0_mhz(self):
+        return round(self.src / (self.d0 * self.d1), 6)
+
+    def set_pl_clk(self, idx, div0=None, div1=None):
+        self.writes.append((idx, div0, div1))
+        if not self.stuck:
+            self.d0, self.d1 = div0, div1
+
+    def mmio(self, base, size):
+        assert base == 0xFF5E0000
+        return types.SimpleNamespace(read=lambda off: (1 << 24) | (self.d1 << 16) | (self.d0 << 8))
+
+
+def test_best_pl_dividers():
+    assert D.best_pl_dividers(999.99, 249.997498)[2] == pytest.approx(249.9975)
+    d0, d1, f = D.best_pl_dividers(999.99, 299.997009)       # 250 and 333.33 are the neighbours
+    assert f == pytest.approx(333.33) and d0 * d1 == 3
+    assert D.best_pl_dividers(1499.985, 299.997009)[2] == pytest.approx(299.997)
+
+
+def test_set_fclk0_exact_sets_reachable_clock_and_verifies():
+    c = _FakeClocks(d0=6)                                     # .hwh divider 6 on a 1000 MHz PLL
+    assert D.set_fclk0_exact(c, c.mmio, 249.997498) == pytest.approx(249.9975)
+    assert c.writes == [(0, 4, 1)]
+
+
+def test_set_fclk0_exact_refuses_unreachable_clock_without_writing():
+    c = _FakeClocks()
+    with pytest.raises(D.GosError, match="not reachable.*nearest 333.33"):
+        D.set_fclk0_exact(c, c.mmio, 299.997009)
+    assert c.writes == [] and c.fclk0_mhz == pytest.approx(199.998)   # never above the closed clock
+
+
+def test_set_fclk0_exact_fails_on_wrong_readback():
+    c = _FakeClocks(stuck=True)
+    with pytest.raises(D.GosError, match="read back 199.998"):
+        D.set_fclk0_exact(c, c.mmio, 249.997498)

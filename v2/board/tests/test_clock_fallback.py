@@ -150,3 +150,17 @@ def test_cli_output_dir_rule(tmp_path, monkeypatch):
                   "--out", str(tmp_path / "dryrun" / "c.json")])
     d = json.loads((tmp_path / "dryrun" / "c.json").read_text())
     assert rc == 0 and d["clock_mhz"] == 300.0 and "DRY RUN" in d["note"]
+
+
+def test_attempt_records_readback_and_preflight_detail():
+    def run(e):
+        if e["clock_mhz"] == B300["clock_mhz"]:
+            e["detail"] = "pre-flight failed: pl_clk0 299.997009 MHz is not reachable"
+            return False
+        e["clock_readback_mhz"] = 249.9975
+        return True
+    r = cf.choose(quiet(), [dict(B300), dict(B250)], run)
+    assert r["ok"] and r["fell_back"] and r["clock_mhz"] == B250["clock_mhz"]
+    a300, a250 = r["attempts"]
+    assert "not reachable" in a300["reason"] and "clock_readback_mhz" not in a300
+    assert a250["clock_readback_mhz"] == 249.9975 and "not reachable" in r["reason"]

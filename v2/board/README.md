@@ -80,7 +80,7 @@ python3 aggregate_sessions.py                       # -> results/hw_repeatabilit
 
 | session | steps (ids) | what |
 |---|---|---|
-| 1 | (clock fallback) `s1.shell`, `s1.smoke`, `s1.smoke_slice`, `s1.fast`, `s1.fcal` | before the steps, with several deployed bitstreams: `clock_fallback.choose` (pre-flight + core smoke of the 300 MHz build, else the 250 MHz build; choice in `hw_clock_choice.json` and the state, used by every later step and session); `s1.fcal` = PL clock calibration; `test_shell.py --skip-scratch` (pl_clk0 read back, VERSION/BUILD_ID, every BRAM filled + read back); `test_core_smoke.py` (one LeNet-5 + one CIFAR-10 image bit- and cycle-exact, refused job → ERR_CODE rule 3, soft_reset, good job); the same with `--write-mode slice` (**informational**: a failure does not fail the session; use `--write-mode slice` for Sessions 2/3 only if it passed); `s1.fast` = the same smoke on the **fast host path** preceded and followed by `GosDevice.check_fast_path()` (**informational**; its PASS is the bring-up condition for `--host-path fast`, see "Host paths") |
+| 1 | (clock fallback) `s1.shell`, `s1.smoke`, `s1.smoke_slice`, `s1.fast`, `s1.fcal` | before the steps, with several deployed bitstreams: `clock_fallback.choose` (pre-flight — including pl_clk0 set to the closed clock and read back == it — + core smoke of the 300 MHz build, else the 250 MHz build; choice, per-attempt read-back clock and failure reason in `hw_clock_choice.json` and the state, used by every later step and session); `s1.fcal` = PL clock calibration; `test_shell.py --skip-scratch` (pl_clk0 read back, VERSION/BUILD_ID, every BRAM filled + read back); `test_core_smoke.py` (one LeNet-5 + one CIFAR-10 image bit- and cycle-exact, refused job → ERR_CODE rule 3, soft_reset, good job); the same with `--write-mode slice` (**informational**: a failure does not fail the session; use `--write-mode slice` for Sessions 2/3 only if it passed); `s1.fast` = the same smoke on the **fast host path** preceded and followed by `GosDevice.check_fast_path()` (**informational**; its PASS is the bring-up condition for `--host-path fast`, see "Host paths") |
 | 2 | `s2.fcal`, `s2.A2A3`, `s2.layerspread`, `s2.A1`, `s2.B3`, `s2.shapes`, `s2.CPU`, `s2.DPU`, `s2.A4` (priority order) | f_meas calibration, A2/A3 all images, A3b per-layer spread, A1 all 10k images per net, B3 1000 kept per condition, **interleaved** safe + CPU (+ fast host path only if `s1.fast` passed), A3-general random shape jobs (only if `data/shapes/` is shipped; hard 15 min cap), CPU baselines `--tag board` (workers pinned), DPU baseline (only if `dpu/dpu_session.py` is deployed; informational), A4 1000 images |
 | 3 | `s3.fcal`, `s3.B1.lenet5`, `s3.B1.cifar10`, `s3.B2`, `s3.soak` | B1 = INA260 SOM-rail protocol per net (accel/**control**/cpu each bracketed by idle, seeded random order per repeat, × `--power-repeats` 3 + final idle = 19 phases of `--window-s` 60 s ≈ 20.5 min per net incl. setup; `--no-power-control`: 13 phases ≈ 14.5 min; CPU = `cpu_int8_ref`, 1 thread); B2 clock sweep (LeNet-5): cycles == model + INA260 idle/accel/idle × `--b2-power-repeats` 3 per clock ≈ 9.5 min per clock (+ cycle identity, power-vs-clock fit); soak 30 min |
 
@@ -103,8 +103,9 @@ invalid for the paper), `--no-bringup-check`, `--results-dir` (default `results/
 exit 3, nothing run): `DEPLOY_INFO.json` present; SHA256 of `bit/<name>.bit` == DEPLOY_INFO
 `bit_sha256` == the shipped `.bit.sha256`, `.hwh` == `hwh_sha256`; `bit/summary.json` build id and
 closed clock == DEPLOY_INFO, timing met (WNS ≥ 0, no failing endpoints); overlay loads; VERSION ==
-0x474F5302; BUILD_ID register == DEPLOY_INFO `build_id`; pl_clk0 read back ≤ closed clock + 0.5 MHz
-and, for Sessions 2/3, equal to it (±0.5 MHz); every data file vs `MANIFEST.json`, each
+0x474F5302; BUILD_ID register == DEPLOY_INFO `build_id`; pl_clk0 **set to the closed clock after
+the overlay load and read back == it within ±0.1 MHz, in every session** (DECISIONS D19; a clock
+the board's PLLs cannot reach fails the pre-flight, nothing is written); every data file vs `MANIFEST.json`, each
 `MANIFEST.json` vs `PACKAGE.json`, `PACKAGE.json` vs DEPLOY_INFO; ≥ 1000 MB free; clean-tree flags
 (scripts + data). Sessions 2/3 also require Session 1 recorded OK in the same state.
 **Environment pre-flight** (`board_env.py`, before the device checks): no package manager
@@ -325,6 +326,14 @@ pred = bc.predict(r.logits, pkg.dequant)                 # PS float32 dequant + 
 
 ## Assumptions (to confirm at bring-up) and open items
 
+- **pl_clk0 (confirmed at bring-up 2026-09-30, DECISIONS D19):** PYNQ does not apply the Vivado PS
+  PLL settings; after an overlay load pl_clk0 is whatever the `.hwh` dividers give on the boot
+  image's PLLs (gos_300 came up at 199.998 MHz). The driver therefore sets pl_clk0 to the
+  bitstream's closed clock (`summary.json`) and verifies the read-back within ±0.1 MHz
+  (`gos_driver.set_fclk0_exact`; never pynq's `Clocks.fclk0_mhz = x`, which picks the closest
+  reachable frequency — 333.33 MHz for a 300 MHz request). With the boot image's PLLs (PL0 source
+  IOPLL = 999.99 MHz) 250 MHz is reachable and 300 MHz is not: gos_300 fails its pre-flight and
+  Session 1 falls back to gos_250. The B2 sweep grid is limited the same way (open, before Session 3).
 - **PYNQ API:** `pynq.Overlay(bit)` with the `.hwh` beside it; `pynq.MMIO(base, size)` with
   `.read/.write` (32-bit) and `.array` (numpy uint32 view); `pynq.ps.Clocks.fclk0_mhz` get/set.
   These are what `test_shell.py` already uses; `.array` is used for the default `elem` write mode

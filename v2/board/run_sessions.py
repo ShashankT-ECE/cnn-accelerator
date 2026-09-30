@@ -62,7 +62,9 @@ SESSION INDEX (3-session repeatability): --session-index K tags every row; resul
 
 Pre-flight (fails loudly, exit 3) also checks: DEPLOY_INFO present; .bit/.hwh SHA256 vs
 DEPLOY_INFO and the shipped .bit.sha256; summary.json build id / closed clock / timing met;
-VERSION == 0x474F5302; BUILD_ID register == DEPLOY_INFO build_id; pl_clk0 read back <= the closed
+VERSION == 0x474F5302; BUILD_ID register == DEPLOY_INFO build_id; pl_clk0 SET to the closed clock
+after the overlay load and read back == it within 0.1 MHz in every session (2026-09-30: PYNQ left
+the 300 MHz build at 199.998 MHz); pl_clk0 read back <= the closed
 clock (+tol) and, for sessions 2/3, equal to it (within tol); every data-package SHA256; free disk;
 clean-tree flags (--allow-dirty marks rows git_dirty=True, invalid for the paper).
 
@@ -282,6 +284,8 @@ def build_steps(cfg: Config, sessions, quick: bool = False, window_s: float = 60
                  "--skip-scratch", "--max-fclk0", maxf]
         if cfg.dry:
             shell += ["--backend", "model", "--clock-mhz", f"{closed:.6f}"]
+        else:
+            shell += ["--set-fclk0", f"{closed:.6f}"]
         steps += [
             Step("s1.shell", 1, "shell/memory smoke (test_shell --skip-scratch)", shell,
                  kind="bringup", out_flag=None, group="bringup"),
@@ -593,7 +597,7 @@ def open_backend_default(cfg: Config):
     if cfg.dry:
         bid = int(str(cfg.deploy.get("build_id") or "0"), 16)
         return D.ModelBackend(clock_mhz=cfg.closed_mhz or 200.0, build_id=bid)
-    return D.PynqBackend(cfg.bit, download=True)
+    return D.PynqBackend(cfg.bit, download=True, clock_mhz=cfg.closed_mhz)   # set + verified
 
 
 def read_summary(bit: Path) -> dict | None:
@@ -708,9 +712,11 @@ def preflight(cfg: Config, open_backend=open_backend_default, verify_data=bc.ver
             f"pl_clk0 {clk:.6f} MHz {src} <= closed clock {closed:.6f} MHz (+{cfg.clock_tol})"
             + ("" if clk <= closed + cfg.clock_tol else " — ABOVE the timing-closed clock"))
         if cfg.require_clock_equal:
-            (ok if abs(clk - closed) <= cfg.clock_tol else bad)(
-                f"pl_clk0 {clk:.6f} MHz == closed clock {closed:.6f} MHz (±{cfg.clock_tol}) for "
-                "the main runs")
+            tol = min(cfg.clock_tol, bc.FCLK_SET_TOL_MHZ)
+            (ok if abs(clk - closed) <= tol else bad)(
+                f"pl_clk0 {clk:.6f} MHz == closed clock {closed:.6f} MHz (±{tol}): the design runs "
+                "at the clock it was timed for"
+                + ("" if abs(clk - closed) <= tol else " — NOT at the closed clock"))
 
     pkg_path = cfg.data_dir / "PACKAGE.json"
     pkg_sha, man_sha, dirty_data = "", {}, []
@@ -1282,11 +1288,13 @@ def _smoke_runner(a, cfg0: Config, board_dir, data_dir, rd, open_backend, verify
     """run_smoke(entry) for clock_fallback.choose: pre-flight of that bitstream + core smoke."""
     def run(entry: dict) -> bool:
         d, bit = deploy_info_for(a.backend, str(entry["bit"]), board_dir, data_dir, info)
-        cfg = replace(cfg0, deploy=d, bit=bit, require_clock_equal=False)
+        cfg = replace(cfg0, deploy=d, bit=bit)
         try:
-            preflight(cfg, open_backend, verify_data, lambda m: say("    " + m))
+            prov = preflight(cfg, open_backend, verify_data, lambda m: say("    " + m))
+            entry["clock_readback_mhz"] = prov.get("clock_readback_mhz")
         except PreflightError as e:
             say(f"    [fallback] pre-flight of {bit.name} failed: {e}")
+            entry["detail"] = "pre-flight failed: " + " | ".join(str(e).split("\n")[1:] or [str(e)]).strip()
             return False
         if (dry := cfg.dry) and a.dryrun_fail_smoke_mhz is not None and \
                 abs(float(entry["clock_mhz"]) - a.dryrun_fail_smoke_mhz) <= 1.0:
@@ -1386,8 +1394,7 @@ def _main(a, board_dir, data_dir, rd, window_s, gap_s, say, lock_fd, open_backen
             choice = res
     cfg = Config(backend=a.backend, board_dir=board_dir, results_dir=rd, data_dir=data_dir,
                  deploy=chosen["deploy"], bit=chosen["bit"], allow_dirty=a.allow_dirty,
-                 clock_tol=a.clock_tol_mhz, min_free_mb=a.min_free_mb,
-                 require_clock_equal=any(s >= 2 for s in a.sessions))
+                 clock_tol=a.clock_tol_mhz, min_free_mb=a.min_free_mb)
     try:
         prov = preflight(cfg, open_backend, verify_data, say)
     except PreflightError as e:

@@ -126,9 +126,20 @@ def main():
     print(f"test_shell: loading {a.bit}")
     ol = Overlay(a.bit)
     if a.set_fclk0 is not None:
-        Clocks.fclk0_mhz = a.set_fclk0
+        # exact set: nothing is written unless the dividers reach the target within 0.1 MHz
+        # (pynq's own setter picks the closest frequency, possibly ABOVE the closed clock)
+        import gos_driver as D
+        was = Clocks.fclk0_mhz
+        try:
+            D.set_fclk0_exact(Clocks, MMIO, a.set_fclk0)
+            print(f"  pl_clk0 set to {a.set_fclk0} MHz (was {was:.6f} MHz after the overlay load)")
+        except D.GosError as e:
+            print(f"  FAIL: {e}")
+            ok = False
     fclk0 = Clocks.fclk0_mhz
-    print(f"  pl_clk0 (PYNQ Clocks.fclk0_mhz) = {fclk0:.3f} MHz")
+    print(f"  pl_clk0 (PYNQ Clocks.fclk0_mhz) = {fclk0:.6f} MHz")
+    if a.set_fclk0 is not None and ok:
+        print(f"  pl_clk0 read back == {a.set_fclk0} MHz (+-0.1): PASS")
     if fclk0 > a.max_fclk0:
         print(f"  FAIL: pl_clk0 {fclk0:.3f} MHz > {a.max_fclk0} MHz (above the limit; pass the bitstream's closed clock via --max-fclk0)")
         ok = False

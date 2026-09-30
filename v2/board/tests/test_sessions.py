@@ -190,7 +190,7 @@ def test_provenance_change_refuses_resume(env):
     hook, counter, _ = fake_steps(env)
     assert run(env, hook=hook) == 0
     st_before = state(env)
-    rc = run(env, hook=hook, be=FakeBE(clk=CLOSED - 0.4))            # within tol: same provenance
+    rc = run(env, hook=hook, be=FakeBE(clk=CLOSED - 0.05))           # within the 0.1 MHz set tolerance: same provenance
     assert rc == 0
     s = json.loads((env["bit"].parent / "summary.json").read_text())
     s["build_id"] = "deadbeef"
@@ -264,7 +264,8 @@ def test_preflight_passes_on_consistent_deploy(env):
     ("wrong VERSION (shell bit)", {}, {"version": 0x474F5300}, "VERSION 0x474F5300"),
     ("DEPLOY_INFO bit sha", {"bit_sha256": "0" * 64}, {}, "DEPLOY_INFO bit_sha256"),
     ("clock above closed", {}, {"clk": 250.0}, "ABOVE the timing-closed clock"),
-    ("clock below closed for main runs", {}, {"clk": 150.0}, "for the main runs"),
+    ("clock below closed", {}, {"clk": 150.0}, "NOT at the closed clock"),
+    ("clock 0.2 MHz off the closed clock", {}, {"clk": CLOSED - 0.2}, "NOT at the closed clock"),
     ("data package sha", {"data_package_sha256": "f" * 64}, {}, "data_package_sha256"),
     ("dirty scripts", {"dirty": True}, {}, "dirty tree"),
     ("no DEPLOY_INFO", {"origin": "none"}, {}, "DEPLOY_INFO.json missing"),
@@ -289,12 +290,15 @@ def test_preflight_timing_not_met(env):
         pf(hw_cfg(env), FakeBE())
 
 
-def test_preflight_session1_allows_lower_clock_and_dirty_with_flag(env):
+def test_preflight_dirty_with_flag_and_session1_needs_the_closed_clock(env):
     cfg = hw_cfg(env, dirty=True)
-    cfg.require_clock_equal = False
     cfg.allow_dirty = True
-    prov = pf(cfg, FakeBE(clk=100.0))
+    prov = pf(cfg, FakeBE())
     assert prov["scripts_dirty"] and any("INVALID for the paper" in w for w in prov["warnings"])
+    # 2026-09-30: the 300 MHz build ran Session 1 at 199.998 MHz because only "<=" was required
+    assert RS.Config.__dataclass_fields__["require_clock_equal"].default is True
+    with pytest.raises(RS.PreflightError, match="NOT at the closed clock"):
+        pf(cfg, FakeBE(clk=100.0))
 
 
 def test_preflight_failure_runs_nothing(env):
