@@ -1,7 +1,7 @@
 {
  "version": 1,
- "created_utc": "2026-09-30T16:33:09+00:00",
- "updated_utc": "2026-09-30T16:46:47+00:00",
+ "created_utc": "2026-09-30T17:11:53+00:00",
+ "updated_utc": "2026-09-30T17:26:56+00:00",
  "provenance": {
   "backend": "pynq",
   "source": "hw",
@@ -14,17 +14,17 @@
   "closed_clock_mhz": 249.997498,
   "clock_readback_mhz": 249.9975,
   "clock_requested_mhz": 250,
-  "data_package_sha256": "e799508c9a854eede2f3c493f6553df6ebff4397496b3c80d65f89980f0948aa",
+  "data_package_sha256": "35081e2c7193c04f95ad875509c9f203951243f37d2acf33de8eb1d5c413e917",
   "manifest_sha256": {
-   "lenet5": "7455ed54b79eae522afc6364c924534bb0351e563f014d9362f4c66ff424af3a",
-   "cifar10": "2921c3c55d28b2e93b68af3f603e3910fba88c5ddfe11a9dc0ade6604803ba6f"
+   "lenet5": "3b4e302978c37b5e754a92e21753b2260d5226fa4d6e29fa5a77d89e00566f2a",
+   "cifar10": "6d849a820d55b66ba5ea926025e74152f0b8b0f6a00ffc6f2c8e47645919bf23"
   },
-  "scripts_commit": "89c9f0c7b40bc703549a6f38ab61843db181dd1d",
+  "scripts_commit": "7ef1572bbccc9cd239e8c417c54babae32f4c13a",
   "scripts_dirty": false,
   "data_dirty": false,
   "allow_dirty": false,
   "deploy_origin": "DEPLOY_INFO.json",
-  "preflight_utc": "2026-09-30T16:33:09+00:00",
+  "preflight_utc": "2026-09-30T17:11:53+00:00",
   "warnings": [],
   "session_index": 1,
   "paper_grade": true,
@@ -40,26 +40,26 @@
      "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
      "clock_mhz": 299.997009,
      "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
-     "start_utc": "2026-09-30T16:32:53+00:00",
+     "start_utc": "2026-09-30T17:11:36+00:00",
      "ok": false,
      "reason": "smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
      "detail": "pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
-     "duration_s": 5.779
+     "duration_s": 6.4
     },
     {
      "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
      "clock_mhz": 249.997498,
      "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
-     "start_utc": "2026-09-30T16:32:59+00:00",
+     "start_utc": "2026-09-30T17:11:42+00:00",
      "ok": true,
      "reason": "smoke PASS",
      "clock_readback_mhz": 249.9975,
-     "duration_s": 9.45
+     "duration_s": 9.859
     }
    ],
    "skipped": [],
    "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
-   "decided_utc": "2026-09-30T16:33:08+00:00"
+   "decided_utc": "2026-09-30T17:11:52+00:00"
   },
   "env": {
    "paper_grade": true,
@@ -124,11 +124,11 @@
    "die_temp": {
     "source": "iio iio:device0 (ams)",
     "channels_c": {
-     "ps_temp": 37.552,
-     "remote_temp": 36.029,
-     "pl_temp": 34.024
+     "ps_temp": 34.164,
+     "remote_temp": 34.428,
+     "pl_temp": 33.697
     },
-    "max_c": 37.552
+    "max_c": 34.428
    },
    "fake_tree": false,
    "paths": {
@@ -162,7 +162,7 @@
     "--set-fclk0",
     "249.997498"
    ],
-   "started_utc": "2026-09-30T16:33:09+00:00",
+   "started_utc": "2026-09-30T17:11:53+00:00",
    "timeout_s": 300.0,
    "provenance": {
     "backend": "pynq",
@@ -176,17 +176,17 @@
     "closed_clock_mhz": 249.997498,
     "clock_readback_mhz": 249.9975,
     "clock_requested_mhz": 250,
-    "data_package_sha256": "e799508c9a854eede2f3c493f6553df6ebff4397496b3c80d65f89980f0948aa",
+    "data_package_sha256": "35081e2c7193c04f95ad875509c9f203951243f37d2acf33de8eb1d5c413e917",
     "manifest_sha256": {
-     "lenet5": "7455ed54b79eae522afc6364c924534bb0351e563f014d9362f4c66ff424af3a",
-     "cifar10": "2921c3c55d28b2e93b68af3f603e3910fba88c5ddfe11a9dc0ade6604803ba6f"
+     "lenet5": "3b4e302978c37b5e754a92e21753b2260d5226fa4d6e29fa5a77d89e00566f2a",
+     "cifar10": "6d849a820d55b66ba5ea926025e74152f0b8b0f6a00ffc6f2c8e47645919bf23"
     },
-    "scripts_commit": "89c9f0c7b40bc703549a6f38ab61843db181dd1d",
+    "scripts_commit": "7ef1572bbccc9cd239e8c417c54babae32f4c13a",
     "scripts_dirty": false,
     "data_dirty": false,
     "allow_dirty": false,
     "deploy_origin": "DEPLOY_INFO.json",
-    "preflight_utc": "2026-09-30T16:33:09+00:00",
+    "preflight_utc": "2026-09-30T17:11:53+00:00",
     "warnings": [],
     "session_index": 1,
     "paper_grade": true,
@@ -202,26 +202,26 @@
        "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
        "clock_mhz": 299.997009,
        "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
-       "start_utc": "2026-09-30T16:32:53+00:00",
+       "start_utc": "2026-09-30T17:11:36+00:00",
        "ok": false,
        "reason": "smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
        "detail": "pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
-       "duration_s": 5.779
+       "duration_s": 6.4
       },
       {
        "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
        "clock_mhz": 249.997498,
        "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
-       "start_utc": "2026-09-30T16:32:59+00:00",
+       "start_utc": "2026-09-30T17:11:42+00:00",
        "ok": true,
        "reason": "smoke PASS",
        "clock_readback_mhz": 249.9975,
-       "duration_s": 9.45
+       "duration_s": 9.859
       }
      ],
      "skipped": [],
      "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
-     "decided_utc": "2026-09-30T16:33:08+00:00"
+     "decided_utc": "2026-09-30T17:11:52+00:00"
     },
     "env": {
      "paper_grade": true,
@@ -286,11 +286,11 @@
      "die_temp": {
       "source": "iio iio:device0 (ams)",
       "channels_c": {
-       "ps_temp": 37.552,
-       "remote_temp": 36.029,
-       "pl_temp": 34.024
+       "ps_temp": 34.164,
+       "remote_temp": 34.428,
+       "pl_temp": 33.697
       },
-      "max_c": 37.552
+      "max_c": 34.428
      },
      "fake_tree": false,
      "paths": {
@@ -310,11 +310,11 @@
    "die_temp_start": {
     "source": "iio iio:device0 (ams)",
     "channels_c": {
-     "ps_temp": 36.635,
-     "remote_temp": 35.609,
-     "pl_temp": 33.806
+     "ps_temp": 36.262,
+     "remote_temp": 35.407,
+     "pl_temp": 33.526
     },
-    "max_c": 36.635
+    "max_c": 36.262
    },
    "run_env": {
     "session_index": 1,
@@ -324,26 +324,26 @@
     "f_req_mhz": 250,
     "note": "paper-grade environment",
     "step_id": "s1.shell",
-    "die_temp_start_c": 36.635
+    "die_temp_start_c": 36.262
    },
    "affinity": {
     "requested": "3",
     "readback": "3",
     "ok": true
    },
-   "finished_utc": "2026-09-30T16:33:16+00:00",
-   "duration_s": 6.767,
+   "finished_utc": "2026-09-30T17:12:00+00:00",
+   "duration_s": 6.92,
    "exit_code": 0,
    "die_temp_end": {
     "source": "iio iio:device0 (ams)",
     "channels_c": {
-     "ps_temp": 34.459,
-     "remote_temp": 35.018,
-     "pl_temp": 34.234
+     "ps_temp": 35.221,
+     "remote_temp": 35.065,
+     "pl_temp": 33.954
     },
-    "max_c": 35.018
+    "max_c": 35.221
    },
-   "log_sha256": "46c5f45e28d57a85541041b8388faf80fb5942d60f2fa91aafed3a58dc686291"
+   "log_sha256": "eb778d31cb93d950ccf5824f37cb12dbd402ec0a41c508ea1acc326d7ac3cf32"
   },
   "s1.smoke": {
    "status": "ok",
@@ -363,7 +363,7 @@
     "--max-fclk0",
     "250.497498"
    ],
-   "started_utc": "2026-09-30T16:33:16+00:00",
+   "started_utc": "2026-09-30T17:12:00+00:00",
    "timeout_s": 300.0,
    "provenance": {
     "backend": "pynq",
@@ -377,17 +377,17 @@
     "closed_clock_mhz": 249.997498,
     "clock_readback_mhz": 249.9975,
     "clock_requested_mhz": 250,
-    "data_package_sha256": "e799508c9a854eede2f3c493f6553df6ebff4397496b3c80d65f89980f0948aa",
+    "data_package_sha256": "35081e2c7193c04f95ad875509c9f203951243f37d2acf33de8eb1d5c413e917",
     "manifest_sha256": {
-     "lenet5": "7455ed54b79eae522afc6364c924534bb0351e563f014d9362f4c66ff424af3a",
-     "cifar10": "2921c3c55d28b2e93b68af3f603e3910fba88c5ddfe11a9dc0ade6604803ba6f"
+     "lenet5": "3b4e302978c37b5e754a92e21753b2260d5226fa4d6e29fa5a77d89e00566f2a",
+     "cifar10": "6d849a820d55b66ba5ea926025e74152f0b8b0f6a00ffc6f2c8e47645919bf23"
     },
-    "scripts_commit": "89c9f0c7b40bc703549a6f38ab61843db181dd1d",
+    "scripts_commit": "7ef1572bbccc9cd239e8c417c54babae32f4c13a",
     "scripts_dirty": false,
     "data_dirty": false,
     "allow_dirty": false,
     "deploy_origin": "DEPLOY_INFO.json",
-    "preflight_utc": "2026-09-30T16:33:09+00:00",
+    "preflight_utc": "2026-09-30T17:11:53+00:00",
     "warnings": [],
     "session_index": 1,
     "paper_grade": true,
@@ -403,26 +403,26 @@
        "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
        "clock_mhz": 299.997009,
        "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
-       "start_utc": "2026-09-30T16:32:53+00:00",
+       "start_utc": "2026-09-30T17:11:36+00:00",
        "ok": false,
        "reason": "smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
        "detail": "pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
-       "duration_s": 5.779
+       "duration_s": 6.4
       },
       {
        "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
        "clock_mhz": 249.997498,
        "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
-       "start_utc": "2026-09-30T16:32:59+00:00",
+       "start_utc": "2026-09-30T17:11:42+00:00",
        "ok": true,
        "reason": "smoke PASS",
        "clock_readback_mhz": 249.9975,
-       "duration_s": 9.45
+       "duration_s": 9.859
       }
      ],
      "skipped": [],
      "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
-     "decided_utc": "2026-09-30T16:33:08+00:00"
+     "decided_utc": "2026-09-30T17:11:52+00:00"
     },
     "env": {
      "paper_grade": true,
@@ -487,11 +487,11 @@
      "die_temp": {
       "source": "iio iio:device0 (ams)",
       "channels_c": {
-       "ps_temp": 37.552,
-       "remote_temp": 36.029,
-       "pl_temp": 34.024
+       "ps_temp": 34.164,
+       "remote_temp": 34.428,
+       "pl_temp": 33.697
       },
-      "max_c": 37.552
+      "max_c": 34.428
      },
      "fake_tree": false,
      "paths": {
@@ -511,11 +511,11 @@
    "die_temp_start": {
     "source": "iio iio:device0 (ams)",
     "channels_c": {
-     "ps_temp": 35.889,
-     "remote_temp": 36.153,
-     "pl_temp": 33.93
+     "ps_temp": 35.018,
+     "remote_temp": 35.578,
+     "pl_temp": 33.884
     },
-    "max_c": 36.153
+    "max_c": 35.578
    },
    "run_env": {
     "session_index": 1,
@@ -525,26 +525,26 @@
     "f_req_mhz": 250,
     "note": "paper-grade environment",
     "step_id": "s1.smoke",
-    "die_temp_start_c": 36.153
+    "die_temp_start_c": 35.578
    },
    "affinity": {
     "requested": "3",
     "readback": "3",
     "ok": true
    },
-   "finished_utc": "2026-09-30T16:33:24+00:00",
-   "duration_s": 7.621,
+   "finished_utc": "2026-09-30T17:12:08+00:00",
+   "duration_s": 7.671,
    "exit_code": 0,
    "die_temp_end": {
     "source": "iio iio:device0 (ams)",
     "channels_c": {
-     "ps_temp": 36.806,
-     "remote_temp": 36.355,
-     "pl_temp": 34.451
+     "ps_temp": 35.609,
+     "remote_temp": 36.184,
+     "pl_temp": 33.954
     },
-    "max_c": 36.806
+    "max_c": 36.184
    },
-   "log_sha256": "53665e07f68d1796c85f1814de7317c5a4ae8c456ff9b87391830ca34efa0c84"
+   "log_sha256": "df9f2894864852b832afbbcd89f25b06125cc1126424c4109c526f12df20f2fc"
   },
   "s1.smoke_slice": {
    "status": "ok",
@@ -566,7 +566,7 @@
     "--write-mode",
     "slice"
    ],
-   "started_utc": "2026-09-30T16:33:24+00:00",
+   "started_utc": "2026-09-30T17:12:08+00:00",
    "timeout_s": 300.0,
    "provenance": {
     "backend": "pynq",
@@ -580,17 +580,17 @@
     "closed_clock_mhz": 249.997498,
     "clock_readback_mhz": 249.9975,
     "clock_requested_mhz": 250,
-    "data_package_sha256": "e799508c9a854eede2f3c493f6553df6ebff4397496b3c80d65f89980f0948aa",
+    "data_package_sha256": "35081e2c7193c04f95ad875509c9f203951243f37d2acf33de8eb1d5c413e917",
     "manifest_sha256": {
-     "lenet5": "7455ed54b79eae522afc6364c924534bb0351e563f014d9362f4c66ff424af3a",
-     "cifar10": "2921c3c55d28b2e93b68af3f603e3910fba88c5ddfe11a9dc0ade6604803ba6f"
+     "lenet5": "3b4e302978c37b5e754a92e21753b2260d5226fa4d6e29fa5a77d89e00566f2a",
+     "cifar10": "6d849a820d55b66ba5ea926025e74152f0b8b0f6a00ffc6f2c8e47645919bf23"
     },
-    "scripts_commit": "89c9f0c7b40bc703549a6f38ab61843db181dd1d",
+    "scripts_commit": "7ef1572bbccc9cd239e8c417c54babae32f4c13a",
     "scripts_dirty": false,
     "data_dirty": false,
     "allow_dirty": false,
     "deploy_origin": "DEPLOY_INFO.json",
-    "preflight_utc": "2026-09-30T16:33:09+00:00",
+    "preflight_utc": "2026-09-30T17:11:53+00:00",
     "warnings": [],
     "session_index": 1,
     "paper_grade": true,
@@ -606,26 +606,26 @@
        "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
        "clock_mhz": 299.997009,
        "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
-       "start_utc": "2026-09-30T16:32:53+00:00",
+       "start_utc": "2026-09-30T17:11:36+00:00",
        "ok": false,
        "reason": "smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
        "detail": "pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
-       "duration_s": 5.779
+       "duration_s": 6.4
       },
       {
        "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
        "clock_mhz": 249.997498,
        "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
-       "start_utc": "2026-09-30T16:32:59+00:00",
+       "start_utc": "2026-09-30T17:11:42+00:00",
        "ok": true,
        "reason": "smoke PASS",
        "clock_readback_mhz": 249.9975,
-       "duration_s": 9.45
+       "duration_s": 9.859
       }
      ],
      "skipped": [],
      "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
-     "decided_utc": "2026-09-30T16:33:08+00:00"
+     "decided_utc": "2026-09-30T17:11:52+00:00"
     },
     "env": {
      "paper_grade": true,
@@ -690,11 +690,11 @@
      "die_temp": {
       "source": "iio iio:device0 (ams)",
       "channels_c": {
-       "ps_temp": 37.552,
-       "remote_temp": 36.029,
-       "pl_temp": 34.024
+       "ps_temp": 34.164,
+       "remote_temp": 34.428,
+       "pl_temp": 33.697
       },
-      "max_c": 37.552
+      "max_c": 34.428
      },
      "fake_tree": false,
      "paths": {
@@ -714,11 +714,11 @@
    "die_temp_start": {
     "source": "iio iio:device0 (ams)",
     "channels_c": {
-     "ps_temp": 35.407,
-     "remote_temp": 35.143,
-     "pl_temp": 34.07
+     "ps_temp": 35.796,
+     "remote_temp": 35.329,
+     "pl_temp": 34.008
     },
-    "max_c": 35.407
+    "max_c": 35.796
    },
    "run_env": {
     "session_index": 1,
@@ -728,26 +728,26 @@
     "f_req_mhz": 250,
     "note": "paper-grade environment",
     "step_id": "s1.smoke_slice",
-    "die_temp_start_c": 35.407
+    "die_temp_start_c": 35.796
    },
    "affinity": {
     "requested": "3",
     "readback": "3",
     "ok": true
    },
-   "finished_utc": "2026-09-30T16:33:31+00:00",
-   "duration_s": 7.569,
+   "finished_utc": "2026-09-30T17:12:15+00:00",
+   "duration_s": 7.467,
    "exit_code": 0,
    "die_temp_end": {
     "source": "iio iio:device0 (ams)",
     "channels_c": {
-     "ps_temp": 36.355,
-     "remote_temp": 35.298,
-     "pl_temp": 33.969
+     "ps_temp": 34.63,
+     "remote_temp": 35.5,
+     "pl_temp": 33.627
     },
-    "max_c": 36.355
+    "max_c": 35.5
    },
-   "log_sha256": "642513e87681e2f6dc08945efbc4cf6e7bbb3c0299a6c7be614aca8a1f479512"
+   "log_sha256": "1559b5ddf932211863791d214861a1a007ebea79fd7a24a657cc571dc9cb81cf"
   },
   "s1.fast": {
    "status": "ok",
@@ -771,7 +771,7 @@
     "--fast-store",
     "block"
    ],
-   "started_utc": "2026-09-30T16:33:31+00:00",
+   "started_utc": "2026-09-30T17:12:15+00:00",
    "timeout_s": 300.0,
    "provenance": {
     "backend": "pynq",
@@ -785,17 +785,17 @@
     "closed_clock_mhz": 249.997498,
     "clock_readback_mhz": 249.9975,
     "clock_requested_mhz": 250,
-    "data_package_sha256": "e799508c9a854eede2f3c493f6553df6ebff4397496b3c80d65f89980f0948aa",
+    "data_package_sha256": "35081e2c7193c04f95ad875509c9f203951243f37d2acf33de8eb1d5c413e917",
     "manifest_sha256": {
-     "lenet5": "7455ed54b79eae522afc6364c924534bb0351e563f014d9362f4c66ff424af3a",
-     "cifar10": "2921c3c55d28b2e93b68af3f603e3910fba88c5ddfe11a9dc0ade6604803ba6f"
+     "lenet5": "3b4e302978c37b5e754a92e21753b2260d5226fa4d6e29fa5a77d89e00566f2a",
+     "cifar10": "6d849a820d55b66ba5ea926025e74152f0b8b0f6a00ffc6f2c8e47645919bf23"
     },
-    "scripts_commit": "89c9f0c7b40bc703549a6f38ab61843db181dd1d",
+    "scripts_commit": "7ef1572bbccc9cd239e8c417c54babae32f4c13a",
     "scripts_dirty": false,
     "data_dirty": false,
     "allow_dirty": false,
     "deploy_origin": "DEPLOY_INFO.json",
-    "preflight_utc": "2026-09-30T16:33:09+00:00",
+    "preflight_utc": "2026-09-30T17:11:53+00:00",
     "warnings": [],
     "session_index": 1,
     "paper_grade": true,
@@ -811,26 +811,26 @@
        "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
        "clock_mhz": 299.997009,
        "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
-       "start_utc": "2026-09-30T16:32:53+00:00",
+       "start_utc": "2026-09-30T17:11:36+00:00",
        "ok": false,
        "reason": "smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
        "detail": "pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
-       "duration_s": 5.779
+       "duration_s": 6.4
       },
       {
        "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
        "clock_mhz": 249.997498,
        "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
-       "start_utc": "2026-09-30T16:32:59+00:00",
+       "start_utc": "2026-09-30T17:11:42+00:00",
        "ok": true,
        "reason": "smoke PASS",
        "clock_readback_mhz": 249.9975,
-       "duration_s": 9.45
+       "duration_s": 9.859
       }
      ],
      "skipped": [],
      "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
-     "decided_utc": "2026-09-30T16:33:08+00:00"
+     "decided_utc": "2026-09-30T17:11:52+00:00"
     },
     "env": {
      "paper_grade": true,
@@ -895,11 +895,11 @@
      "die_temp": {
       "source": "iio iio:device0 (ams)",
       "channels_c": {
-       "ps_temp": 37.552,
-       "remote_temp": 36.029,
-       "pl_temp": 34.024
+       "ps_temp": 34.164,
+       "remote_temp": 34.428,
+       "pl_temp": 33.697
       },
-      "max_c": 37.552
+      "max_c": 34.428
      },
      "fake_tree": false,
      "paths": {
@@ -919,11 +919,11 @@
    "die_temp_start": {
     "source": "iio iio:device0 (ams)",
     "channels_c": {
-     "ps_temp": 35.78,
-     "remote_temp": 35.78,
-     "pl_temp": 33.938
+     "ps_temp": 36.992,
+     "remote_temp": 35.485,
+     "pl_temp": 33.658
     },
-    "max_c": 35.78
+    "max_c": 36.992
    },
    "run_env": {
     "session_index": 1,
@@ -933,33 +933,33 @@
     "f_req_mhz": 250,
     "note": "paper-grade environment",
     "step_id": "s1.fast",
-    "die_temp_start_c": 35.78
+    "die_temp_start_c": 36.992
    },
    "affinity": {
     "requested": "3",
     "readback": "3",
     "ok": true
    },
-   "finished_utc": "2026-09-30T16:33:39+00:00",
-   "duration_s": 8.074,
+   "finished_utc": "2026-09-30T17:12:23+00:00",
+   "duration_s": 8.073,
    "exit_code": 0,
    "die_temp_end": {
     "source": "iio iio:device0 (ams)",
     "channels_c": {
-     "ps_temp": 35.671,
-     "remote_temp": 34.739,
-     "pl_temp": 33.923
+     "ps_temp": 37.039,
+     "remote_temp": 34.366,
+     "pl_temp": 33.783
     },
-    "max_c": 35.671
+    "max_c": 37.039
    },
-   "log_sha256": "5dcd18f63550da4decf299330c06e05ba35a4c21bec7d5d30480b57ea208b2be"
+   "log_sha256": "daf710e8117fda0cca3ef160ad3968767e8a3785748fc7ed0b764ca080cd62a0"
   },
   "s1.fcal": {
    "status": "ok",
    "title": "PL clock cross-check: f_meas vs the read-back clock (cycle counter vs CLOCK_MONOTONIC_RAW, 8 s)",
    "session": 1,
    "group": "fcal",
-   "params_key": "[\"exp_fclk_cal.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--write-mode\", \"elem\", \"--seconds\", \"8\", \"--tag\", \"_s1\", \"--seed\", \"743454265\"]",
+   "params_key": "[\"exp_fclk_cal.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--write-mode\", \"elem\", \"--seconds\", \"8\", \"--tag\", \"_s1\", \"--seed\", \"565029320\"]",
    "cmd": [
     "/usr/local/share/pynq-venv/bin/python3",
     "/home/ubuntu/gos/exp_fclk_cal.py",
@@ -976,11 +976,11 @@
     "--tag",
     "_s1",
     "--seed",
-    "743454265",
+    "565029320",
     "--out-dir",
     "/home/ubuntu/gos/results/.staging/s1.fcal"
    ],
-   "started_utc": "2026-09-30T16:33:39+00:00",
+   "started_utc": "2026-09-30T17:12:23+00:00",
    "timeout_s": 300.0,
    "provenance": {
     "backend": "pynq",
@@ -994,17 +994,17 @@
     "closed_clock_mhz": 249.997498,
     "clock_readback_mhz": 249.9975,
     "clock_requested_mhz": 250,
-    "data_package_sha256": "e799508c9a854eede2f3c493f6553df6ebff4397496b3c80d65f89980f0948aa",
+    "data_package_sha256": "35081e2c7193c04f95ad875509c9f203951243f37d2acf33de8eb1d5c413e917",
     "manifest_sha256": {
-     "lenet5": "7455ed54b79eae522afc6364c924534bb0351e563f014d9362f4c66ff424af3a",
-     "cifar10": "2921c3c55d28b2e93b68af3f603e3910fba88c5ddfe11a9dc0ade6604803ba6f"
+     "lenet5": "3b4e302978c37b5e754a92e21753b2260d5226fa4d6e29fa5a77d89e00566f2a",
+     "cifar10": "6d849a820d55b66ba5ea926025e74152f0b8b0f6a00ffc6f2c8e47645919bf23"
     },
-    "scripts_commit": "89c9f0c7b40bc703549a6f38ab61843db181dd1d",
+    "scripts_commit": "7ef1572bbccc9cd239e8c417c54babae32f4c13a",
     "scripts_dirty": false,
     "data_dirty": false,
     "allow_dirty": false,
     "deploy_origin": "DEPLOY_INFO.json",
-    "preflight_utc": "2026-09-30T16:33:09+00:00",
+    "preflight_utc": "2026-09-30T17:11:53+00:00",
     "warnings": [],
     "session_index": 1,
     "paper_grade": true,
@@ -1020,26 +1020,26 @@
        "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
        "clock_mhz": 299.997009,
        "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
-       "start_utc": "2026-09-30T16:32:53+00:00",
+       "start_utc": "2026-09-30T17:11:36+00:00",
        "ok": false,
        "reason": "smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
        "detail": "pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
-       "duration_s": 5.779
+       "duration_s": 6.4
       },
       {
        "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
        "clock_mhz": 249.997498,
        "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
-       "start_utc": "2026-09-30T16:32:59+00:00",
+       "start_utc": "2026-09-30T17:11:42+00:00",
        "ok": true,
        "reason": "smoke PASS",
        "clock_readback_mhz": 249.9975,
-       "duration_s": 9.45
+       "duration_s": 9.859
       }
      ],
      "skipped": [],
      "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
-     "decided_utc": "2026-09-30T16:33:08+00:00"
+     "decided_utc": "2026-09-30T17:11:52+00:00"
     },
     "env": {
      "paper_grade": true,
@@ -1104,11 +1104,11 @@
      "die_temp": {
       "source": "iio iio:device0 (ams)",
       "channels_c": {
-       "ps_temp": 37.552,
-       "remote_temp": 36.029,
-       "pl_temp": 34.024
+       "ps_temp": 34.164,
+       "remote_temp": 34.428,
+       "pl_temp": 33.697
       },
-      "max_c": 37.552
+      "max_c": 34.428
      },
      "fake_tree": false,
      "paths": {
@@ -1123,19 +1123,19 @@
     }
    },
    "outputs": {
-    "hw_fclk_cal_s1.csv": "9f0c763806b695f2a3b87d6019f2982d4ce96f1645b7e7fcb27ee11fc6070d49",
-    "hw_fclk_cal_s1.npz": "88202e6c64feacd402c4a4d2e5c03e5a380db0a1585df1ba87cf5291b406df96"
+    "hw_fclk_cal_s1.csv": "129d342c7b852d0251ce002d3ee6e4d1f51589af68dbb347d1b03c3a57df7fdf",
+    "hw_fclk_cal_s1.npz": "14647d054732863033de54a3cee744a99a77e159abc80344d06effb865ec43de"
    },
    "log": "logs/s1.fcal.log",
    "required": true,
    "die_temp_start": {
     "source": "iio iio:device0 (ams)",
     "channels_c": {
-     "ps_temp": 38.282,
-     "remote_temp": 35.454,
-     "pl_temp": 34.288
+     "ps_temp": 36.511,
+     "remote_temp": 34.77,
+     "pl_temp": 33.728
     },
-    "max_c": 38.282
+    "max_c": 36.511
    },
    "run_env": {
     "session_index": 1,
@@ -1145,33 +1145,33 @@
     "f_req_mhz": 250,
     "note": "paper-grade environment",
     "step_id": "s1.fcal",
-    "die_temp_start_c": 38.282
+    "die_temp_start_c": 36.511
    },
    "affinity": {
     "requested": "3",
     "readback": "3",
     "ok": true
    },
-   "finished_utc": "2026-09-30T16:33:55+00:00",
-   "duration_s": 15.938,
+   "finished_utc": "2026-09-30T17:12:39+00:00",
+   "duration_s": 15.939,
    "exit_code": 0,
    "die_temp_end": {
     "source": "iio iio:device0 (ams)",
     "channels_c": {
-     "ps_temp": 35.562,
-     "remote_temp": 36.697,
-     "pl_temp": 34.047
+     "ps_temp": 35.516,
+     "remote_temp": 35.391,
+     "pl_temp": 33.868
     },
-    "max_c": 36.697
+    "max_c": 35.516
    },
-   "log_sha256": "7731f3b18f2580f48aa14cb1598c895bbdf67eeb339bec2635ee580ffbda3b09"
+   "log_sha256": "b621be61feb840c8ea75b2df0aace749e375796f377541bca605b144f74271e6"
   },
   "s2.fcal": {
    "status": "ok",
    "title": "PL clock cross-check: f_meas vs the read-back clock (cycle counter vs CLOCK_MONOTONIC_RAW, 8 s)",
    "session": 2,
    "group": "fcal",
-   "params_key": "[\"exp_fclk_cal.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--write-mode\", \"elem\", \"--seconds\", \"8\", \"--tag\", \"_s2\", \"--seed\", \"743454365\"]",
+   "params_key": "[\"exp_fclk_cal.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--write-mode\", \"elem\", \"--seconds\", \"8\", \"--tag\", \"_s2\", \"--seed\", \"565029420\"]",
    "cmd": [
     "/usr/local/share/pynq-venv/bin/python3",
     "/home/ubuntu/gos/exp_fclk_cal.py",
@@ -1188,11 +1188,11 @@
     "--tag",
     "_s2",
     "--seed",
-    "743454365",
+    "565029420",
     "--out-dir",
     "/home/ubuntu/gos/results/.staging/s2.fcal"
    ],
-   "started_utc": "2026-09-30T16:34:08+00:00",
+   "started_utc": "2026-09-30T17:12:51+00:00",
    "timeout_s": 300.0,
    "provenance": {
     "backend": "pynq",
@@ -1206,17 +1206,17 @@
     "closed_clock_mhz": 249.997498,
     "clock_readback_mhz": 249.9975,
     "clock_requested_mhz": 250,
-    "data_package_sha256": "e799508c9a854eede2f3c493f6553df6ebff4397496b3c80d65f89980f0948aa",
+    "data_package_sha256": "35081e2c7193c04f95ad875509c9f203951243f37d2acf33de8eb1d5c413e917",
     "manifest_sha256": {
-     "lenet5": "7455ed54b79eae522afc6364c924534bb0351e563f014d9362f4c66ff424af3a",
-     "cifar10": "2921c3c55d28b2e93b68af3f603e3910fba88c5ddfe11a9dc0ade6604803ba6f"
+     "lenet5": "3b4e302978c37b5e754a92e21753b2260d5226fa4d6e29fa5a77d89e00566f2a",
+     "cifar10": "6d849a820d55b66ba5ea926025e74152f0b8b0f6a00ffc6f2c8e47645919bf23"
     },
-    "scripts_commit": "89c9f0c7b40bc703549a6f38ab61843db181dd1d",
+    "scripts_commit": "7ef1572bbccc9cd239e8c417c54babae32f4c13a",
     "scripts_dirty": false,
     "data_dirty": false,
     "allow_dirty": false,
     "deploy_origin": "DEPLOY_INFO.json",
-    "preflight_utc": "2026-09-30T16:33:09+00:00",
+    "preflight_utc": "2026-09-30T17:11:53+00:00",
     "warnings": [],
     "session_index": 1,
     "paper_grade": true,
@@ -1232,26 +1232,26 @@
        "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
        "clock_mhz": 299.997009,
        "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
-       "start_utc": "2026-09-30T16:32:53+00:00",
+       "start_utc": "2026-09-30T17:11:36+00:00",
        "ok": false,
        "reason": "smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
        "detail": "pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
-       "duration_s": 5.779
+       "duration_s": 6.4
       },
       {
        "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
        "clock_mhz": 249.997498,
        "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
-       "start_utc": "2026-09-30T16:32:59+00:00",
+       "start_utc": "2026-09-30T17:11:42+00:00",
        "ok": true,
        "reason": "smoke PASS",
        "clock_readback_mhz": 249.9975,
-       "duration_s": 9.45
+       "duration_s": 9.859
       }
      ],
      "skipped": [],
      "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
-     "decided_utc": "2026-09-30T16:33:08+00:00"
+     "decided_utc": "2026-09-30T17:11:52+00:00"
     },
     "env": {
      "paper_grade": true,
@@ -1316,11 +1316,11 @@
      "die_temp": {
       "source": "iio iio:device0 (ams)",
       "channels_c": {
-       "ps_temp": 37.552,
-       "remote_temp": 36.029,
-       "pl_temp": 34.024
+       "ps_temp": 34.164,
+       "remote_temp": 34.428,
+       "pl_temp": 33.697
       },
-      "max_c": 37.552
+      "max_c": 34.428
      },
      "fake_tree": false,
      "paths": {
@@ -1335,19 +1335,19 @@
     }
    },
    "outputs": {
-    "hw_fclk_cal_s2.csv": "700f3bb2e666373284b6a3a9ba8d763d39c7385a9092745490bf2ed871479336",
-    "hw_fclk_cal_s2.npz": "8234e10fc05fd995c5a4708695710b8cb441374358fd3fc5138265f17708a5d3"
+    "hw_fclk_cal_s2.csv": "d2017aa09a99a07ae1b2c7c61cbcd6d71c04a9b2159ce130fd15f798cb36e08b",
+    "hw_fclk_cal_s2.npz": "9d58a01e58ae8030e0da50ed7b775ff5f3e7d7b5597d34a4551956dd6d78c32c"
    },
    "log": "logs/s2.fcal.log",
    "required": true,
    "die_temp_start": {
     "source": "iio iio:device0 (ams)",
     "channels_c": {
-     "ps_temp": 36.713,
-     "remote_temp": 35.733,
-     "pl_temp": 33.923
+     "ps_temp": 36.604,
+     "remote_temp": 35.174,
+     "pl_temp": 33.627
     },
-    "max_c": 36.713
+    "max_c": 36.604
    },
    "run_env": {
     "session_index": 1,
@@ -1356,35 +1356,35 @@
     "cpu_freq_khz": 1333333,
     "f_req_mhz": 250,
     "note": "paper-grade environment",
-    "f_meas_mhz": 249.844223,
-    "f_meas_ci_lo_mhz": "249.807268",
-    "f_meas_ci_hi_mhz": "249.912129",
+    "f_meas_mhz": 249.93667,
+    "f_meas_ci_lo_mhz": "249.860475",
+    "f_meas_ci_hi_mhz": "249.944775",
     "f_meas_readback_mhz": 249.9975,
     "f_meas_source": "cross-check (differential lower envelope, CLOCK_MONOTONIC_RAW)",
     "f_meas_step": "s1.fcal",
-    "f_meas_rel_diff_pct": "-0.0613",
+    "f_meas_rel_diff_pct": "-0.0243",
     "f_meas_flag": false,
     "step_id": "s2.fcal",
-    "die_temp_start_c": 36.713
+    "die_temp_start_c": 36.604
    },
    "affinity": {
     "requested": "3",
     "readback": "3",
     "ok": true
    },
-   "finished_utc": "2026-09-30T16:34:24+00:00",
-   "duration_s": 15.883,
+   "finished_utc": "2026-09-30T17:13:07+00:00",
+   "duration_s": 15.935,
    "exit_code": 0,
    "die_temp_end": {
     "source": "iio iio:device0 (ams)",
     "channels_c": {
-     "ps_temp": 35.236,
-     "remote_temp": 36.682,
-     "pl_temp": 33.938
+     "ps_temp": 35.143,
+     "remote_temp": 34.303,
+     "pl_temp": 33.962
     },
-    "max_c": 36.682
+    "max_c": 35.143
    },
-   "log_sha256": "1f980f87f3f65c9e7bb2b49e760c99124ab3b7b004ce17e249a5836804e46aac"
+   "log_sha256": "297cbadaed50e3a2a4823ce97ebf0472b8345214093aa8574db0c9684661a29c"
   },
   "s2.A2A3": {
    "status": "ok",
@@ -1410,8 +1410,8 @@
     "--out-dir",
     "/home/ubuntu/gos/results/.staging/s2.A2A3"
    ],
-   "started_utc": "2026-09-30T16:34:24+00:00",
-   "timeout_s": 1410.0,
+   "started_utc": "2026-09-30T17:13:08+00:00",
+   "timeout_s": 300.0,
    "provenance": {
     "backend": "pynq",
     "source": "hw",
@@ -1424,17 +1424,17 @@
     "closed_clock_mhz": 249.997498,
     "clock_readback_mhz": 249.9975,
     "clock_requested_mhz": 250,
-    "data_package_sha256": "e799508c9a854eede2f3c493f6553df6ebff4397496b3c80d65f89980f0948aa",
+    "data_package_sha256": "35081e2c7193c04f95ad875509c9f203951243f37d2acf33de8eb1d5c413e917",
     "manifest_sha256": {
-     "lenet5": "7455ed54b79eae522afc6364c924534bb0351e563f014d9362f4c66ff424af3a",
-     "cifar10": "2921c3c55d28b2e93b68af3f603e3910fba88c5ddfe11a9dc0ade6604803ba6f"
+     "lenet5": "3b4e302978c37b5e754a92e21753b2260d5226fa4d6e29fa5a77d89e00566f2a",
+     "cifar10": "6d849a820d55b66ba5ea926025e74152f0b8b0f6a00ffc6f2c8e47645919bf23"
     },
-    "scripts_commit": "89c9f0c7b40bc703549a6f38ab61843db181dd1d",
+    "scripts_commit": "7ef1572bbccc9cd239e8c417c54babae32f4c13a",
     "scripts_dirty": false,
     "data_dirty": false,
     "allow_dirty": false,
     "deploy_origin": "DEPLOY_INFO.json",
-    "preflight_utc": "2026-09-30T16:33:09+00:00",
+    "preflight_utc": "2026-09-30T17:11:53+00:00",
     "warnings": [],
     "session_index": 1,
     "paper_grade": true,
@@ -1450,26 +1450,26 @@
        "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
        "clock_mhz": 299.997009,
        "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
-       "start_utc": "2026-09-30T16:32:53+00:00",
+       "start_utc": "2026-09-30T17:11:36+00:00",
        "ok": false,
        "reason": "smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
        "detail": "pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
-       "duration_s": 5.779
+       "duration_s": 6.4
       },
       {
        "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
        "clock_mhz": 249.997498,
        "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
-       "start_utc": "2026-09-30T16:32:59+00:00",
+       "start_utc": "2026-09-30T17:11:42+00:00",
        "ok": true,
        "reason": "smoke PASS",
        "clock_readback_mhz": 249.9975,
-       "duration_s": 9.45
+       "duration_s": 9.859
       }
      ],
      "skipped": [],
      "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
-     "decided_utc": "2026-09-30T16:33:08+00:00"
+     "decided_utc": "2026-09-30T17:11:52+00:00"
     },
     "env": {
      "paper_grade": true,
@@ -1534,11 +1534,11 @@
      "die_temp": {
       "source": "iio iio:device0 (ams)",
       "channels_c": {
-       "ps_temp": 37.552,
-       "remote_temp": 36.029,
-       "pl_temp": 34.024
+       "ps_temp": 34.164,
+       "remote_temp": 34.428,
+       "pl_temp": 33.697
       },
-      "max_c": 37.552
+      "max_c": 34.428
      },
      "fake_tree": false,
      "paths": {
@@ -1553,20 +1553,20 @@
     }
    },
    "outputs": {
-    "hw_a2_a3_cycles.csv": "6bebce435ec37540836e94d502a8e4112d229ccb2f402d13213accfca64ce4d1",
-    "hw_cycles_cifar10.npz": "8e9eaa78eb87cddc93687a5250f27894535bf414e9dd51a634e83002a1984f36",
-    "hw_cycles_lenet5.npz": "3e4b95e17204385e7495d29d22efe5c1fff8dc1d9bb281515a3de0f8037e515e"
+    "hw_a2_a3_cycles.csv": "f97f9cd7d5d4552fb60d4539264911178807d9100a35ba553c360608ea3800b5",
+    "hw_cycles_cifar10.npz": "f1a054f39cf87ad44f2b32d504a72fa87aed307695844cc31374ca958303c95e",
+    "hw_cycles_lenet5.npz": "ad4148db315fe95d2ae299a23fde0f21d487e13f4f2c6218844219e5d2e28425"
    },
    "log": "logs/s2.A2A3.log",
    "required": true,
    "die_temp_start": {
     "source": "iio iio:device0 (ams)",
     "channels_c": {
-     "ps_temp": 35.873,
-     "remote_temp": 36.169,
-     "pl_temp": 33.69
+     "ps_temp": 35.609,
+     "remote_temp": 35.858,
+     "pl_temp": 33.759
     },
-    "max_c": 36.169
+    "max_c": 35.858
    },
    "run_env": {
     "session_index": 1,
@@ -1575,35 +1575,35 @@
     "cpu_freq_khz": 1333333,
     "f_req_mhz": 250,
     "note": "paper-grade environment",
-    "f_meas_mhz": 249.878349,
-    "f_meas_ci_lo_mhz": "249.797199",
-    "f_meas_ci_hi_mhz": "249.925945",
+    "f_meas_mhz": 249.91533,
+    "f_meas_ci_lo_mhz": "249.838885",
+    "f_meas_ci_hi_mhz": "249.969946",
     "f_meas_readback_mhz": 249.9975,
     "f_meas_source": "cross-check (differential lower envelope, CLOCK_MONOTONIC_RAW)",
     "f_meas_step": "s2.fcal",
-    "f_meas_rel_diff_pct": "-0.0477",
+    "f_meas_rel_diff_pct": "-0.0329",
     "f_meas_flag": false,
     "step_id": "s2.A2A3",
-    "die_temp_start_c": 36.169
+    "die_temp_start_c": 35.858
    },
    "affinity": {
     "requested": "3",
     "readback": "3",
     "ok": true
    },
-   "finished_utc": "2026-09-30T16:34:54+00:00",
-   "duration_s": 29.814,
+   "finished_utc": "2026-09-30T17:13:37+00:00",
+   "duration_s": 29.864,
    "exit_code": 0,
    "die_temp_end": {
     "source": "iio iio:device0 (ams)",
     "channels_c": {
-     "ps_temp": 37.086,
-     "remote_temp": 35.718,
-     "pl_temp": 33.954
+     "ps_temp": 35.485,
+     "remote_temp": 36.106,
+     "pl_temp": 33.744
     },
-    "max_c": 37.086
+    "max_c": 36.106
    },
-   "log_sha256": "cf3c0c6e79e51630d9a0e804d7eb2c39b7f13d1db3566e56c4c213bec06e49d9"
+   "log_sha256": "a11bfc59c8da6835c74beb8a13ec40d64e5957164d035d4de2a01ca3b4545245"
   },
   "s2.layerspread": {
    "status": "ok",
@@ -1631,7 +1631,7 @@
     "--out-dir",
     "/home/ubuntu/gos/results/.staging/s2.layerspread"
    ],
-   "started_utc": "2026-09-30T16:34:54+00:00",
+   "started_utc": "2026-09-30T17:13:37+00:00",
    "timeout_s": 1500.0,
    "provenance": {
     "backend": "pynq",
@@ -1645,17 +1645,17 @@
     "closed_clock_mhz": 249.997498,
     "clock_readback_mhz": 249.9975,
     "clock_requested_mhz": 250,
-    "data_package_sha256": "e799508c9a854eede2f3c493f6553df6ebff4397496b3c80d65f89980f0948aa",
+    "data_package_sha256": "35081e2c7193c04f95ad875509c9f203951243f37d2acf33de8eb1d5c413e917",
     "manifest_sha256": {
-     "lenet5": "7455ed54b79eae522afc6364c924534bb0351e563f014d9362f4c66ff424af3a",
-     "cifar10": "2921c3c55d28b2e93b68af3f603e3910fba88c5ddfe11a9dc0ade6604803ba6f"
+     "lenet5": "3b4e302978c37b5e754a92e21753b2260d5226fa4d6e29fa5a77d89e00566f2a",
+     "cifar10": "6d849a820d55b66ba5ea926025e74152f0b8b0f6a00ffc6f2c8e47645919bf23"
     },
-    "scripts_commit": "89c9f0c7b40bc703549a6f38ab61843db181dd1d",
+    "scripts_commit": "7ef1572bbccc9cd239e8c417c54babae32f4c13a",
     "scripts_dirty": false,
     "data_dirty": false,
     "allow_dirty": false,
     "deploy_origin": "DEPLOY_INFO.json",
-    "preflight_utc": "2026-09-30T16:33:09+00:00",
+    "preflight_utc": "2026-09-30T17:11:53+00:00",
     "warnings": [],
     "session_index": 1,
     "paper_grade": true,
@@ -1671,26 +1671,26 @@
        "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
        "clock_mhz": 299.997009,
        "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
-       "start_utc": "2026-09-30T16:32:53+00:00",
+       "start_utc": "2026-09-30T17:11:36+00:00",
        "ok": false,
        "reason": "smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
        "detail": "pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
-       "duration_s": 5.779
+       "duration_s": 6.4
       },
       {
        "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
        "clock_mhz": 249.997498,
        "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
-       "start_utc": "2026-09-30T16:32:59+00:00",
+       "start_utc": "2026-09-30T17:11:42+00:00",
        "ok": true,
        "reason": "smoke PASS",
        "clock_readback_mhz": 249.9975,
-       "duration_s": 9.45
+       "duration_s": 9.859
       }
      ],
      "skipped": [],
      "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
-     "decided_utc": "2026-09-30T16:33:08+00:00"
+     "decided_utc": "2026-09-30T17:11:52+00:00"
     },
     "env": {
      "paper_grade": true,
@@ -1755,11 +1755,11 @@
      "die_temp": {
       "source": "iio iio:device0 (ams)",
       "channels_c": {
-       "ps_temp": 37.552,
-       "remote_temp": 36.029,
-       "pl_temp": 34.024
+       "ps_temp": 34.164,
+       "remote_temp": 34.428,
+       "pl_temp": 33.697
       },
-      "max_c": 37.552
+      "max_c": 34.428
      },
      "fake_tree": false,
      "paths": {
@@ -1774,18 +1774,18 @@
     }
    },
    "outputs": {
-    "hw_layer_spread.csv": "8ea9d1444cbed0fb3c43bb1d8e6e9facb825dfcfbd66bf73379cec17a5c66e5b"
+    "hw_layer_spread.csv": "158f563e1803dc78ecc29c1df7f9a3244bb06e0d5dcb513bf490469aa8b2dbd1"
    },
    "log": "logs/s2.layerspread.log",
    "required": true,
    "die_temp_start": {
     "source": "iio iio:device0 (ams)",
     "channels_c": {
-     "ps_temp": 36.697,
-     "remote_temp": 33.93,
-     "pl_temp": 34.187
+     "ps_temp": 35.143,
+     "remote_temp": 35.236,
+     "pl_temp": 33.588
     },
-    "max_c": 36.697
+    "max_c": 35.236
    },
    "run_env": {
     "session_index": 1,
@@ -1794,35 +1794,35 @@
     "cpu_freq_khz": 1333333,
     "f_req_mhz": 250,
     "note": "paper-grade environment",
-    "f_meas_mhz": 249.878349,
-    "f_meas_ci_lo_mhz": "249.797199",
-    "f_meas_ci_hi_mhz": "249.925945",
+    "f_meas_mhz": 249.91533,
+    "f_meas_ci_lo_mhz": "249.838885",
+    "f_meas_ci_hi_mhz": "249.969946",
     "f_meas_readback_mhz": 249.9975,
     "f_meas_source": "cross-check (differential lower envelope, CLOCK_MONOTONIC_RAW)",
     "f_meas_step": "s2.fcal",
-    "f_meas_rel_diff_pct": "-0.0477",
+    "f_meas_rel_diff_pct": "-0.0329",
     "f_meas_flag": false,
     "step_id": "s2.layerspread",
-    "die_temp_start_c": 36.697
+    "die_temp_start_c": 35.236
    },
    "affinity": {
     "requested": "3",
     "readback": "3",
     "ok": true
    },
-   "finished_utc": "2026-09-30T16:35:01+00:00",
-   "duration_s": 6.413,
+   "finished_utc": "2026-09-30T17:13:44+00:00",
+   "duration_s": 6.462,
    "exit_code": 0,
    "die_temp_end": {
     "source": "iio iio:device0 (ams)",
     "channels_c": {
-     "ps_temp": 35.391,
-     "remote_temp": 35.143,
-     "pl_temp": 34.179
+     "ps_temp": 35.547,
+     "remote_temp": 35.189,
+     "pl_temp": 33.418
     },
-    "max_c": 35.391
+    "max_c": 35.547
    },
-   "log_sha256": "6b06017fbbd89e5408c2f6f974f2974ddcd6da5d8218ad679238c257278e8c22"
+   "log_sha256": "ca03fd23174854a5ccb4af8a1639150674b9cc1df0ba9c760d803ead40164de6"
   },
   "s2.A1": {
    "status": "ok",
@@ -1848,8 +1848,8 @@
     "--out-dir",
     "/home/ubuntu/gos/results/.staging/s2.A1"
    ],
-   "started_utc": "2026-09-30T16:35:01+00:00",
-   "timeout_s": 1410.0,
+   "started_utc": "2026-09-30T17:13:44+00:00",
+   "timeout_s": 300.0,
    "provenance": {
     "backend": "pynq",
     "source": "hw",
@@ -1862,17 +1862,17 @@
     "closed_clock_mhz": 249.997498,
     "clock_readback_mhz": 249.9975,
     "clock_requested_mhz": 250,
-    "data_package_sha256": "e799508c9a854eede2f3c493f6553df6ebff4397496b3c80d65f89980f0948aa",
+    "data_package_sha256": "35081e2c7193c04f95ad875509c9f203951243f37d2acf33de8eb1d5c413e917",
     "manifest_sha256": {
-     "lenet5": "7455ed54b79eae522afc6364c924534bb0351e563f014d9362f4c66ff424af3a",
-     "cifar10": "2921c3c55d28b2e93b68af3f603e3910fba88c5ddfe11a9dc0ade6604803ba6f"
+     "lenet5": "3b4e302978c37b5e754a92e21753b2260d5226fa4d6e29fa5a77d89e00566f2a",
+     "cifar10": "6d849a820d55b66ba5ea926025e74152f0b8b0f6a00ffc6f2c8e47645919bf23"
     },
-    "scripts_commit": "89c9f0c7b40bc703549a6f38ab61843db181dd1d",
+    "scripts_commit": "7ef1572bbccc9cd239e8c417c54babae32f4c13a",
     "scripts_dirty": false,
     "data_dirty": false,
     "allow_dirty": false,
     "deploy_origin": "DEPLOY_INFO.json",
-    "preflight_utc": "2026-09-30T16:33:09+00:00",
+    "preflight_utc": "2026-09-30T17:11:53+00:00",
     "warnings": [],
     "session_index": 1,
     "paper_grade": true,
@@ -1888,26 +1888,26 @@
        "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
        "clock_mhz": 299.997009,
        "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
-       "start_utc": "2026-09-30T16:32:53+00:00",
+       "start_utc": "2026-09-30T17:11:36+00:00",
        "ok": false,
        "reason": "smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
        "detail": "pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
-       "duration_s": 5.779
+       "duration_s": 6.4
       },
       {
        "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
        "clock_mhz": 249.997498,
        "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
-       "start_utc": "2026-09-30T16:32:59+00:00",
+       "start_utc": "2026-09-30T17:11:42+00:00",
        "ok": true,
        "reason": "smoke PASS",
        "clock_readback_mhz": 249.9975,
-       "duration_s": 9.45
+       "duration_s": 9.859
       }
      ],
      "skipped": [],
      "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
-     "decided_utc": "2026-09-30T16:33:08+00:00"
+     "decided_utc": "2026-09-30T17:11:52+00:00"
     },
     "env": {
      "paper_grade": true,
@@ -1972,11 +1972,11 @@
      "die_temp": {
       "source": "iio iio:device0 (ams)",
       "channels_c": {
-       "ps_temp": 37.552,
-       "remote_temp": 36.029,
-       "pl_temp": 34.024
+       "ps_temp": 34.164,
+       "remote_temp": 34.428,
+       "pl_temp": 33.697
       },
-      "max_c": 37.552
+      "max_c": 34.428
      },
      "fake_tree": false,
      "paths": {
@@ -1991,7 +1991,7 @@
     }
    },
    "outputs": {
-    "hw_a1_accuracy.csv": "026cb8fe893b6688a763cc10a4e34f5471ebc3554181c9b65d90c310c86cda51",
+    "hw_a1_accuracy.csv": "875629d7cf96c8bf63a99839f7f522cafbe6541fce3c4d362887c5db20f50d79",
     "hw_logits_cifar10.npz": "7b973ffea7cf9e3edf1ac163cbe04a5452ef2807088683cfce281a6ebabbdff8",
     "hw_logits_lenet5.npz": "cb3f4b8dc71fd673678ad0c99e40460c9b737344d60e89217d2ec1835672573c"
    },
@@ -2000,11 +2000,11 @@
    "die_temp_start": {
     "source": "iio iio:device0 (ams)",
     "channels_c": {
-     "ps_temp": 36.386,
-     "remote_temp": 36.448,
-     "pl_temp": 34.257
+     "ps_temp": 36.34,
+     "remote_temp": 34.925,
+     "pl_temp": 33.588
     },
-    "max_c": 36.448
+    "max_c": 36.34
    },
    "run_env": {
     "session_index": 1,
@@ -2013,42 +2013,42 @@
     "cpu_freq_khz": 1333333,
     "f_req_mhz": 250,
     "note": "paper-grade environment",
-    "f_meas_mhz": 249.878349,
-    "f_meas_ci_lo_mhz": "249.797199",
-    "f_meas_ci_hi_mhz": "249.925945",
+    "f_meas_mhz": 249.91533,
+    "f_meas_ci_lo_mhz": "249.838885",
+    "f_meas_ci_hi_mhz": "249.969946",
     "f_meas_readback_mhz": 249.9975,
     "f_meas_source": "cross-check (differential lower envelope, CLOCK_MONOTONIC_RAW)",
     "f_meas_step": "s2.fcal",
-    "f_meas_rel_diff_pct": "-0.0477",
+    "f_meas_rel_diff_pct": "-0.0329",
     "f_meas_flag": false,
     "step_id": "s2.A1",
-    "die_temp_start_c": 36.448
+    "die_temp_start_c": 36.34
    },
    "affinity": {
     "requested": "3",
     "readback": "3",
     "ok": true
    },
-   "finished_utc": "2026-09-30T16:35:31+00:00",
-   "duration_s": 29.768,
+   "finished_utc": "2026-09-30T17:14:14+00:00",
+   "duration_s": 29.512,
    "exit_code": 0,
    "die_temp_end": {
     "source": "iio iio:device0 (ams)",
     "channels_c": {
-     "ps_temp": 36.977,
-     "remote_temp": 35.625,
-     "pl_temp": 34.443
+     "ps_temp": 34.925,
+     "remote_temp": 35.252,
+     "pl_temp": 33.806
     },
-    "max_c": 36.977
+    "max_c": 35.252
    },
-   "log_sha256": "0adb5c5889dac1dbf384f65a0fe202c60f41998a11fc144c584ad45115ac18db"
+   "log_sha256": "67672e543826f825a0c5b651fee9c19a45875654f561e274c082d0700235231e"
   },
   "s2.B3": {
    "status": "ok",
    "title": "B3 latency breakdown, interleaved conditions (safe host path, CPU cpu_int8_ref x1; + fast host path if s1.fast OK)",
    "session": 2,
    "group": "latency",
-   "params_key": "[\"exp_b3_breakdown.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--write-mode\", \"elem\", \"--n\", \"1000\", \"--conditions\", \"safe\", \"cpu\", \"--fast-store\", \"block\", \"--seed\", \"743454167\", \"--conditions-add\", \"fast\"]",
+   "params_key": "[\"exp_b3_breakdown.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--write-mode\", \"elem\", \"--n\", \"1000\", \"--conditions\", \"safe\", \"cpu\", \"--fast-store\", \"block\", \"--seed\", \"565029222\", \"--conditions-add\", \"fast\"]",
    "cmd": [
     "/usr/local/share/pynq-venv/bin/python3",
     "/home/ubuntu/gos/exp_b3_breakdown.py",
@@ -2068,14 +2068,14 @@
     "--fast-store",
     "block",
     "--seed",
-    "743454167",
+    "565029222",
     "--conditions-add",
     "fast",
     "--out-dir",
     "/home/ubuntu/gos/results/.staging/s2.B3"
    ],
-   "started_utc": "2026-09-30T16:35:31+00:00",
-   "timeout_s": 606.0,
+   "started_utc": "2026-09-30T17:14:14+00:00",
+   "timeout_s": 500.0,
    "provenance": {
     "backend": "pynq",
     "source": "hw",
@@ -2088,17 +2088,17 @@
     "closed_clock_mhz": 249.997498,
     "clock_readback_mhz": 249.9975,
     "clock_requested_mhz": 250,
-    "data_package_sha256": "e799508c9a854eede2f3c493f6553df6ebff4397496b3c80d65f89980f0948aa",
+    "data_package_sha256": "35081e2c7193c04f95ad875509c9f203951243f37d2acf33de8eb1d5c413e917",
     "manifest_sha256": {
-     "lenet5": "7455ed54b79eae522afc6364c924534bb0351e563f014d9362f4c66ff424af3a",
-     "cifar10": "2921c3c55d28b2e93b68af3f603e3910fba88c5ddfe11a9dc0ade6604803ba6f"
+     "lenet5": "3b4e302978c37b5e754a92e21753b2260d5226fa4d6e29fa5a77d89e00566f2a",
+     "cifar10": "6d849a820d55b66ba5ea926025e74152f0b8b0f6a00ffc6f2c8e47645919bf23"
     },
-    "scripts_commit": "89c9f0c7b40bc703549a6f38ab61843db181dd1d",
+    "scripts_commit": "7ef1572bbccc9cd239e8c417c54babae32f4c13a",
     "scripts_dirty": false,
     "data_dirty": false,
     "allow_dirty": false,
     "deploy_origin": "DEPLOY_INFO.json",
-    "preflight_utc": "2026-09-30T16:33:09+00:00",
+    "preflight_utc": "2026-09-30T17:11:53+00:00",
     "warnings": [],
     "session_index": 1,
     "paper_grade": true,
@@ -2114,26 +2114,26 @@
        "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
        "clock_mhz": 299.997009,
        "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
-       "start_utc": "2026-09-30T16:32:53+00:00",
+       "start_utc": "2026-09-30T17:11:36+00:00",
        "ok": false,
        "reason": "smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
        "detail": "pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
-       "duration_s": 5.779
+       "duration_s": 6.4
       },
       {
        "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
        "clock_mhz": 249.997498,
        "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
-       "start_utc": "2026-09-30T16:32:59+00:00",
+       "start_utc": "2026-09-30T17:11:42+00:00",
        "ok": true,
        "reason": "smoke PASS",
        "clock_readback_mhz": 249.9975,
-       "duration_s": 9.45
+       "duration_s": 9.859
       }
      ],
      "skipped": [],
      "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
-     "decided_utc": "2026-09-30T16:33:08+00:00"
+     "decided_utc": "2026-09-30T17:11:52+00:00"
     },
     "env": {
      "paper_grade": true,
@@ -2198,11 +2198,11 @@
      "die_temp": {
       "source": "iio iio:device0 (ams)",
       "channels_c": {
-       "ps_temp": 37.552,
-       "remote_temp": 36.029,
-       "pl_temp": 34.024
+       "ps_temp": 34.164,
+       "remote_temp": 34.428,
+       "pl_temp": 33.697
       },
-      "max_c": 37.552
+      "max_c": 34.428
      },
      "fake_tree": false,
      "paths": {
@@ -2217,26 +2217,26 @@
     }
    },
    "outputs": {
-    "hw_b3_breakdown.csv": "7dc04e06f57403e07ab27d8cd35343bf2ee945e36d7341249531aba7c030b60f",
-    "hw_b3_breakdown_cpu.csv": "192b801f178c9578d905ae3081634411ed2bab3147bee4b739ad89f81c028c64",
-    "hw_b3_breakdown_fast.csv": "0503027c5161ebc0be5304f9531ab1a01ab15851cab194a5c74a9d2754d1d88d",
-    "hw_b3_times_cifar10.npz": "ddc29541363239a3ccd148ec61d91ec3d4c94dbee1044f4bf16e3191bcc07094",
-    "hw_b3_times_cifar10_cpu.npz": "64dd6664790a73752b3b4791e6d77cdd0c163da3d61be7576dd1be5868aa37ee",
-    "hw_b3_times_cifar10_fast.npz": "4ced3b7feda5d5c60eade6c9509ec8e48b1bdaba2540e999e11ec75021609906",
-    "hw_b3_times_lenet5.npz": "6187f0fdee23980c564e570d04801526ed5c21879d957885978dfd152b4c0b3d",
-    "hw_b3_times_lenet5_cpu.npz": "7c98a1b00e7a786b494750346745cd6a9b19bf70093de3e24427ad0a617c09ec",
-    "hw_b3_times_lenet5_fast.npz": "b4666cb424b016201fb88055c5418a7f538738a18f15a38b7b0c121ab0a8a160"
+    "hw_b3_breakdown.csv": "7622825e156cb48d71358211b454133959e3aacfbfa7fab1c7ace6ab0ba39423",
+    "hw_b3_breakdown_cpu.csv": "45b9ec9898508b6c466efc1131a465605d655a7b1fbe39c3a0b2c379bdd1aae5",
+    "hw_b3_breakdown_fast.csv": "46709155a03d5e65eb600d37c53ded2e4a65fb00bb1f3a874f1b5779a9eb6c04",
+    "hw_b3_times_cifar10.npz": "8ad95585d1bc99619648656c345e09c3f5343230904c42f073edb24d0156483e",
+    "hw_b3_times_cifar10_cpu.npz": "482a659fe4eb4f4f43ba13a8af9c5187ab9ae0b270bdb14ece5e2d5d698d7ea5",
+    "hw_b3_times_cifar10_fast.npz": "45087af8663cc0f05a39f1859575166692374a23ca1aee583a6afb9e4b5be207",
+    "hw_b3_times_lenet5.npz": "91bf0930fc49497d32ed0b3819b9f4c4d225f20f2b400acaf2ea0c058ba195ab",
+    "hw_b3_times_lenet5_cpu.npz": "f8cedc6c29bef3f822bb6c69aedc88e89ad491ddbd2bcfa376ee6c5fde24e1e2",
+    "hw_b3_times_lenet5_fast.npz": "2277334cae720b50b29610774e5e898e51600e8bc463b5f1745a3801578f1ca4"
    },
    "log": "logs/s2.B3.log",
    "required": true,
    "die_temp_start": {
     "source": "iio iio:device0 (ams)",
     "channels_c": {
-     "ps_temp": 36.153,
-     "remote_temp": 35.531,
-     "pl_temp": 34.039
+     "ps_temp": 35.842,
+     "remote_temp": 35.469,
+     "pl_temp": 33.581
     },
-    "max_c": 36.153
+    "max_c": 35.842
    },
    "run_env": {
     "session_index": 1,
@@ -2245,42 +2245,42 @@
     "cpu_freq_khz": 1333333,
     "f_req_mhz": 250,
     "note": "paper-grade environment",
-    "f_meas_mhz": 249.878349,
-    "f_meas_ci_lo_mhz": "249.797199",
-    "f_meas_ci_hi_mhz": "249.925945",
+    "f_meas_mhz": 249.91533,
+    "f_meas_ci_lo_mhz": "249.838885",
+    "f_meas_ci_hi_mhz": "249.969946",
     "f_meas_readback_mhz": 249.9975,
     "f_meas_source": "cross-check (differential lower envelope, CLOCK_MONOTONIC_RAW)",
     "f_meas_step": "s2.fcal",
-    "f_meas_rel_diff_pct": "-0.0477",
+    "f_meas_rel_diff_pct": "-0.0329",
     "f_meas_flag": false,
     "step_id": "s2.B3",
-    "die_temp_start_c": 36.153
+    "die_temp_start_c": 35.842
    },
    "affinity": {
     "requested": "3",
     "readback": "3",
     "ok": true
    },
-   "finished_utc": "2026-09-30T16:37:37+00:00",
-   "duration_s": 126.673,
+   "finished_utc": "2026-09-30T17:16:20+00:00",
+   "duration_s": 126.317,
    "exit_code": 0,
    "die_temp_end": {
     "source": "iio iio:device0 (ams)",
     "channels_c": {
-     "ps_temp": 36.526,
-     "remote_temp": 34.91,
-     "pl_temp": 34.373
+     "ps_temp": 36.93,
+     "remote_temp": 35.221,
+     "pl_temp": 33.674
     },
-    "max_c": 36.526
+    "max_c": 36.93
    },
-   "log_sha256": "1b7ccb6c6d22457e0c4ecfe96b8181dce48ed44f1c45c593c1d540bff0ddcf4c"
+   "log_sha256": "8e88fce179109aa3b771b5b46db95b5b27fad7feabf2f1c547db561f8ce68a8b"
   },
   "s2.shapes": {
    "status": "ok",
    "title": "A3-general: 300 random multi-layer shape jobs (set seed 20260929), bit/cycle-exact vs model + RTL sim, stratified order, cap 900 s",
    "session": 2,
    "group": "shapes",
-   "params_key": "{\"argv\": [\"exp_shapes.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--write-mode\", \"elem\", \"--host-path\", \"safe\", \"--fast-store\", \"block\", \"--budget-s\", \"900\", \"--order-seed\", \"743454195\"], \"params\": {\"budget_s\": 900.0, \"host_path\": \"safe\", \"n_jobs\": 300, \"order_seed\": 743454195, \"seed\": \"20260929\", \"shapeset_sha256\": \"37bdfbaacba1dc000701ad690b261df81455d7636899da8f14a207513c831280\"}}",
+   "params_key": "{\"argv\": [\"exp_shapes.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--write-mode\", \"elem\", \"--host-path\", \"safe\", \"--fast-store\", \"block\", \"--budget-s\", \"900\", \"--order-seed\", \"565029250\"], \"params\": {\"budget_s\": 900.0, \"host_path\": \"safe\", \"n_jobs\": 300, \"order_seed\": 565029250, \"seed\": \"20260929\", \"shapeset_sha256\": \"37bdfbaacba1dc000701ad690b261df81455d7636899da8f14a207513c831280\"}}",
    "cmd": [
     "/usr/local/share/pynq-venv/bin/python3",
     "/home/ubuntu/gos/exp_shapes.py",
@@ -2299,11 +2299,11 @@
     "--budget-s",
     "900",
     "--order-seed",
-    "743454195",
+    "565029250",
     "--out-dir",
     "/home/ubuntu/gos/results/.staging/s2.shapes"
    ],
-   "started_utc": "2026-09-30T16:37:37+00:00",
+   "started_utc": "2026-09-30T17:16:20+00:00",
    "timeout_s": 1080.0,
    "provenance": {
     "backend": "pynq",
@@ -2317,17 +2317,17 @@
     "closed_clock_mhz": 249.997498,
     "clock_readback_mhz": 249.9975,
     "clock_requested_mhz": 250,
-    "data_package_sha256": "e799508c9a854eede2f3c493f6553df6ebff4397496b3c80d65f89980f0948aa",
+    "data_package_sha256": "35081e2c7193c04f95ad875509c9f203951243f37d2acf33de8eb1d5c413e917",
     "manifest_sha256": {
-     "lenet5": "7455ed54b79eae522afc6364c924534bb0351e563f014d9362f4c66ff424af3a",
-     "cifar10": "2921c3c55d28b2e93b68af3f603e3910fba88c5ddfe11a9dc0ade6604803ba6f"
+     "lenet5": "3b4e302978c37b5e754a92e21753b2260d5226fa4d6e29fa5a77d89e00566f2a",
+     "cifar10": "6d849a820d55b66ba5ea926025e74152f0b8b0f6a00ffc6f2c8e47645919bf23"
     },
-    "scripts_commit": "89c9f0c7b40bc703549a6f38ab61843db181dd1d",
+    "scripts_commit": "7ef1572bbccc9cd239e8c417c54babae32f4c13a",
     "scripts_dirty": false,
     "data_dirty": false,
     "allow_dirty": false,
     "deploy_origin": "DEPLOY_INFO.json",
-    "preflight_utc": "2026-09-30T16:33:09+00:00",
+    "preflight_utc": "2026-09-30T17:11:53+00:00",
     "warnings": [],
     "session_index": 1,
     "paper_grade": true,
@@ -2343,26 +2343,26 @@
        "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
        "clock_mhz": 299.997009,
        "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
-       "start_utc": "2026-09-30T16:32:53+00:00",
+       "start_utc": "2026-09-30T17:11:36+00:00",
        "ok": false,
        "reason": "smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
        "detail": "pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
-       "duration_s": 5.779
+       "duration_s": 6.4
       },
       {
        "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
        "clock_mhz": 249.997498,
        "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
-       "start_utc": "2026-09-30T16:32:59+00:00",
+       "start_utc": "2026-09-30T17:11:42+00:00",
        "ok": true,
        "reason": "smoke PASS",
        "clock_readback_mhz": 249.9975,
-       "duration_s": 9.45
+       "duration_s": 9.859
       }
      ],
      "skipped": [],
      "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
-     "decided_utc": "2026-09-30T16:33:08+00:00"
+     "decided_utc": "2026-09-30T17:11:52+00:00"
     },
     "env": {
      "paper_grade": true,
@@ -2427,11 +2427,11 @@
      "die_temp": {
       "source": "iio iio:device0 (ams)",
       "channels_c": {
-       "ps_temp": 37.552,
-       "remote_temp": 36.029,
-       "pl_temp": 34.024
+       "ps_temp": 34.164,
+       "remote_temp": 34.428,
+       "pl_temp": 33.697
       },
-      "max_c": 37.552
+      "max_c": 34.428
      },
      "fake_tree": false,
      "paths": {
@@ -2446,18 +2446,18 @@
     }
    },
    "outputs": {
-    "hw_shapes.csv": "01965328370573ba0f81374b41623a8717fac13f26017980cc33e20c45688e0c"
+    "hw_shapes.csv": "6de272c472e33a07f483148da87a6237b09311429e82dbad55a8f9b7aa7ca7a5"
    },
    "log": "logs/s2.shapes.log",
    "required": true,
    "die_temp_start": {
     "source": "iio iio:device0 (ams)",
     "channels_c": {
-     "ps_temp": 37.117,
-     "remote_temp": 35.174,
-     "pl_temp": 34.171
+     "ps_temp": 36.464,
+     "remote_temp": 36.526,
+     "pl_temp": 33.876
     },
-    "max_c": 37.117
+    "max_c": 36.526
    },
    "run_env": {
     "session_index": 1,
@@ -2466,35 +2466,35 @@
     "cpu_freq_khz": 1333333,
     "f_req_mhz": 250,
     "note": "paper-grade environment",
-    "f_meas_mhz": 249.878349,
-    "f_meas_ci_lo_mhz": "249.797199",
-    "f_meas_ci_hi_mhz": "249.925945",
+    "f_meas_mhz": 249.91533,
+    "f_meas_ci_lo_mhz": "249.838885",
+    "f_meas_ci_hi_mhz": "249.969946",
     "f_meas_readback_mhz": 249.9975,
     "f_meas_source": "cross-check (differential lower envelope, CLOCK_MONOTONIC_RAW)",
     "f_meas_step": "s2.fcal",
-    "f_meas_rel_diff_pct": "-0.0477",
+    "f_meas_rel_diff_pct": "-0.0329",
     "f_meas_flag": false,
     "step_id": "s2.shapes",
-    "die_temp_start_c": 37.117
+    "die_temp_start_c": 36.526
    },
    "affinity": {
     "requested": "3",
     "readback": "3",
     "ok": true
    },
-   "finished_utc": "2026-09-30T16:38:13+00:00",
-   "duration_s": 35.499,
+   "finished_utc": "2026-09-30T17:16:55+00:00",
+   "duration_s": 34.744,
    "exit_code": 0,
    "die_temp_end": {
     "source": "iio iio:device0 (ams)",
     "channels_c": {
-     "ps_temp": 35.982,
-     "remote_temp": 35.842,
-     "pl_temp": 34.226
+     "ps_temp": 34.537,
+     "remote_temp": 35.935,
+     "pl_temp": 33.985
     },
-    "max_c": 35.982
+    "max_c": 35.935
    },
-   "log_sha256": "ccbb1a3a68aae5f8c322f5e6703f83e0e256f3ae49ca1412518c0e57dbe9eaa1"
+   "log_sha256": "a377403caaa422da0c82c288d193cc79ed4ee17fa77bcfe9ed9c37445ba9755f"
   },
   "s2.CPU": {
    "status": "ok",
@@ -2516,8 +2516,8 @@
     "--out-dir",
     "/home/ubuntu/gos/results/.staging/s2.CPU"
    ],
-   "started_utc": "2026-09-30T16:38:13+00:00",
-   "timeout_s": 7320.0,
+   "started_utc": "2026-09-30T17:16:55+00:00",
+   "timeout_s": 1783.7,
    "provenance": {
     "backend": "pynq",
     "source": "hw",
@@ -2530,17 +2530,17 @@
     "closed_clock_mhz": 249.997498,
     "clock_readback_mhz": 249.9975,
     "clock_requested_mhz": 250,
-    "data_package_sha256": "e799508c9a854eede2f3c493f6553df6ebff4397496b3c80d65f89980f0948aa",
+    "data_package_sha256": "35081e2c7193c04f95ad875509c9f203951243f37d2acf33de8eb1d5c413e917",
     "manifest_sha256": {
-     "lenet5": "7455ed54b79eae522afc6364c924534bb0351e563f014d9362f4c66ff424af3a",
-     "cifar10": "2921c3c55d28b2e93b68af3f603e3910fba88c5ddfe11a9dc0ade6604803ba6f"
+     "lenet5": "3b4e302978c37b5e754a92e21753b2260d5226fa4d6e29fa5a77d89e00566f2a",
+     "cifar10": "6d849a820d55b66ba5ea926025e74152f0b8b0f6a00ffc6f2c8e47645919bf23"
     },
-    "scripts_commit": "89c9f0c7b40bc703549a6f38ab61843db181dd1d",
+    "scripts_commit": "7ef1572bbccc9cd239e8c417c54babae32f4c13a",
     "scripts_dirty": false,
     "data_dirty": false,
     "allow_dirty": false,
     "deploy_origin": "DEPLOY_INFO.json",
-    "preflight_utc": "2026-09-30T16:33:09+00:00",
+    "preflight_utc": "2026-09-30T17:11:53+00:00",
     "warnings": [],
     "session_index": 1,
     "paper_grade": true,
@@ -2556,26 +2556,26 @@
        "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
        "clock_mhz": 299.997009,
        "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
-       "start_utc": "2026-09-30T16:32:53+00:00",
+       "start_utc": "2026-09-30T17:11:36+00:00",
        "ok": false,
        "reason": "smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
        "detail": "pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
-       "duration_s": 5.779
+       "duration_s": 6.4
       },
       {
        "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
        "clock_mhz": 249.997498,
        "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
-       "start_utc": "2026-09-30T16:32:59+00:00",
+       "start_utc": "2026-09-30T17:11:42+00:00",
        "ok": true,
        "reason": "smoke PASS",
        "clock_readback_mhz": 249.9975,
-       "duration_s": 9.45
+       "duration_s": 9.859
       }
      ],
      "skipped": [],
      "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
-     "decided_utc": "2026-09-30T16:33:08+00:00"
+     "decided_utc": "2026-09-30T17:11:52+00:00"
     },
     "env": {
      "paper_grade": true,
@@ -2640,11 +2640,11 @@
      "die_temp": {
       "source": "iio iio:device0 (ams)",
       "channels_c": {
-       "ps_temp": 37.552,
-       "remote_temp": 36.029,
-       "pl_temp": 34.024
+       "ps_temp": 34.164,
+       "remote_temp": 34.428,
+       "pl_temp": 33.697
       },
-      "max_c": 37.552
+      "max_c": 34.428
      },
      "fake_tree": false,
      "paths": {
@@ -2659,19 +2659,19 @@
     }
    },
    "outputs": {
-    "hw_cpu_baseline.csv": "b59ec9f1b30a4c698b10556f46755a2de3492546b0e1091c7c95895b424afd35",
-    "hw_cpu_baseline_env.json": "810f3c24a61a2e7cd77ac1862fe15ddddf64e2cfe6f95cd60e16be2344f1eed9"
+    "hw_cpu_baseline.csv": "2c4119a93ec04553ee2b9558f9dd6cdc48c2deeea99a66c03fba95af4d03b1a4",
+    "hw_cpu_baseline_env.json": "867d071e4b2821f9beefa74f9559d07ae1e198eed555e99331b4174c2fb126ec"
    },
    "log": "logs/s2.CPU.log",
    "required": true,
    "die_temp_start": {
     "source": "iio iio:device0 (ams)",
     "channels_c": {
-     "ps_temp": 35.687,
-     "remote_temp": 34.941,
-     "pl_temp": 34.218
+     "ps_temp": 36.293,
+     "remote_temp": 35.065,
+     "pl_temp": 34.272
     },
-    "max_c": 35.687
+    "max_c": 36.293
    },
    "run_env": {
     "session_index": 1,
@@ -2680,35 +2680,35 @@
     "cpu_freq_khz": 1333333,
     "f_req_mhz": 250,
     "note": "paper-grade environment",
-    "f_meas_mhz": 249.878349,
-    "f_meas_ci_lo_mhz": "249.797199",
-    "f_meas_ci_hi_mhz": "249.925945",
+    "f_meas_mhz": 249.91533,
+    "f_meas_ci_lo_mhz": "249.838885",
+    "f_meas_ci_hi_mhz": "249.969946",
     "f_meas_readback_mhz": 249.9975,
     "f_meas_source": "cross-check (differential lower envelope, CLOCK_MONOTONIC_RAW)",
     "f_meas_step": "s2.fcal",
-    "f_meas_rel_diff_pct": "-0.0477",
+    "f_meas_rel_diff_pct": "-0.0329",
     "f_meas_flag": false,
     "step_id": "s2.CPU",
-    "die_temp_start_c": 35.687
+    "die_temp_start_c": 36.293
    },
    "affinity": {
     "requested": "0-3",
     "readback": "0-3",
     "ok": true
    },
-   "finished_utc": "2026-09-30T16:46:37+00:00",
-   "duration_s": 504.16,
+   "finished_utc": "2026-09-30T17:26:46+00:00",
+   "duration_s": 591.055,
    "exit_code": 0,
    "die_temp_end": {
     "source": "iio iio:device0 (ams)",
     "channels_c": {
-     "ps_temp": 36.495,
-     "remote_temp": 35.221,
-     "pl_temp": 33.868
+     "ps_temp": 34.226,
+     "remote_temp": 36.293,
+     "pl_temp": 34.482
     },
-    "max_c": 36.495
+    "max_c": 36.293
    },
-   "log_sha256": "a15eef759033664bdb5f3b69c795926317bda9a1f94e4f8485913f18cfdd89ca"
+   "log_sha256": "324ff7b92becf80a799bd6826bf785b08ccb1a7d200b80e892522de320f1f98d"
   },
   "s2.A4": {
    "status": "ok",
@@ -2736,7 +2736,7 @@
     "--out-dir",
     "/home/ubuntu/gos/results/.staging/s2.A4"
    ],
-   "started_utc": "2026-09-30T16:46:37+00:00",
+   "started_utc": "2026-09-30T17:26:46+00:00",
    "timeout_s": 300.0,
    "provenance": {
     "backend": "pynq",
@@ -2750,17 +2750,17 @@
     "closed_clock_mhz": 249.997498,
     "clock_readback_mhz": 249.9975,
     "clock_requested_mhz": 250,
-    "data_package_sha256": "e799508c9a854eede2f3c493f6553df6ebff4397496b3c80d65f89980f0948aa",
+    "data_package_sha256": "35081e2c7193c04f95ad875509c9f203951243f37d2acf33de8eb1d5c413e917",
     "manifest_sha256": {
-     "lenet5": "7455ed54b79eae522afc6364c924534bb0351e563f014d9362f4c66ff424af3a",
-     "cifar10": "2921c3c55d28b2e93b68af3f603e3910fba88c5ddfe11a9dc0ade6604803ba6f"
+     "lenet5": "3b4e302978c37b5e754a92e21753b2260d5226fa4d6e29fa5a77d89e00566f2a",
+     "cifar10": "6d849a820d55b66ba5ea926025e74152f0b8b0f6a00ffc6f2c8e47645919bf23"
     },
-    "scripts_commit": "89c9f0c7b40bc703549a6f38ab61843db181dd1d",
+    "scripts_commit": "7ef1572bbccc9cd239e8c417c54babae32f4c13a",
     "scripts_dirty": false,
     "data_dirty": false,
     "allow_dirty": false,
     "deploy_origin": "DEPLOY_INFO.json",
-    "preflight_utc": "2026-09-30T16:33:09+00:00",
+    "preflight_utc": "2026-09-30T17:11:53+00:00",
     "warnings": [],
     "session_index": 1,
     "paper_grade": true,
@@ -2776,26 +2776,26 @@
        "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
        "clock_mhz": 299.997009,
        "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
-       "start_utc": "2026-09-30T16:32:53+00:00",
+       "start_utc": "2026-09-30T17:11:36+00:00",
        "ok": false,
        "reason": "smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
        "detail": "pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
-       "duration_s": 5.779
+       "duration_s": 6.4
       },
       {
        "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
        "clock_mhz": 249.997498,
        "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
-       "start_utc": "2026-09-30T16:32:59+00:00",
+       "start_utc": "2026-09-30T17:11:42+00:00",
        "ok": true,
        "reason": "smoke PASS",
        "clock_readback_mhz": 249.9975,
-       "duration_s": 9.45
+       "duration_s": 9.859
       }
      ],
      "skipped": [],
      "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
-     "decided_utc": "2026-09-30T16:33:08+00:00"
+     "decided_utc": "2026-09-30T17:11:52+00:00"
     },
     "env": {
      "paper_grade": true,
@@ -2860,11 +2860,11 @@
      "die_temp": {
       "source": "iio iio:device0 (ams)",
       "channels_c": {
-       "ps_temp": 37.552,
-       "remote_temp": 36.029,
-       "pl_temp": 34.024
+       "ps_temp": 34.164,
+       "remote_temp": 34.428,
+       "pl_temp": 33.697
       },
-      "max_c": 37.552
+      "max_c": 34.428
      },
      "fake_tree": false,
      "paths": {
@@ -2879,18 +2879,18 @@
     }
    },
    "outputs": {
-    "hw_a4_util.csv": "437ed40d00b704ad92fbe4a4028cc314cea3aa20a7bcb0dad4fefa63ed9e8f14"
+    "hw_a4_util.csv": "e205a74d5e791b7a1c22b3cfeb705d2686d244269672c16b862c9bbd6472196a"
    },
    "log": "logs/s2.A4.log",
    "required": true,
    "die_temp_start": {
     "source": "iio iio:device0 (ams)",
     "channels_c": {
-     "ps_temp": 34.692,
-     "remote_temp": 35.671,
-     "pl_temp": 33.806
+     "ps_temp": 35.671,
+     "remote_temp": 35.718,
+     "pl_temp": 34.202
     },
-    "max_c": 35.671
+    "max_c": 35.718
    },
    "run_env": {
     "session_index": 1,
@@ -2899,40 +2899,40 @@
     "cpu_freq_khz": 1333333,
     "f_req_mhz": 250,
     "note": "paper-grade environment",
-    "f_meas_mhz": 249.878349,
-    "f_meas_ci_lo_mhz": "249.797199",
-    "f_meas_ci_hi_mhz": "249.925945",
+    "f_meas_mhz": 249.91533,
+    "f_meas_ci_lo_mhz": "249.838885",
+    "f_meas_ci_hi_mhz": "249.969946",
     "f_meas_readback_mhz": 249.9975,
     "f_meas_source": "cross-check (differential lower envelope, CLOCK_MONOTONIC_RAW)",
     "f_meas_step": "s2.fcal",
-    "f_meas_rel_diff_pct": "-0.0477",
+    "f_meas_rel_diff_pct": "-0.0329",
     "f_meas_flag": false,
     "step_id": "s2.A4",
-    "die_temp_start_c": 35.671
+    "die_temp_start_c": 35.718
    },
    "affinity": {
     "requested": "3",
     "readback": "3",
     "ok": true
    },
-   "finished_utc": "2026-09-30T16:46:47+00:00",
-   "duration_s": 9.57,
+   "finished_utc": "2026-09-30T17:26:56+00:00",
+   "duration_s": 9.522,
    "exit_code": 0,
    "die_temp_end": {
     "source": "iio iio:device0 (ams)",
     "channels_c": {
-     "ps_temp": 35.36,
-     "remote_temp": 35.733,
-     "pl_temp": 33.853
+     "ps_temp": 35.283,
+     "remote_temp": 36.899,
+     "pl_temp": 34.358
     },
-    "max_c": 35.733
+    "max_c": 36.899
    },
-   "log_sha256": "ef9ae7de112331dea6abbd567a63ed0d8f2d21a9d705d8fdbf16db786df70da0"
+   "log_sha256": "d2e96d1eba9ceb4de345ad11a2fbf6895cfc24b1bfd0227333447f3794d93708"
   }
  },
  "invocations": [
   {
-   "utc": "2026-09-30T16:33:09+00:00",
+   "utc": "2026-09-30T17:11:53+00:00",
    "args": {
     "sessions": [
      1
@@ -2978,7 +2978,7 @@
     "min_free_mb": 1000.0,
     "no_bringup_check": false
    },
-   "session_log": "logs/run_sessions_20260930_163253.log",
+   "session_log": "logs/run_sessions_20260930_171135.log",
    "preflight": {
     "backend": "pynq",
     "source": "hw",
@@ -2991,17 +2991,17 @@
     "closed_clock_mhz": 249.997498,
     "clock_readback_mhz": 249.9975,
     "clock_requested_mhz": 250,
-    "data_package_sha256": "e799508c9a854eede2f3c493f6553df6ebff4397496b3c80d65f89980f0948aa",
+    "data_package_sha256": "35081e2c7193c04f95ad875509c9f203951243f37d2acf33de8eb1d5c413e917",
     "manifest_sha256": {
-     "lenet5": "7455ed54b79eae522afc6364c924534bb0351e563f014d9362f4c66ff424af3a",
-     "cifar10": "2921c3c55d28b2e93b68af3f603e3910fba88c5ddfe11a9dc0ade6604803ba6f"
+     "lenet5": "3b4e302978c37b5e754a92e21753b2260d5226fa4d6e29fa5a77d89e00566f2a",
+     "cifar10": "6d849a820d55b66ba5ea926025e74152f0b8b0f6a00ffc6f2c8e47645919bf23"
     },
-    "scripts_commit": "89c9f0c7b40bc703549a6f38ab61843db181dd1d",
+    "scripts_commit": "7ef1572bbccc9cd239e8c417c54babae32f4c13a",
     "scripts_dirty": false,
     "data_dirty": false,
     "allow_dirty": false,
     "deploy_origin": "DEPLOY_INFO.json",
-    "preflight_utc": "2026-09-30T16:33:09+00:00",
+    "preflight_utc": "2026-09-30T17:11:53+00:00",
     "warnings": [],
     "session_index": 1,
     "paper_grade": true,
@@ -3017,26 +3017,26 @@
        "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
        "clock_mhz": 299.997009,
        "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
-       "start_utc": "2026-09-30T16:32:53+00:00",
+       "start_utc": "2026-09-30T17:11:36+00:00",
        "ok": false,
        "reason": "smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
        "detail": "pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
-       "duration_s": 5.779
+       "duration_s": 6.4
       },
       {
        "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
        "clock_mhz": 249.997498,
        "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
-       "start_utc": "2026-09-30T16:32:59+00:00",
+       "start_utc": "2026-09-30T17:11:42+00:00",
        "ok": true,
        "reason": "smoke PASS",
        "clock_readback_mhz": 249.9975,
-       "duration_s": 9.45
+       "duration_s": 9.859
       }
      ],
      "skipped": [],
      "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
-     "decided_utc": "2026-09-30T16:33:08+00:00"
+     "decided_utc": "2026-09-30T17:11:52+00:00"
     },
     "env": {
      "paper_grade": true,
@@ -3101,11 +3101,11 @@
      "die_temp": {
       "source": "iio iio:device0 (ams)",
       "channels_c": {
-       "ps_temp": 37.552,
-       "remote_temp": 36.029,
-       "pl_temp": 34.024
+       "ps_temp": 34.164,
+       "remote_temp": 34.428,
+       "pl_temp": 33.697
       },
-      "max_c": 37.552
+      "max_c": 34.428
      },
      "fake_tree": false,
      "paths": {
@@ -3121,7 +3121,7 @@
    }
   },
   {
-   "utc": "2026-09-30T16:34:08+00:00",
+   "utc": "2026-09-30T17:12:51+00:00",
    "args": {
     "sessions": [
      2
@@ -3167,7 +3167,7 @@
     "min_free_mb": 1000.0,
     "no_bringup_check": false
    },
-   "session_log": "logs/run_sessions_20260930_163403.log",
+   "session_log": "logs/run_sessions_20260930_171246.log",
    "preflight": {
     "backend": "pynq",
     "source": "hw",
@@ -3180,17 +3180,17 @@
     "closed_clock_mhz": 249.997498,
     "clock_readback_mhz": 249.9975,
     "clock_requested_mhz": 250,
-    "data_package_sha256": "e799508c9a854eede2f3c493f6553df6ebff4397496b3c80d65f89980f0948aa",
+    "data_package_sha256": "35081e2c7193c04f95ad875509c9f203951243f37d2acf33de8eb1d5c413e917",
     "manifest_sha256": {
-     "lenet5": "7455ed54b79eae522afc6364c924534bb0351e563f014d9362f4c66ff424af3a",
-     "cifar10": "2921c3c55d28b2e93b68af3f603e3910fba88c5ddfe11a9dc0ade6604803ba6f"
+     "lenet5": "3b4e302978c37b5e754a92e21753b2260d5226fa4d6e29fa5a77d89e00566f2a",
+     "cifar10": "6d849a820d55b66ba5ea926025e74152f0b8b0f6a00ffc6f2c8e47645919bf23"
     },
-    "scripts_commit": "89c9f0c7b40bc703549a6f38ab61843db181dd1d",
+    "scripts_commit": "7ef1572bbccc9cd239e8c417c54babae32f4c13a",
     "scripts_dirty": false,
     "data_dirty": false,
     "allow_dirty": false,
     "deploy_origin": "DEPLOY_INFO.json",
-    "preflight_utc": "2026-09-30T16:34:08+00:00",
+    "preflight_utc": "2026-09-30T17:12:51+00:00",
     "warnings": [],
     "session_index": 1,
     "paper_grade": true,
@@ -3206,26 +3206,26 @@
        "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
        "clock_mhz": 299.997009,
        "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
-       "start_utc": "2026-09-30T16:32:53+00:00",
+       "start_utc": "2026-09-30T17:11:36+00:00",
        "ok": false,
        "reason": "smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
        "detail": "pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
-       "duration_s": 5.779
+       "duration_s": 6.4
       },
       {
        "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
        "clock_mhz": 249.997498,
        "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
-       "start_utc": "2026-09-30T16:32:59+00:00",
+       "start_utc": "2026-09-30T17:11:42+00:00",
        "ok": true,
        "reason": "smoke PASS",
        "clock_readback_mhz": 249.9975,
-       "duration_s": 9.45
+       "duration_s": 9.859
       }
      ],
      "skipped": [],
      "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
-     "decided_utc": "2026-09-30T16:33:08+00:00"
+     "decided_utc": "2026-09-30T17:11:52+00:00"
     },
     "env": {
      "paper_grade": true,
@@ -3290,11 +3290,11 @@
      "die_temp": {
       "source": "iio iio:device0 (ams)",
       "channels_c": {
-       "ps_temp": 35.594,
-       "remote_temp": 36.697,
-       "pl_temp": 34.0
+       "ps_temp": 37.288,
+       "remote_temp": 34.91,
+       "pl_temp": 33.728
       },
-      "max_c": 36.697
+      "max_c": 37.288
      },
      "fake_tree": false,
      "paths": {
@@ -3314,7 +3314,7 @@
   "s1.shell": {
    "backend": "pynq",
    "params_key": "[\"test_shell.py\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--expect-version\", \"0x474F5302\", \"--skip-scratch\", \"--max-fclk0\", \"250.497498\", \"--set-fclk0\", \"249.997498\"]",
-   "duration_s": 6.767,
+   "duration_s": 6.92,
    "images": 0,
    "fixed_s": 0.0,
    "rate_s": null
@@ -3322,7 +3322,7 @@
   "s1.smoke": {
    "backend": "pynq",
    "params_key": "[\"test_core_smoke.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--max-fclk0\", \"250.497498\"]",
-   "duration_s": 7.621,
+   "duration_s": 7.671,
    "images": 0,
    "fixed_s": 0.0,
    "rate_s": null
@@ -3330,7 +3330,7 @@
   "s1.smoke_slice": {
    "backend": "pynq",
    "params_key": "[\"test_core_smoke.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--max-fclk0\", \"250.497498\", \"--write-mode\", \"slice\"]",
-   "duration_s": 7.569,
+   "duration_s": 7.467,
    "images": 0,
    "fixed_s": 0.0,
    "rate_s": null
@@ -3338,23 +3338,23 @@
   "s1.fast": {
    "backend": "pynq",
    "params_key": "[\"test_core_smoke.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--max-fclk0\", \"250.497498\", \"--host-path\", \"fast\", \"--fast-store\", \"block\"]",
-   "duration_s": 8.074,
+   "duration_s": 8.073,
    "images": 0,
    "fixed_s": 0.0,
    "rate_s": null
   },
   "s1.fcal": {
    "backend": "pynq",
-   "params_key": "[\"exp_fclk_cal.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--write-mode\", \"elem\", \"--seconds\", \"8\", \"--tag\", \"_s1\", \"--seed\", \"743454265\"]",
-   "duration_s": 15.938,
+   "params_key": "[\"exp_fclk_cal.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--write-mode\", \"elem\", \"--seconds\", \"8\", \"--tag\", \"_s1\", \"--seed\", \"565029320\"]",
+   "duration_s": 15.939,
    "images": 0,
    "fixed_s": 18.0,
    "rate_s": null
   },
   "s2.fcal": {
    "backend": "pynq",
-   "params_key": "[\"exp_fclk_cal.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--write-mode\", \"elem\", \"--seconds\", \"8\", \"--tag\", \"_s2\", \"--seed\", \"743454365\"]",
-   "duration_s": 15.883,
+   "params_key": "[\"exp_fclk_cal.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--write-mode\", \"elem\", \"--seconds\", \"8\", \"--tag\", \"_s2\", \"--seed\", \"565029420\"]",
+   "duration_s": 15.935,
    "images": 0,
    "fixed_s": 18.0,
    "rate_s": null
@@ -3362,7 +3362,7 @@
   "s2.A2A3": {
    "backend": "pynq",
    "params_key": "[\"exp_a2_a3_cycles.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--write-mode\", \"elem\", \"--host-path\", \"safe\", \"--fast-store\", \"block\"]",
-   "duration_s": 29.814,
+   "duration_s": 29.864,
    "images": 20000,
    "fixed_s": 0.0,
    "rate_s": 0.0
@@ -3370,7 +3370,7 @@
   "s2.layerspread": {
    "backend": "pynq",
    "params_key": "{\"argv\": [\"exp_layer_spread.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--write-mode\", \"elem\", \"--host-path\", \"safe\", \"--fast-store\", \"block\", \"--npz-dir\", \"/home/ubuntu/gos/results\"], \"params\": {\"host_path\": \"safe\", \"limit\": null, \"npz_dir\": \"/home/ubuntu/gos/results\"}}",
-   "duration_s": 6.413,
+   "duration_s": 6.462,
    "images": 20000,
    "fixed_s": 460.0,
    "rate_s": 0.0
@@ -3378,23 +3378,23 @@
   "s2.A1": {
    "backend": "pynq",
    "params_key": "[\"exp_a1_accuracy.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--write-mode\", \"elem\", \"--host-path\", \"safe\", \"--fast-store\", \"block\"]",
-   "duration_s": 29.768,
+   "duration_s": 29.512,
    "images": 20000,
    "fixed_s": 0.0,
    "rate_s": 0.0
   },
   "s2.B3": {
    "backend": "pynq",
-   "params_key": "[\"exp_b3_breakdown.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--write-mode\", \"elem\", \"--n\", \"1000\", \"--conditions\", \"safe\", \"cpu\", \"--fast-store\", \"block\", \"--seed\", \"743454167\", \"--conditions-add\", \"fast\"]",
-   "duration_s": 126.673,
+   "params_key": "[\"exp_b3_breakdown.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--write-mode\", \"elem\", \"--n\", \"1000\", \"--conditions\", \"safe\", \"cpu\", \"--fast-store\", \"block\", \"--seed\", \"565029222\", \"--conditions-add\", \"fast\"]",
+   "duration_s": 126.317,
    "images": 6600,
    "fixed_s": 0.0,
-   "rate_s": 0.014647354701666672
+   "rate_s": 0.014593532581515264
   },
   "s2.shapes": {
    "backend": "pynq",
-   "params_key": "{\"argv\": [\"exp_shapes.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--write-mode\", \"elem\", \"--host-path\", \"safe\", \"--fast-store\", \"block\", \"--budget-s\", \"900\", \"--order-seed\", \"743454195\"], \"params\": {\"budget_s\": 900.0, \"host_path\": \"safe\", \"n_jobs\": 300, \"order_seed\": 743454195, \"seed\": \"20260929\", \"shapeset_sha256\": \"37bdfbaacba1dc000701ad690b261df81455d7636899da8f14a207513c831280\"}}",
-   "duration_s": 35.499,
+   "params_key": "{\"argv\": [\"exp_shapes.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--write-mode\", \"elem\", \"--host-path\", \"safe\", \"--fast-store\", \"block\", \"--budget-s\", \"900\", \"--order-seed\", \"565029250\"], \"params\": {\"budget_s\": 900.0, \"host_path\": \"safe\", \"n_jobs\": 300, \"order_seed\": 565029250, \"seed\": \"20260929\", \"shapeset_sha256\": \"37bdfbaacba1dc000701ad690b261df81455d7636899da8f14a207513c831280\"}}",
+   "duration_s": 34.744,
    "images": 0,
    "fixed_s": 510.0,
    "rate_s": null
@@ -3402,7 +3402,7 @@
   "s2.CPU": {
    "backend": "pynq",
    "params_key": "[\"cpu/run_cpu_baselines.py\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--tag\", \"board\", \"--pin-1t\", \"3\", \"--pin-nt\", \"0-3\"]",
-   "duration_s": 504.16,
+   "duration_s": 591.055,
    "images": 0,
    "fixed_s": 0.0,
    "rate_s": null
@@ -3410,13 +3410,13 @@
   "s2.A4": {
    "backend": "pynq",
    "params_key": "[\"exp_a4_util.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--write-mode\", \"elem\", \"--host-path\", \"safe\", \"--fast-store\", \"block\", \"--limit\", \"1000\"]",
-   "duration_s": 9.57,
+   "duration_s": 9.522,
    "images": 2000,
    "fixed_s": 0.0,
    "rate_s": 0.0
   }
  },
- "order_seed": 743454165,
+ "order_seed": 565029220,
  "env_last": {
   "paper_grade": true,
   "pkg_manager_offenders": [],
@@ -3480,11 +3480,11 @@
   "die_temp": {
    "source": "iio iio:device0 (ams)",
    "channels_c": {
-    "ps_temp": 35.594,
-    "remote_temp": 36.697,
-    "pl_temp": 34.0
+    "ps_temp": 37.288,
+    "remote_temp": 34.91,
+    "pl_temp": 33.728
    },
-   "max_c": 36.697
+   "max_c": 37.288
   },
   "fake_tree": false,
   "paths": {
