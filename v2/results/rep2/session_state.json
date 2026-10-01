@@ -1,0 +1,3058 @@
+{
+ "version": 1,
+ "created_utc": "2026-10-01T08:32:09+00:00",
+ "updated_utc": "2026-10-01T09:24:10+00:00",
+ "provenance": {
+  "backend": "pynq",
+  "source": "hw",
+  "version_hw": "0x474F5302",
+  "build_id_hw": "fd880d43",
+  "build_id_deploy": "fd880d43",
+  "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+  "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
+  "hwh_sha256": "1ad1a01e7edfed5c7826b63aa189efe6039acfc4bfded6beaf32e6552adcacdb",
+  "closed_clock_mhz": 249.997498,
+  "clock_readback_mhz": 249.9975,
+  "clock_requested_mhz": 250,
+  "data_package_sha256": "56c09c9f5a2e02ec078c4d8a4628bb6d9cd6dbd90c333b387fbf2519ef78fbe3",
+  "manifest_sha256": {
+   "lenet5": "7749eb52347eba2cfc09ef50fb79af9a6aa4e51ae324a07db3c463f063fe654b",
+   "cifar10": "21e4eb74b4d9003047b6f4270e87435c537abef39bf23ecd6249857df2a600e5"
+  },
+  "scripts_commit": "e91657aa272f8db8aafc7641da56afae9433579b",
+  "scripts_dirty": false,
+  "data_dirty": false,
+  "allow_dirty": false,
+  "deploy_origin": "DEPLOY_INFO.json",
+  "preflight_utc": "2026-10-01T08:32:09+00:00",
+  "warnings": [],
+  "session_index": 2,
+  "paper_grade": true,
+  "cpu_freq_khz": 1333333,
+  "bit_choice": {
+   "ok": true,
+   "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+   "clock_mhz": 249.997498,
+   "fell_back": true,
+   "reason": "fell back to 249.997 MHz: 299.997 MHz smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+   "attempts": [
+    {
+     "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+     "clock_mhz": 299.997009,
+     "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
+     "start_utc": "2026-10-01T08:31:52+00:00",
+     "ok": false,
+     "reason": "smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+     "detail": "pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+     "duration_s": 6.563
+    },
+    {
+     "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+     "clock_mhz": 249.997498,
+     "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
+     "start_utc": "2026-10-01T08:31:58+00:00",
+     "ok": true,
+     "reason": "smoke PASS",
+     "clock_readback_mhz": 249.9975,
+     "duration_s": 9.584
+    }
+   ],
+   "skipped": [],
+   "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
+   "decided_utc": "2026-10-01T08:32:08+00:00"
+  },
+  "env": {
+   "paper_grade": true,
+   "pkg_manager_offenders": [],
+   "cpufreq_before": {
+    "root": "/sys/devices/system/cpu",
+    "fake": false,
+    "policies": {
+     "policy0": {
+      "affected_cpus": "0 1 2 3",
+      "scaling_governor": "performance",
+      "scaling_min_freq": "1333333",
+      "scaling_max_freq": "1333333",
+      "scaling_cur_freq": "1333333",
+      "cpuinfo_min_freq": "333333",
+      "cpuinfo_max_freq": "1333333",
+      "scaling_available_governors": "conservative ondemand userspace powersave performance schedutil",
+      "scaling_available_frequencies": "333333 444444 666666 1333333",
+      "scaling_driver": "cpufreq-dt"
+     }
+    },
+    "cpu_cur_freq_khz": {
+     "0": "1333333",
+     "1": "1333333",
+     "2": "1333333",
+     "3": "1333333"
+    }
+   },
+   "cpufreq_apply": {
+    "ok": true,
+    "errors": [],
+    "target_khz": 1333333,
+    "readback": {
+     "errors": [],
+     "governor": {
+      "policy0": "performance"
+     },
+     "policy_cur_freq_khz": {
+      "policy0": "1333333"
+     },
+     "cpu_cur_freq_khz": {
+      "0": "1333333",
+      "1": "1333333",
+      "2": "1333333",
+      "3": "1333333"
+     }
+    }
+   },
+   "cpu_freq_khz": 1333333,
+   "cpu_governor": "performance",
+   "meas_cores": "3",
+   "cpu1_cores": "3",
+   "cpun_cores": "0-3",
+   "housekeeping_cores": "0-2",
+   "orchestrator_pin": {
+    "requested": "0-2",
+    "readback": "0-2",
+    "ok": true,
+    "error": "",
+    "original": "0-3"
+   },
+   "die_temp": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 36.215,
+     "remote_temp": 34.241,
+     "pl_temp": 34.272
+    },
+    "max_c": 36.215
+   },
+   "fake_tree": false,
+   "paths": {
+    "sysfs_root": "/sys/devices/system/cpu",
+    "proc_root": "/proc",
+    "iio_root": "/sys/bus/iio/devices",
+    "hwmon_root": "/sys/class/hwmon",
+    "fake": false
+   },
+   "warnings": [],
+   "allow_non_paper_grade": false
+  }
+ },
+ "steps": {
+  "s1.shell": {
+   "status": "ok",
+   "title": "shell/memory smoke (test_shell --skip-scratch)",
+   "session": 1,
+   "group": "bringup",
+   "params_key": "[\"test_shell.py\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--expect-version\", \"0x474F5302\", \"--skip-scratch\", \"--max-fclk0\", \"250.497498\", \"--set-fclk0\", \"249.997498\"]",
+   "cmd": [
+    "/usr/local/share/pynq-venv/bin/python3",
+    "/home/ubuntu/gos/test_shell.py",
+    "--bit",
+    "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+    "--expect-version",
+    "0x474F5302",
+    "--skip-scratch",
+    "--max-fclk0",
+    "250.497498",
+    "--set-fclk0",
+    "249.997498"
+   ],
+   "started_utc": "2026-10-01T08:32:09+00:00",
+   "timeout_s": 480.0,
+   "provenance": {
+    "backend": "pynq",
+    "source": "hw",
+    "version_hw": "0x474F5302",
+    "build_id_hw": "fd880d43",
+    "build_id_deploy": "fd880d43",
+    "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+    "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
+    "hwh_sha256": "1ad1a01e7edfed5c7826b63aa189efe6039acfc4bfded6beaf32e6552adcacdb",
+    "closed_clock_mhz": 249.997498,
+    "clock_readback_mhz": 249.9975,
+    "clock_requested_mhz": 250,
+    "data_package_sha256": "56c09c9f5a2e02ec078c4d8a4628bb6d9cd6dbd90c333b387fbf2519ef78fbe3",
+    "manifest_sha256": {
+     "lenet5": "7749eb52347eba2cfc09ef50fb79af9a6aa4e51ae324a07db3c463f063fe654b",
+     "cifar10": "21e4eb74b4d9003047b6f4270e87435c537abef39bf23ecd6249857df2a600e5"
+    },
+    "scripts_commit": "e91657aa272f8db8aafc7641da56afae9433579b",
+    "scripts_dirty": false,
+    "data_dirty": false,
+    "allow_dirty": false,
+    "deploy_origin": "DEPLOY_INFO.json",
+    "preflight_utc": "2026-10-01T08:32:09+00:00",
+    "warnings": [],
+    "session_index": 2,
+    "paper_grade": true,
+    "cpu_freq_khz": 1333333,
+    "bit_choice": {
+     "ok": true,
+     "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+     "clock_mhz": 249.997498,
+     "fell_back": true,
+     "reason": "fell back to 249.997 MHz: 299.997 MHz smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+     "attempts": [
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+       "clock_mhz": 299.997009,
+       "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
+       "start_utc": "2026-10-01T08:31:52+00:00",
+       "ok": false,
+       "reason": "smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+       "detail": "pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+       "duration_s": 6.563
+      },
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+       "clock_mhz": 249.997498,
+       "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
+       "start_utc": "2026-10-01T08:31:58+00:00",
+       "ok": true,
+       "reason": "smoke PASS",
+       "clock_readback_mhz": 249.9975,
+       "duration_s": 9.584
+      }
+     ],
+     "skipped": [],
+     "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
+     "decided_utc": "2026-10-01T08:32:08+00:00"
+    },
+    "env": {
+     "paper_grade": true,
+     "pkg_manager_offenders": [],
+     "cpufreq_before": {
+      "root": "/sys/devices/system/cpu",
+      "fake": false,
+      "policies": {
+       "policy0": {
+        "affected_cpus": "0 1 2 3",
+        "scaling_governor": "performance",
+        "scaling_min_freq": "1333333",
+        "scaling_max_freq": "1333333",
+        "scaling_cur_freq": "1333333",
+        "cpuinfo_min_freq": "333333",
+        "cpuinfo_max_freq": "1333333",
+        "scaling_available_governors": "conservative ondemand userspace powersave performance schedutil",
+        "scaling_available_frequencies": "333333 444444 666666 1333333",
+        "scaling_driver": "cpufreq-dt"
+       }
+      },
+      "cpu_cur_freq_khz": {
+       "0": "1333333",
+       "1": "1333333",
+       "2": "1333333",
+       "3": "1333333"
+      }
+     },
+     "cpufreq_apply": {
+      "ok": true,
+      "errors": [],
+      "target_khz": 1333333,
+      "readback": {
+       "errors": [],
+       "governor": {
+        "policy0": "performance"
+       },
+       "policy_cur_freq_khz": {
+        "policy0": "1333333"
+       },
+       "cpu_cur_freq_khz": {
+        "0": "1333333",
+        "1": "1333333",
+        "2": "1333333",
+        "3": "1333333"
+       }
+      }
+     },
+     "cpu_freq_khz": 1333333,
+     "cpu_governor": "performance",
+     "meas_cores": "3",
+     "cpu1_cores": "3",
+     "cpun_cores": "0-3",
+     "housekeeping_cores": "0-2",
+     "orchestrator_pin": {
+      "requested": "0-2",
+      "readback": "0-2",
+      "ok": true,
+      "error": "",
+      "original": "0-3"
+     },
+     "die_temp": {
+      "source": "iio iio:device0 (ams)",
+      "channels_c": {
+       "ps_temp": 36.215,
+       "remote_temp": 34.241,
+       "pl_temp": 34.272
+      },
+      "max_c": 36.215
+     },
+     "fake_tree": false,
+     "paths": {
+      "sysfs_root": "/sys/devices/system/cpu",
+      "proc_root": "/proc",
+      "iio_root": "/sys/bus/iio/devices",
+      "hwmon_root": "/sys/class/hwmon",
+      "fake": false
+     },
+     "warnings": [],
+     "allow_non_paper_grade": false
+    }
+   },
+   "outputs": {},
+   "log": "logs/s1.shell.log",
+   "required": true,
+   "die_temp_start": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 35.407,
+     "remote_temp": 36.759,
+     "pl_temp": 33.899
+    },
+    "max_c": 36.759
+   },
+   "run_env": {
+    "session_index": 2,
+    "paper_grade": true,
+    "cpu_governor": "performance",
+    "cpu_freq_khz": 1333333,
+    "f_req_mhz": 250,
+    "note": "paper-grade environment",
+    "step_id": "s1.shell",
+    "die_temp_start_c": 36.759
+   },
+   "affinity": {
+    "requested": "3",
+    "readback": "3",
+    "ok": true
+   },
+   "finished_utc": "2026-10-01T08:32:16+00:00",
+   "duration_s": 6.872,
+   "exit_code": 0,
+   "die_temp_end": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 35.314,
+     "remote_temp": 34.661,
+     "pl_temp": 34.506
+    },
+    "max_c": 35.314
+   },
+   "log_sha256": "13123beac8c4237dc1b1c9ca42b93589b3706420146fc3bbb1224b993788cd98"
+  },
+  "s1.smoke": {
+   "status": "ok",
+   "title": "core smoke (VERSION/BUILD_ID, LeNet+CIFAR bit/cycle-exact, refused job)",
+   "session": 1,
+   "group": "bringup",
+   "params_key": "[\"test_core_smoke.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--max-fclk0\", \"250.497498\"]",
+   "cmd": [
+    "/usr/local/share/pynq-venv/bin/python3",
+    "/home/ubuntu/gos/test_core_smoke.py",
+    "--backend",
+    "pynq",
+    "--data-dir",
+    "/home/ubuntu/gos/data",
+    "--bit",
+    "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+    "--max-fclk0",
+    "250.497498"
+   ],
+   "started_utc": "2026-10-01T08:32:16+00:00",
+   "timeout_s": 480.0,
+   "provenance": {
+    "backend": "pynq",
+    "source": "hw",
+    "version_hw": "0x474F5302",
+    "build_id_hw": "fd880d43",
+    "build_id_deploy": "fd880d43",
+    "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+    "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
+    "hwh_sha256": "1ad1a01e7edfed5c7826b63aa189efe6039acfc4bfded6beaf32e6552adcacdb",
+    "closed_clock_mhz": 249.997498,
+    "clock_readback_mhz": 249.9975,
+    "clock_requested_mhz": 250,
+    "data_package_sha256": "56c09c9f5a2e02ec078c4d8a4628bb6d9cd6dbd90c333b387fbf2519ef78fbe3",
+    "manifest_sha256": {
+     "lenet5": "7749eb52347eba2cfc09ef50fb79af9a6aa4e51ae324a07db3c463f063fe654b",
+     "cifar10": "21e4eb74b4d9003047b6f4270e87435c537abef39bf23ecd6249857df2a600e5"
+    },
+    "scripts_commit": "e91657aa272f8db8aafc7641da56afae9433579b",
+    "scripts_dirty": false,
+    "data_dirty": false,
+    "allow_dirty": false,
+    "deploy_origin": "DEPLOY_INFO.json",
+    "preflight_utc": "2026-10-01T08:32:09+00:00",
+    "warnings": [],
+    "session_index": 2,
+    "paper_grade": true,
+    "cpu_freq_khz": 1333333,
+    "bit_choice": {
+     "ok": true,
+     "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+     "clock_mhz": 249.997498,
+     "fell_back": true,
+     "reason": "fell back to 249.997 MHz: 299.997 MHz smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+     "attempts": [
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+       "clock_mhz": 299.997009,
+       "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
+       "start_utc": "2026-10-01T08:31:52+00:00",
+       "ok": false,
+       "reason": "smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+       "detail": "pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+       "duration_s": 6.563
+      },
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+       "clock_mhz": 249.997498,
+       "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
+       "start_utc": "2026-10-01T08:31:58+00:00",
+       "ok": true,
+       "reason": "smoke PASS",
+       "clock_readback_mhz": 249.9975,
+       "duration_s": 9.584
+      }
+     ],
+     "skipped": [],
+     "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
+     "decided_utc": "2026-10-01T08:32:08+00:00"
+    },
+    "env": {
+     "paper_grade": true,
+     "pkg_manager_offenders": [],
+     "cpufreq_before": {
+      "root": "/sys/devices/system/cpu",
+      "fake": false,
+      "policies": {
+       "policy0": {
+        "affected_cpus": "0 1 2 3",
+        "scaling_governor": "performance",
+        "scaling_min_freq": "1333333",
+        "scaling_max_freq": "1333333",
+        "scaling_cur_freq": "1333333",
+        "cpuinfo_min_freq": "333333",
+        "cpuinfo_max_freq": "1333333",
+        "scaling_available_governors": "conservative ondemand userspace powersave performance schedutil",
+        "scaling_available_frequencies": "333333 444444 666666 1333333",
+        "scaling_driver": "cpufreq-dt"
+       }
+      },
+      "cpu_cur_freq_khz": {
+       "0": "1333333",
+       "1": "1333333",
+       "2": "1333333",
+       "3": "1333333"
+      }
+     },
+     "cpufreq_apply": {
+      "ok": true,
+      "errors": [],
+      "target_khz": 1333333,
+      "readback": {
+       "errors": [],
+       "governor": {
+        "policy0": "performance"
+       },
+       "policy_cur_freq_khz": {
+        "policy0": "1333333"
+       },
+       "cpu_cur_freq_khz": {
+        "0": "1333333",
+        "1": "1333333",
+        "2": "1333333",
+        "3": "1333333"
+       }
+      }
+     },
+     "cpu_freq_khz": 1333333,
+     "cpu_governor": "performance",
+     "meas_cores": "3",
+     "cpu1_cores": "3",
+     "cpun_cores": "0-3",
+     "housekeeping_cores": "0-2",
+     "orchestrator_pin": {
+      "requested": "0-2",
+      "readback": "0-2",
+      "ok": true,
+      "error": "",
+      "original": "0-3"
+     },
+     "die_temp": {
+      "source": "iio iio:device0 (ams)",
+      "channels_c": {
+       "ps_temp": 36.215,
+       "remote_temp": 34.241,
+       "pl_temp": 34.272
+      },
+      "max_c": 36.215
+     },
+     "fake_tree": false,
+     "paths": {
+      "sysfs_root": "/sys/devices/system/cpu",
+      "proc_root": "/proc",
+      "iio_root": "/sys/bus/iio/devices",
+      "hwmon_root": "/sys/class/hwmon",
+      "fake": false
+     },
+     "warnings": [],
+     "allow_non_paper_grade": false
+    }
+   },
+   "outputs": {},
+   "log": "logs/s1.smoke.log",
+   "required": true,
+   "die_temp_start": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 35.765,
+     "remote_temp": 35.78,
+     "pl_temp": 34.296
+    },
+    "max_c": 35.78
+   },
+   "run_env": {
+    "session_index": 2,
+    "paper_grade": true,
+    "cpu_governor": "performance",
+    "cpu_freq_khz": 1333333,
+    "f_req_mhz": 250,
+    "note": "paper-grade environment",
+    "step_id": "s1.smoke",
+    "die_temp_start_c": 35.78
+   },
+   "affinity": {
+    "requested": "3",
+    "readback": "3",
+    "ok": true
+   },
+   "finished_utc": "2026-10-01T08:32:23+00:00",
+   "duration_s": 7.675,
+   "exit_code": 0,
+   "die_temp_end": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 35.547,
+     "remote_temp": 35.609,
+     "pl_temp": 34.202
+    },
+    "max_c": 35.609
+   },
+   "log_sha256": "b76f605925aa0feea51c6f176e6543059fa80e2ef1019cc52da95b6f9208116c"
+  },
+  "s1.smoke_slice": {
+   "status": "ok",
+   "title": "core smoke with --write-mode slice (informational)",
+   "session": 1,
+   "group": "bringup",
+   "params_key": "[\"test_core_smoke.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--max-fclk0\", \"250.497498\", \"--write-mode\", \"slice\"]",
+   "cmd": [
+    "/usr/local/share/pynq-venv/bin/python3",
+    "/home/ubuntu/gos/test_core_smoke.py",
+    "--backend",
+    "pynq",
+    "--data-dir",
+    "/home/ubuntu/gos/data",
+    "--bit",
+    "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+    "--max-fclk0",
+    "250.497498",
+    "--write-mode",
+    "slice"
+   ],
+   "started_utc": "2026-10-01T08:32:23+00:00",
+   "timeout_s": 480.0,
+   "provenance": {
+    "backend": "pynq",
+    "source": "hw",
+    "version_hw": "0x474F5302",
+    "build_id_hw": "fd880d43",
+    "build_id_deploy": "fd880d43",
+    "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+    "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
+    "hwh_sha256": "1ad1a01e7edfed5c7826b63aa189efe6039acfc4bfded6beaf32e6552adcacdb",
+    "closed_clock_mhz": 249.997498,
+    "clock_readback_mhz": 249.9975,
+    "clock_requested_mhz": 250,
+    "data_package_sha256": "56c09c9f5a2e02ec078c4d8a4628bb6d9cd6dbd90c333b387fbf2519ef78fbe3",
+    "manifest_sha256": {
+     "lenet5": "7749eb52347eba2cfc09ef50fb79af9a6aa4e51ae324a07db3c463f063fe654b",
+     "cifar10": "21e4eb74b4d9003047b6f4270e87435c537abef39bf23ecd6249857df2a600e5"
+    },
+    "scripts_commit": "e91657aa272f8db8aafc7641da56afae9433579b",
+    "scripts_dirty": false,
+    "data_dirty": false,
+    "allow_dirty": false,
+    "deploy_origin": "DEPLOY_INFO.json",
+    "preflight_utc": "2026-10-01T08:32:09+00:00",
+    "warnings": [],
+    "session_index": 2,
+    "paper_grade": true,
+    "cpu_freq_khz": 1333333,
+    "bit_choice": {
+     "ok": true,
+     "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+     "clock_mhz": 249.997498,
+     "fell_back": true,
+     "reason": "fell back to 249.997 MHz: 299.997 MHz smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+     "attempts": [
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+       "clock_mhz": 299.997009,
+       "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
+       "start_utc": "2026-10-01T08:31:52+00:00",
+       "ok": false,
+       "reason": "smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+       "detail": "pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+       "duration_s": 6.563
+      },
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+       "clock_mhz": 249.997498,
+       "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
+       "start_utc": "2026-10-01T08:31:58+00:00",
+       "ok": true,
+       "reason": "smoke PASS",
+       "clock_readback_mhz": 249.9975,
+       "duration_s": 9.584
+      }
+     ],
+     "skipped": [],
+     "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
+     "decided_utc": "2026-10-01T08:32:08+00:00"
+    },
+    "env": {
+     "paper_grade": true,
+     "pkg_manager_offenders": [],
+     "cpufreq_before": {
+      "root": "/sys/devices/system/cpu",
+      "fake": false,
+      "policies": {
+       "policy0": {
+        "affected_cpus": "0 1 2 3",
+        "scaling_governor": "performance",
+        "scaling_min_freq": "1333333",
+        "scaling_max_freq": "1333333",
+        "scaling_cur_freq": "1333333",
+        "cpuinfo_min_freq": "333333",
+        "cpuinfo_max_freq": "1333333",
+        "scaling_available_governors": "conservative ondemand userspace powersave performance schedutil",
+        "scaling_available_frequencies": "333333 444444 666666 1333333",
+        "scaling_driver": "cpufreq-dt"
+       }
+      },
+      "cpu_cur_freq_khz": {
+       "0": "1333333",
+       "1": "1333333",
+       "2": "1333333",
+       "3": "1333333"
+      }
+     },
+     "cpufreq_apply": {
+      "ok": true,
+      "errors": [],
+      "target_khz": 1333333,
+      "readback": {
+       "errors": [],
+       "governor": {
+        "policy0": "performance"
+       },
+       "policy_cur_freq_khz": {
+        "policy0": "1333333"
+       },
+       "cpu_cur_freq_khz": {
+        "0": "1333333",
+        "1": "1333333",
+        "2": "1333333",
+        "3": "1333333"
+       }
+      }
+     },
+     "cpu_freq_khz": 1333333,
+     "cpu_governor": "performance",
+     "meas_cores": "3",
+     "cpu1_cores": "3",
+     "cpun_cores": "0-3",
+     "housekeeping_cores": "0-2",
+     "orchestrator_pin": {
+      "requested": "0-2",
+      "readback": "0-2",
+      "ok": true,
+      "error": "",
+      "original": "0-3"
+     },
+     "die_temp": {
+      "source": "iio iio:device0 (ams)",
+      "channels_c": {
+       "ps_temp": 36.215,
+       "remote_temp": 34.241,
+       "pl_temp": 34.272
+      },
+      "max_c": 36.215
+     },
+     "fake_tree": false,
+     "paths": {
+      "sysfs_root": "/sys/devices/system/cpu",
+      "proc_root": "/proc",
+      "iio_root": "/sys/bus/iio/devices",
+      "hwmon_root": "/sys/class/hwmon",
+      "fake": false
+     },
+     "warnings": [],
+     "allow_non_paper_grade": false
+    }
+   },
+   "outputs": {},
+   "log": "logs/s1.smoke_slice.log",
+   "required": false,
+   "die_temp_start": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 36.075,
+     "remote_temp": 36.324,
+     "pl_temp": 34.109
+    },
+    "max_c": 36.324
+   },
+   "run_env": {
+    "session_index": 2,
+    "paper_grade": true,
+    "cpu_governor": "performance",
+    "cpu_freq_khz": 1333333,
+    "f_req_mhz": 250,
+    "note": "paper-grade environment",
+    "step_id": "s1.smoke_slice",
+    "die_temp_start_c": 36.324
+   },
+   "affinity": {
+    "requested": "3",
+    "readback": "3",
+    "ok": true
+   },
+   "finished_utc": "2026-10-01T08:32:31+00:00",
+   "duration_s": 7.625,
+   "exit_code": 0,
+   "die_temp_end": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 36.479,
+     "remote_temp": 35.64,
+     "pl_temp": 34.381
+    },
+    "max_c": 36.479
+   },
+   "log_sha256": "1db3a97ac868f4610461f863ae6587437b2e16ed4edfcd11e43aceabe4c1593e"
+  },
+  "s1.fast": {
+   "status": "ok",
+   "title": "fast host path bring-up check (ACT0 fast write + per-word readback, CSR block reads; core smoke on the fast path) (informational)",
+   "session": 1,
+   "group": "bringup",
+   "params_key": "[\"test_core_smoke.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--max-fclk0\", \"250.497498\", \"--host-path\", \"fast\", \"--fast-store\", \"block\"]",
+   "cmd": [
+    "/usr/local/share/pynq-venv/bin/python3",
+    "/home/ubuntu/gos/test_core_smoke.py",
+    "--backend",
+    "pynq",
+    "--data-dir",
+    "/home/ubuntu/gos/data",
+    "--bit",
+    "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+    "--max-fclk0",
+    "250.497498",
+    "--host-path",
+    "fast",
+    "--fast-store",
+    "block"
+   ],
+   "started_utc": "2026-10-01T08:32:31+00:00",
+   "timeout_s": 480.0,
+   "provenance": {
+    "backend": "pynq",
+    "source": "hw",
+    "version_hw": "0x474F5302",
+    "build_id_hw": "fd880d43",
+    "build_id_deploy": "fd880d43",
+    "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+    "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
+    "hwh_sha256": "1ad1a01e7edfed5c7826b63aa189efe6039acfc4bfded6beaf32e6552adcacdb",
+    "closed_clock_mhz": 249.997498,
+    "clock_readback_mhz": 249.9975,
+    "clock_requested_mhz": 250,
+    "data_package_sha256": "56c09c9f5a2e02ec078c4d8a4628bb6d9cd6dbd90c333b387fbf2519ef78fbe3",
+    "manifest_sha256": {
+     "lenet5": "7749eb52347eba2cfc09ef50fb79af9a6aa4e51ae324a07db3c463f063fe654b",
+     "cifar10": "21e4eb74b4d9003047b6f4270e87435c537abef39bf23ecd6249857df2a600e5"
+    },
+    "scripts_commit": "e91657aa272f8db8aafc7641da56afae9433579b",
+    "scripts_dirty": false,
+    "data_dirty": false,
+    "allow_dirty": false,
+    "deploy_origin": "DEPLOY_INFO.json",
+    "preflight_utc": "2026-10-01T08:32:09+00:00",
+    "warnings": [],
+    "session_index": 2,
+    "paper_grade": true,
+    "cpu_freq_khz": 1333333,
+    "bit_choice": {
+     "ok": true,
+     "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+     "clock_mhz": 249.997498,
+     "fell_back": true,
+     "reason": "fell back to 249.997 MHz: 299.997 MHz smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+     "attempts": [
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+       "clock_mhz": 299.997009,
+       "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
+       "start_utc": "2026-10-01T08:31:52+00:00",
+       "ok": false,
+       "reason": "smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+       "detail": "pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+       "duration_s": 6.563
+      },
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+       "clock_mhz": 249.997498,
+       "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
+       "start_utc": "2026-10-01T08:31:58+00:00",
+       "ok": true,
+       "reason": "smoke PASS",
+       "clock_readback_mhz": 249.9975,
+       "duration_s": 9.584
+      }
+     ],
+     "skipped": [],
+     "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
+     "decided_utc": "2026-10-01T08:32:08+00:00"
+    },
+    "env": {
+     "paper_grade": true,
+     "pkg_manager_offenders": [],
+     "cpufreq_before": {
+      "root": "/sys/devices/system/cpu",
+      "fake": false,
+      "policies": {
+       "policy0": {
+        "affected_cpus": "0 1 2 3",
+        "scaling_governor": "performance",
+        "scaling_min_freq": "1333333",
+        "scaling_max_freq": "1333333",
+        "scaling_cur_freq": "1333333",
+        "cpuinfo_min_freq": "333333",
+        "cpuinfo_max_freq": "1333333",
+        "scaling_available_governors": "conservative ondemand userspace powersave performance schedutil",
+        "scaling_available_frequencies": "333333 444444 666666 1333333",
+        "scaling_driver": "cpufreq-dt"
+       }
+      },
+      "cpu_cur_freq_khz": {
+       "0": "1333333",
+       "1": "1333333",
+       "2": "1333333",
+       "3": "1333333"
+      }
+     },
+     "cpufreq_apply": {
+      "ok": true,
+      "errors": [],
+      "target_khz": 1333333,
+      "readback": {
+       "errors": [],
+       "governor": {
+        "policy0": "performance"
+       },
+       "policy_cur_freq_khz": {
+        "policy0": "1333333"
+       },
+       "cpu_cur_freq_khz": {
+        "0": "1333333",
+        "1": "1333333",
+        "2": "1333333",
+        "3": "1333333"
+       }
+      }
+     },
+     "cpu_freq_khz": 1333333,
+     "cpu_governor": "performance",
+     "meas_cores": "3",
+     "cpu1_cores": "3",
+     "cpun_cores": "0-3",
+     "housekeeping_cores": "0-2",
+     "orchestrator_pin": {
+      "requested": "0-2",
+      "readback": "0-2",
+      "ok": true,
+      "error": "",
+      "original": "0-3"
+     },
+     "die_temp": {
+      "source": "iio iio:device0 (ams)",
+      "channels_c": {
+       "ps_temp": 36.215,
+       "remote_temp": 34.241,
+       "pl_temp": 34.272
+      },
+      "max_c": 36.215
+     },
+     "fake_tree": false,
+     "paths": {
+      "sysfs_root": "/sys/devices/system/cpu",
+      "proc_root": "/proc",
+      "iio_root": "/sys/bus/iio/devices",
+      "hwmon_root": "/sys/class/hwmon",
+      "fake": false
+     },
+     "warnings": [],
+     "allow_non_paper_grade": false
+    }
+   },
+   "outputs": {},
+   "log": "logs/s1.fast.log",
+   "required": false,
+   "die_temp_start": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 34.77,
+     "remote_temp": 33.744,
+     "pl_temp": 34.101
+    },
+    "max_c": 34.77
+   },
+   "run_env": {
+    "session_index": 2,
+    "paper_grade": true,
+    "cpu_governor": "performance",
+    "cpu_freq_khz": 1333333,
+    "f_req_mhz": 250,
+    "note": "paper-grade environment",
+    "step_id": "s1.fast",
+    "die_temp_start_c": 34.77
+   },
+   "affinity": {
+    "requested": "3",
+    "readback": "3",
+    "ok": true
+   },
+   "finished_utc": "2026-10-01T08:32:39+00:00",
+   "duration_s": 8.211,
+   "exit_code": 0,
+   "die_temp_end": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 36.713,
+     "remote_temp": 35.687,
+     "pl_temp": 34.234
+    },
+    "max_c": 36.713
+   },
+   "log_sha256": "c57eb57e78bced26fc6e7f5f813317bdd10b04d0a55513edeb4fe28bb047ad00"
+  },
+  "s1.fcal": {
+   "status": "ok",
+   "title": "PL clock cross-check: f_meas vs the read-back clock (cycle counter vs CLOCK_MONOTONIC_RAW, 8 s)",
+   "session": 1,
+   "group": "fcal",
+   "params_key": "[\"exp_fclk_cal.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--write-mode\", \"elem\", \"--seconds\", \"8\", \"--tag\", \"_s1\", \"--seed\", \"1809043235\"]",
+   "cmd": [
+    "/usr/local/share/pynq-venv/bin/python3",
+    "/home/ubuntu/gos/exp_fclk_cal.py",
+    "--backend",
+    "pynq",
+    "--data-dir",
+    "/home/ubuntu/gos/data",
+    "--bit",
+    "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+    "--write-mode",
+    "elem",
+    "--seconds",
+    "8",
+    "--tag",
+    "_s1",
+    "--seed",
+    "1809043235",
+    "--out-dir",
+    "/home/ubuntu/gos/results/rep2/.staging/s1.fcal"
+   ],
+   "started_utc": "2026-10-01T08:32:39+00:00",
+   "timeout_s": 300.0,
+   "provenance": {
+    "backend": "pynq",
+    "source": "hw",
+    "version_hw": "0x474F5302",
+    "build_id_hw": "fd880d43",
+    "build_id_deploy": "fd880d43",
+    "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+    "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
+    "hwh_sha256": "1ad1a01e7edfed5c7826b63aa189efe6039acfc4bfded6beaf32e6552adcacdb",
+    "closed_clock_mhz": 249.997498,
+    "clock_readback_mhz": 249.9975,
+    "clock_requested_mhz": 250,
+    "data_package_sha256": "56c09c9f5a2e02ec078c4d8a4628bb6d9cd6dbd90c333b387fbf2519ef78fbe3",
+    "manifest_sha256": {
+     "lenet5": "7749eb52347eba2cfc09ef50fb79af9a6aa4e51ae324a07db3c463f063fe654b",
+     "cifar10": "21e4eb74b4d9003047b6f4270e87435c537abef39bf23ecd6249857df2a600e5"
+    },
+    "scripts_commit": "e91657aa272f8db8aafc7641da56afae9433579b",
+    "scripts_dirty": false,
+    "data_dirty": false,
+    "allow_dirty": false,
+    "deploy_origin": "DEPLOY_INFO.json",
+    "preflight_utc": "2026-10-01T08:32:09+00:00",
+    "warnings": [],
+    "session_index": 2,
+    "paper_grade": true,
+    "cpu_freq_khz": 1333333,
+    "bit_choice": {
+     "ok": true,
+     "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+     "clock_mhz": 249.997498,
+     "fell_back": true,
+     "reason": "fell back to 249.997 MHz: 299.997 MHz smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+     "attempts": [
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+       "clock_mhz": 299.997009,
+       "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
+       "start_utc": "2026-10-01T08:31:52+00:00",
+       "ok": false,
+       "reason": "smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+       "detail": "pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+       "duration_s": 6.563
+      },
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+       "clock_mhz": 249.997498,
+       "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
+       "start_utc": "2026-10-01T08:31:58+00:00",
+       "ok": true,
+       "reason": "smoke PASS",
+       "clock_readback_mhz": 249.9975,
+       "duration_s": 9.584
+      }
+     ],
+     "skipped": [],
+     "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
+     "decided_utc": "2026-10-01T08:32:08+00:00"
+    },
+    "env": {
+     "paper_grade": true,
+     "pkg_manager_offenders": [],
+     "cpufreq_before": {
+      "root": "/sys/devices/system/cpu",
+      "fake": false,
+      "policies": {
+       "policy0": {
+        "affected_cpus": "0 1 2 3",
+        "scaling_governor": "performance",
+        "scaling_min_freq": "1333333",
+        "scaling_max_freq": "1333333",
+        "scaling_cur_freq": "1333333",
+        "cpuinfo_min_freq": "333333",
+        "cpuinfo_max_freq": "1333333",
+        "scaling_available_governors": "conservative ondemand userspace powersave performance schedutil",
+        "scaling_available_frequencies": "333333 444444 666666 1333333",
+        "scaling_driver": "cpufreq-dt"
+       }
+      },
+      "cpu_cur_freq_khz": {
+       "0": "1333333",
+       "1": "1333333",
+       "2": "1333333",
+       "3": "1333333"
+      }
+     },
+     "cpufreq_apply": {
+      "ok": true,
+      "errors": [],
+      "target_khz": 1333333,
+      "readback": {
+       "errors": [],
+       "governor": {
+        "policy0": "performance"
+       },
+       "policy_cur_freq_khz": {
+        "policy0": "1333333"
+       },
+       "cpu_cur_freq_khz": {
+        "0": "1333333",
+        "1": "1333333",
+        "2": "1333333",
+        "3": "1333333"
+       }
+      }
+     },
+     "cpu_freq_khz": 1333333,
+     "cpu_governor": "performance",
+     "meas_cores": "3",
+     "cpu1_cores": "3",
+     "cpun_cores": "0-3",
+     "housekeeping_cores": "0-2",
+     "orchestrator_pin": {
+      "requested": "0-2",
+      "readback": "0-2",
+      "ok": true,
+      "error": "",
+      "original": "0-3"
+     },
+     "die_temp": {
+      "source": "iio iio:device0 (ams)",
+      "channels_c": {
+       "ps_temp": 36.215,
+       "remote_temp": 34.241,
+       "pl_temp": 34.272
+      },
+      "max_c": 36.215
+     },
+     "fake_tree": false,
+     "paths": {
+      "sysfs_root": "/sys/devices/system/cpu",
+      "proc_root": "/proc",
+      "iio_root": "/sys/bus/iio/devices",
+      "hwmon_root": "/sys/class/hwmon",
+      "fake": false
+     },
+     "warnings": [],
+     "allow_non_paper_grade": false
+    }
+   },
+   "outputs": {
+    "hw_fclk_cal_s1.csv": "f230c513bc496e2e424f412f28e27c81681bad1b25b992f0ebed40e7ad232f8c",
+    "hw_fclk_cal_s1.npz": "75736f3a554c35ff07afb125dd07628e9032638dcf62f0f3a5648270e55475c5"
+   },
+   "log": "logs/s1.fcal.log",
+   "required": true,
+   "die_temp_start": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 35.951,
+     "remote_temp": 35.656,
+     "pl_temp": 33.985
+    },
+    "max_c": 35.951
+   },
+   "run_env": {
+    "session_index": 2,
+    "paper_grade": true,
+    "cpu_governor": "performance",
+    "cpu_freq_khz": 1333333,
+    "f_req_mhz": 250,
+    "note": "paper-grade environment",
+    "step_id": "s1.fcal",
+    "die_temp_start_c": 35.951
+   },
+   "affinity": {
+    "requested": "3",
+    "readback": "3",
+    "ok": true
+   },
+   "finished_utc": "2026-10-01T08:32:55+00:00",
+   "duration_s": 15.942,
+   "exit_code": 0,
+   "die_temp_end": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 35.485,
+     "remote_temp": 35.578,
+     "pl_temp": 34.171
+    },
+    "max_c": 35.578
+   },
+   "log_sha256": "fe5d51703195af371fec1a7b65cd489d9753acce6716be5d62bf77d11bf2d1d8"
+  },
+  "s2.B3": {
+   "status": "ok",
+   "title": "B3 latency breakdown, interleaved conditions (safe host path, CPU cpu_int8_ref x1; + fast host path if s1.fast OK)",
+   "session": 2,
+   "group": "latency",
+   "params_key": "[\"exp_b3_breakdown.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--write-mode\", \"elem\", \"--n\", \"1000\", \"--conditions\", \"safe\", \"cpu\", \"--fast-store\", \"block\", \"--seed\", \"1809043137\", \"--conditions-add\", \"fast\"]",
+   "cmd": [
+    "/usr/local/share/pynq-venv/bin/python3",
+    "/home/ubuntu/gos/exp_b3_breakdown.py",
+    "--backend",
+    "pynq",
+    "--data-dir",
+    "/home/ubuntu/gos/data",
+    "--bit",
+    "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+    "--write-mode",
+    "elem",
+    "--n",
+    "1000",
+    "--conditions",
+    "safe",
+    "cpu",
+    "--fast-store",
+    "block",
+    "--seed",
+    "1809043137",
+    "--conditions-add",
+    "fast",
+    "--out-dir",
+    "/home/ubuntu/gos/results/rep2/.staging/s2.B3"
+   ],
+   "started_utc": "2026-10-01T08:33:07+00:00",
+   "timeout_s": 606.0,
+   "provenance": {
+    "backend": "pynq",
+    "source": "hw",
+    "version_hw": "0x474F5302",
+    "build_id_hw": "fd880d43",
+    "build_id_deploy": "fd880d43",
+    "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+    "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
+    "hwh_sha256": "1ad1a01e7edfed5c7826b63aa189efe6039acfc4bfded6beaf32e6552adcacdb",
+    "closed_clock_mhz": 249.997498,
+    "clock_readback_mhz": 249.9975,
+    "clock_requested_mhz": 250,
+    "data_package_sha256": "56c09c9f5a2e02ec078c4d8a4628bb6d9cd6dbd90c333b387fbf2519ef78fbe3",
+    "manifest_sha256": {
+     "lenet5": "7749eb52347eba2cfc09ef50fb79af9a6aa4e51ae324a07db3c463f063fe654b",
+     "cifar10": "21e4eb74b4d9003047b6f4270e87435c537abef39bf23ecd6249857df2a600e5"
+    },
+    "scripts_commit": "e91657aa272f8db8aafc7641da56afae9433579b",
+    "scripts_dirty": false,
+    "data_dirty": false,
+    "allow_dirty": false,
+    "deploy_origin": "DEPLOY_INFO.json",
+    "preflight_utc": "2026-10-01T08:32:09+00:00",
+    "warnings": [],
+    "session_index": 2,
+    "paper_grade": true,
+    "cpu_freq_khz": 1333333,
+    "bit_choice": {
+     "ok": true,
+     "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+     "clock_mhz": 249.997498,
+     "fell_back": true,
+     "reason": "fell back to 249.997 MHz: 299.997 MHz smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+     "attempts": [
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+       "clock_mhz": 299.997009,
+       "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
+       "start_utc": "2026-10-01T08:31:52+00:00",
+       "ok": false,
+       "reason": "smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+       "detail": "pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+       "duration_s": 6.563
+      },
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+       "clock_mhz": 249.997498,
+       "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
+       "start_utc": "2026-10-01T08:31:58+00:00",
+       "ok": true,
+       "reason": "smoke PASS",
+       "clock_readback_mhz": 249.9975,
+       "duration_s": 9.584
+      }
+     ],
+     "skipped": [],
+     "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
+     "decided_utc": "2026-10-01T08:32:08+00:00"
+    },
+    "env": {
+     "paper_grade": true,
+     "pkg_manager_offenders": [],
+     "cpufreq_before": {
+      "root": "/sys/devices/system/cpu",
+      "fake": false,
+      "policies": {
+       "policy0": {
+        "affected_cpus": "0 1 2 3",
+        "scaling_governor": "performance",
+        "scaling_min_freq": "1333333",
+        "scaling_max_freq": "1333333",
+        "scaling_cur_freq": "1333333",
+        "cpuinfo_min_freq": "333333",
+        "cpuinfo_max_freq": "1333333",
+        "scaling_available_governors": "conservative ondemand userspace powersave performance schedutil",
+        "scaling_available_frequencies": "333333 444444 666666 1333333",
+        "scaling_driver": "cpufreq-dt"
+       }
+      },
+      "cpu_cur_freq_khz": {
+       "0": "1333333",
+       "1": "1333333",
+       "2": "1333333",
+       "3": "1333333"
+      }
+     },
+     "cpufreq_apply": {
+      "ok": true,
+      "errors": [],
+      "target_khz": 1333333,
+      "readback": {
+       "errors": [],
+       "governor": {
+        "policy0": "performance"
+       },
+       "policy_cur_freq_khz": {
+        "policy0": "1333333"
+       },
+       "cpu_cur_freq_khz": {
+        "0": "1333333",
+        "1": "1333333",
+        "2": "1333333",
+        "3": "1333333"
+       }
+      }
+     },
+     "cpu_freq_khz": 1333333,
+     "cpu_governor": "performance",
+     "meas_cores": "3",
+     "cpu1_cores": "3",
+     "cpun_cores": "0-3",
+     "housekeeping_cores": "0-2",
+     "orchestrator_pin": {
+      "requested": "0-2",
+      "readback": "0-2",
+      "ok": true,
+      "error": "",
+      "original": "0-3"
+     },
+     "die_temp": {
+      "source": "iio iio:device0 (ams)",
+      "channels_c": {
+       "ps_temp": 36.215,
+       "remote_temp": 34.241,
+       "pl_temp": 34.272
+      },
+      "max_c": 36.215
+     },
+     "fake_tree": false,
+     "paths": {
+      "sysfs_root": "/sys/devices/system/cpu",
+      "proc_root": "/proc",
+      "iio_root": "/sys/bus/iio/devices",
+      "hwmon_root": "/sys/class/hwmon",
+      "fake": false
+     },
+     "warnings": [],
+     "allow_non_paper_grade": false
+    }
+   },
+   "outputs": {
+    "hw_b3_breakdown.csv": "1e9c9696456755f2123b8cbbf832c9330593fd54601953f902ed499d27f1eb56",
+    "hw_b3_breakdown_cpu.csv": "e45dba10908501ea6db60c498a5ce498521e02ed3d9f03b1d6adf965681f92ac",
+    "hw_b3_breakdown_fast.csv": "fc9e3e7c8ba43e6068b50f41f594b54a9366bf14c72d730bdc036cefe0962225",
+    "hw_b3_times_cifar10.npz": "04e7edc13534a25d3d611b35297ce4f6cdc43d3e8d56a9b238d9552337b286d1",
+    "hw_b3_times_cifar10_cpu.npz": "96ed86abf5c35d041c45b58cbc6adb5ad9ff47c08bb6dd15b0edd51619471438",
+    "hw_b3_times_cifar10_fast.npz": "153b25acebf5be511a58f2d32b53bd273ad0767e9a6e95284079a631eb6e3120",
+    "hw_b3_times_lenet5.npz": "3dac1f91f611c273bfb15714ba9a1c4d2a0b836e04e49c9e17f7478c41fedf11",
+    "hw_b3_times_lenet5_cpu.npz": "23de4aeb8274f5529c59f452921162f4c61a48a1aa0e2560d071425c84178fd6",
+    "hw_b3_times_lenet5_fast.npz": "29f6933b91953e589fb74e5c72869b83efeb55b00aa84ddb551b88e45b04e74e"
+   },
+   "log": "logs/s2.B3.log",
+   "required": true,
+   "die_temp_start": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 35.531,
+     "remote_temp": 35.811,
+     "pl_temp": 33.977
+    },
+    "max_c": 35.811
+   },
+   "run_env": {
+    "session_index": 2,
+    "paper_grade": true,
+    "cpu_governor": "performance",
+    "cpu_freq_khz": 1333333,
+    "f_req_mhz": 250,
+    "note": "paper-grade environment",
+    "f_meas_mhz": 249.913907,
+    "f_meas_ci_lo_mhz": "249.854405",
+    "f_meas_ci_hi_mhz": "249.977359",
+    "f_meas_readback_mhz": 249.9975,
+    "f_meas_source": "cross-check (differential lower envelope, CLOCK_MONOTONIC_RAW)",
+    "f_meas_step": "s1.fcal",
+    "f_meas_rel_diff_pct": "-0.0334",
+    "f_meas_flag": false,
+    "step_id": "s2.B3",
+    "die_temp_start_c": 35.811
+   },
+   "affinity": {
+    "requested": "3",
+    "readback": "3",
+    "ok": true
+   },
+   "finished_utc": "2026-10-01T08:35:14+00:00",
+   "duration_s": 126.326,
+   "exit_code": 0,
+   "die_temp_end": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 37.925,
+     "remote_temp": 36.682,
+     "pl_temp": 34.412
+    },
+    "max_c": 37.925
+   },
+   "log_sha256": "87f5fe00875b019cbaa07439d9b10d4781233f49a76ea8a1f0c3f93bf696c471"
+  },
+  "s2.CPU": {
+   "status": "ok",
+   "title": "CPU baselines (A5)",
+   "session": 2,
+   "group": "baselines",
+   "params_key": "[\"cpu/run_cpu_baselines.py\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--tag\", \"board\", \"--pin-1t\", \"3\", \"--pin-nt\", \"0-3\"]",
+   "cmd": [
+    "/usr/local/share/pynq-venv/bin/python3",
+    "/home/ubuntu/gos/cpu/run_cpu_baselines.py",
+    "--data-dir",
+    "/home/ubuntu/gos/data",
+    "--tag",
+    "board",
+    "--pin-1t",
+    "3",
+    "--pin-nt",
+    "0-3",
+    "--out-dir",
+    "/home/ubuntu/gos/results/rep2/.staging/s2.CPU"
+   ],
+   "started_utc": "2026-10-01T08:35:14+00:00",
+   "timeout_s": 7320.0,
+   "provenance": {
+    "backend": "pynq",
+    "source": "hw",
+    "version_hw": "0x474F5302",
+    "build_id_hw": "fd880d43",
+    "build_id_deploy": "fd880d43",
+    "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+    "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
+    "hwh_sha256": "1ad1a01e7edfed5c7826b63aa189efe6039acfc4bfded6beaf32e6552adcacdb",
+    "closed_clock_mhz": 249.997498,
+    "clock_readback_mhz": 249.9975,
+    "clock_requested_mhz": 250,
+    "data_package_sha256": "56c09c9f5a2e02ec078c4d8a4628bb6d9cd6dbd90c333b387fbf2519ef78fbe3",
+    "manifest_sha256": {
+     "lenet5": "7749eb52347eba2cfc09ef50fb79af9a6aa4e51ae324a07db3c463f063fe654b",
+     "cifar10": "21e4eb74b4d9003047b6f4270e87435c537abef39bf23ecd6249857df2a600e5"
+    },
+    "scripts_commit": "e91657aa272f8db8aafc7641da56afae9433579b",
+    "scripts_dirty": false,
+    "data_dirty": false,
+    "allow_dirty": false,
+    "deploy_origin": "DEPLOY_INFO.json",
+    "preflight_utc": "2026-10-01T08:32:09+00:00",
+    "warnings": [],
+    "session_index": 2,
+    "paper_grade": true,
+    "cpu_freq_khz": 1333333,
+    "bit_choice": {
+     "ok": true,
+     "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+     "clock_mhz": 249.997498,
+     "fell_back": true,
+     "reason": "fell back to 249.997 MHz: 299.997 MHz smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+     "attempts": [
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+       "clock_mhz": 299.997009,
+       "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
+       "start_utc": "2026-10-01T08:31:52+00:00",
+       "ok": false,
+       "reason": "smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+       "detail": "pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+       "duration_s": 6.563
+      },
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+       "clock_mhz": 249.997498,
+       "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
+       "start_utc": "2026-10-01T08:31:58+00:00",
+       "ok": true,
+       "reason": "smoke PASS",
+       "clock_readback_mhz": 249.9975,
+       "duration_s": 9.584
+      }
+     ],
+     "skipped": [],
+     "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
+     "decided_utc": "2026-10-01T08:32:08+00:00"
+    },
+    "env": {
+     "paper_grade": true,
+     "pkg_manager_offenders": [],
+     "cpufreq_before": {
+      "root": "/sys/devices/system/cpu",
+      "fake": false,
+      "policies": {
+       "policy0": {
+        "affected_cpus": "0 1 2 3",
+        "scaling_governor": "performance",
+        "scaling_min_freq": "1333333",
+        "scaling_max_freq": "1333333",
+        "scaling_cur_freq": "1333333",
+        "cpuinfo_min_freq": "333333",
+        "cpuinfo_max_freq": "1333333",
+        "scaling_available_governors": "conservative ondemand userspace powersave performance schedutil",
+        "scaling_available_frequencies": "333333 444444 666666 1333333",
+        "scaling_driver": "cpufreq-dt"
+       }
+      },
+      "cpu_cur_freq_khz": {
+       "0": "1333333",
+       "1": "1333333",
+       "2": "1333333",
+       "3": "1333333"
+      }
+     },
+     "cpufreq_apply": {
+      "ok": true,
+      "errors": [],
+      "target_khz": 1333333,
+      "readback": {
+       "errors": [],
+       "governor": {
+        "policy0": "performance"
+       },
+       "policy_cur_freq_khz": {
+        "policy0": "1333333"
+       },
+       "cpu_cur_freq_khz": {
+        "0": "1333333",
+        "1": "1333333",
+        "2": "1333333",
+        "3": "1333333"
+       }
+      }
+     },
+     "cpu_freq_khz": 1333333,
+     "cpu_governor": "performance",
+     "meas_cores": "3",
+     "cpu1_cores": "3",
+     "cpun_cores": "0-3",
+     "housekeeping_cores": "0-2",
+     "orchestrator_pin": {
+      "requested": "0-2",
+      "readback": "0-2",
+      "ok": true,
+      "error": "",
+      "original": "0-3"
+     },
+     "die_temp": {
+      "source": "iio iio:device0 (ams)",
+      "channels_c": {
+       "ps_temp": 36.215,
+       "remote_temp": 34.241,
+       "pl_temp": 34.272
+      },
+      "max_c": 36.215
+     },
+     "fake_tree": false,
+     "paths": {
+      "sysfs_root": "/sys/devices/system/cpu",
+      "proc_root": "/proc",
+      "iio_root": "/sys/bus/iio/devices",
+      "hwmon_root": "/sys/class/hwmon",
+      "fake": false
+     },
+     "warnings": [],
+     "allow_non_paper_grade": false
+    }
+   },
+   "outputs": {
+    "hw_cpu_baseline.csv": "71cac3b3a659a4b3195cc91021bfa28950187c14e2fb515369cc4dfe89ea7d9d",
+    "hw_cpu_baseline_env.json": "2e0fc3d42c4d86293627906d8835249b7ed4d02ab8b70d0766c3089f40ba9c0f"
+   },
+   "log": "logs/s2.CPU.log",
+   "required": true,
+   "die_temp_start": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 36.884,
+     "remote_temp": 36.044,
+     "pl_temp": 34.513
+    },
+    "max_c": 36.884
+   },
+   "run_env": {
+    "session_index": 2,
+    "paper_grade": true,
+    "cpu_governor": "performance",
+    "cpu_freq_khz": 1333333,
+    "f_req_mhz": 250,
+    "note": "paper-grade environment",
+    "f_meas_mhz": 249.913907,
+    "f_meas_ci_lo_mhz": "249.854405",
+    "f_meas_ci_hi_mhz": "249.977359",
+    "f_meas_readback_mhz": 249.9975,
+    "f_meas_source": "cross-check (differential lower envelope, CLOCK_MONOTONIC_RAW)",
+    "f_meas_step": "s1.fcal",
+    "f_meas_rel_diff_pct": "-0.0334",
+    "f_meas_flag": false,
+    "step_id": "s2.CPU",
+    "die_temp_start_c": 36.884
+   },
+   "affinity": {
+    "requested": "0-3",
+    "readback": "0-3",
+    "ok": true
+   },
+   "finished_utc": "2026-10-01T08:45:07+00:00",
+   "duration_s": 593.356,
+   "exit_code": 0,
+   "die_temp_end": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 37.07,
+     "remote_temp": 37.521,
+     "pl_temp": 35.018
+    },
+    "max_c": 37.521
+   },
+   "log_sha256": "d9f8b7bdeb25bb78a1da313ab457cf2d417c8582ca45e5b2bd689e90f2cb6eb1"
+  },
+  "s3.fcal": {
+   "status": "ok",
+   "title": "PL clock cross-check: f_meas vs the read-back clock (cycle counter vs CLOCK_MONOTONIC_RAW, 8 s)",
+   "session": 3,
+   "group": "fcal",
+   "params_key": "[\"exp_fclk_cal.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--write-mode\", \"elem\", \"--seconds\", \"8\", \"--tag\", \"_s3\", \"--seed\", \"1809043435\"]",
+   "cmd": [
+    "/usr/local/share/pynq-venv/bin/python3",
+    "/home/ubuntu/gos/exp_fclk_cal.py",
+    "--backend",
+    "pynq",
+    "--data-dir",
+    "/home/ubuntu/gos/data",
+    "--bit",
+    "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+    "--write-mode",
+    "elem",
+    "--seconds",
+    "8",
+    "--tag",
+    "_s3",
+    "--seed",
+    "1809043435",
+    "--out-dir",
+    "/home/ubuntu/gos/results/rep2/.staging/s3.fcal"
+   ],
+   "started_utc": "2026-10-01T08:45:20+00:00",
+   "timeout_s": 300.0,
+   "provenance": {
+    "backend": "pynq",
+    "source": "hw",
+    "version_hw": "0x474F5302",
+    "build_id_hw": "fd880d43",
+    "build_id_deploy": "fd880d43",
+    "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+    "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
+    "hwh_sha256": "1ad1a01e7edfed5c7826b63aa189efe6039acfc4bfded6beaf32e6552adcacdb",
+    "closed_clock_mhz": 249.997498,
+    "clock_readback_mhz": 249.9975,
+    "clock_requested_mhz": 250,
+    "data_package_sha256": "56c09c9f5a2e02ec078c4d8a4628bb6d9cd6dbd90c333b387fbf2519ef78fbe3",
+    "manifest_sha256": {
+     "lenet5": "7749eb52347eba2cfc09ef50fb79af9a6aa4e51ae324a07db3c463f063fe654b",
+     "cifar10": "21e4eb74b4d9003047b6f4270e87435c537abef39bf23ecd6249857df2a600e5"
+    },
+    "scripts_commit": "e91657aa272f8db8aafc7641da56afae9433579b",
+    "scripts_dirty": false,
+    "data_dirty": false,
+    "allow_dirty": false,
+    "deploy_origin": "DEPLOY_INFO.json",
+    "preflight_utc": "2026-10-01T08:32:09+00:00",
+    "warnings": [],
+    "session_index": 2,
+    "paper_grade": true,
+    "cpu_freq_khz": 1333333,
+    "bit_choice": {
+     "ok": true,
+     "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+     "clock_mhz": 249.997498,
+     "fell_back": true,
+     "reason": "fell back to 249.997 MHz: 299.997 MHz smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+     "attempts": [
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+       "clock_mhz": 299.997009,
+       "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
+       "start_utc": "2026-10-01T08:31:52+00:00",
+       "ok": false,
+       "reason": "smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+       "detail": "pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+       "duration_s": 6.563
+      },
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+       "clock_mhz": 249.997498,
+       "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
+       "start_utc": "2026-10-01T08:31:58+00:00",
+       "ok": true,
+       "reason": "smoke PASS",
+       "clock_readback_mhz": 249.9975,
+       "duration_s": 9.584
+      }
+     ],
+     "skipped": [],
+     "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
+     "decided_utc": "2026-10-01T08:32:08+00:00"
+    },
+    "env": {
+     "paper_grade": true,
+     "pkg_manager_offenders": [],
+     "cpufreq_before": {
+      "root": "/sys/devices/system/cpu",
+      "fake": false,
+      "policies": {
+       "policy0": {
+        "affected_cpus": "0 1 2 3",
+        "scaling_governor": "performance",
+        "scaling_min_freq": "1333333",
+        "scaling_max_freq": "1333333",
+        "scaling_cur_freq": "1333333",
+        "cpuinfo_min_freq": "333333",
+        "cpuinfo_max_freq": "1333333",
+        "scaling_available_governors": "conservative ondemand userspace powersave performance schedutil",
+        "scaling_available_frequencies": "333333 444444 666666 1333333",
+        "scaling_driver": "cpufreq-dt"
+       }
+      },
+      "cpu_cur_freq_khz": {
+       "0": "1333333",
+       "1": "1333333",
+       "2": "1333333",
+       "3": "1333333"
+      }
+     },
+     "cpufreq_apply": {
+      "ok": true,
+      "errors": [],
+      "target_khz": 1333333,
+      "readback": {
+       "errors": [],
+       "governor": {
+        "policy0": "performance"
+       },
+       "policy_cur_freq_khz": {
+        "policy0": "1333333"
+       },
+       "cpu_cur_freq_khz": {
+        "0": "1333333",
+        "1": "1333333",
+        "2": "1333333",
+        "3": "1333333"
+       }
+      }
+     },
+     "cpu_freq_khz": 1333333,
+     "cpu_governor": "performance",
+     "meas_cores": "3",
+     "cpu1_cores": "3",
+     "cpun_cores": "0-3",
+     "housekeeping_cores": "0-2",
+     "orchestrator_pin": {
+      "requested": "0-2",
+      "readback": "0-2",
+      "ok": true,
+      "error": "",
+      "original": "0-3"
+     },
+     "die_temp": {
+      "source": "iio iio:device0 (ams)",
+      "channels_c": {
+       "ps_temp": 36.215,
+       "remote_temp": 34.241,
+       "pl_temp": 34.272
+      },
+      "max_c": 36.215
+     },
+     "fake_tree": false,
+     "paths": {
+      "sysfs_root": "/sys/devices/system/cpu",
+      "proc_root": "/proc",
+      "iio_root": "/sys/bus/iio/devices",
+      "hwmon_root": "/sys/class/hwmon",
+      "fake": false
+     },
+     "warnings": [],
+     "allow_non_paper_grade": false
+    }
+   },
+   "outputs": {
+    "hw_fclk_cal_s3.csv": "f7763aca5469e74b7e49f844ec62a7b1559cd9e94c7f580f9930a85cb88ec818",
+    "hw_fclk_cal_s3.npz": "d9f0006e496828d1b1ca178d8846b77e2e707fbb11a14ac60a314f3007c82ac5"
+   },
+   "log": "logs/s3.fcal.log",
+   "required": true,
+   "die_temp_start": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 36.961,
+     "remote_temp": 35.873,
+     "pl_temp": 34.257
+    },
+    "max_c": 36.961
+   },
+   "run_env": {
+    "session_index": 2,
+    "paper_grade": true,
+    "cpu_governor": "performance",
+    "cpu_freq_khz": 1333333,
+    "f_req_mhz": 250,
+    "note": "paper-grade environment",
+    "f_meas_mhz": 249.913907,
+    "f_meas_ci_lo_mhz": "249.854405",
+    "f_meas_ci_hi_mhz": "249.977359",
+    "f_meas_readback_mhz": 249.9975,
+    "f_meas_source": "cross-check (differential lower envelope, CLOCK_MONOTONIC_RAW)",
+    "f_meas_step": "s1.fcal",
+    "f_meas_rel_diff_pct": "-0.0334",
+    "f_meas_flag": false,
+    "step_id": "s3.fcal",
+    "die_temp_start_c": 36.961
+   },
+   "affinity": {
+    "requested": "3",
+    "readback": "3",
+    "ok": true
+   },
+   "finished_utc": "2026-10-01T08:45:36+00:00",
+   "duration_s": 16.287,
+   "exit_code": 0,
+   "die_temp_end": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 36.448,
+     "remote_temp": 36.759,
+     "pl_temp": 34.109
+    },
+    "max_c": 36.759
+   },
+   "log_sha256": "038bd8e04769e876a4bdeadb7955e79778160b809ff871e0f637c80401837219"
+  },
+  "s3.B1.lenet5": {
+   "status": "ok",
+   "title": "B1 SOM-rail power (INA260) protocol lenet5 (accel/control/cpu bracketed by idle, random order, x3 + idle, 60 s phases, CPU cpu_ort_int8 x4)",
+   "session": 3,
+   "group": "energy",
+   "params_key": "[\"power_log.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--write-mode\", \"elem\", \"--host-path\", \"fast\", \"--fast-store\", \"block\", \"--protocol\", \"--net\", \"lenet5\", \"--tag\", \"_lenet5\", \"--phase-s\", \"60\", \"--repeats\", \"3\", \"--rate-hz\", \"10\", \"--cpu-kind\", \"cpu_ort_int8\", \"--cpu-threads\", \"4\", \"--cpu-cores\", \"0-3\", \"--order\", \"random\", \"--order-seed\", \"1809043145\"]",
+   "cmd": [
+    "/usr/local/share/pynq-venv/bin/python3",
+    "/home/ubuntu/gos/power_log.py",
+    "--backend",
+    "pynq",
+    "--data-dir",
+    "/home/ubuntu/gos/data",
+    "--bit",
+    "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+    "--write-mode",
+    "elem",
+    "--host-path",
+    "fast",
+    "--fast-store",
+    "block",
+    "--protocol",
+    "--net",
+    "lenet5",
+    "--tag",
+    "_lenet5",
+    "--phase-s",
+    "60",
+    "--repeats",
+    "3",
+    "--rate-hz",
+    "10",
+    "--cpu-kind",
+    "cpu_ort_int8",
+    "--cpu-threads",
+    "4",
+    "--cpu-cores",
+    "0-3",
+    "--order",
+    "random",
+    "--order-seed",
+    "1809043145",
+    "--out-dir",
+    "/home/ubuntu/gos/results/rep2/.staging/s3.B1.lenet5"
+   ],
+   "started_utc": "2026-10-01T08:45:36+00:00",
+   "timeout_s": 3810.0,
+   "provenance": {
+    "backend": "pynq",
+    "source": "hw",
+    "version_hw": "0x474F5302",
+    "build_id_hw": "fd880d43",
+    "build_id_deploy": "fd880d43",
+    "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+    "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
+    "hwh_sha256": "1ad1a01e7edfed5c7826b63aa189efe6039acfc4bfded6beaf32e6552adcacdb",
+    "closed_clock_mhz": 249.997498,
+    "clock_readback_mhz": 249.9975,
+    "clock_requested_mhz": 250,
+    "data_package_sha256": "56c09c9f5a2e02ec078c4d8a4628bb6d9cd6dbd90c333b387fbf2519ef78fbe3",
+    "manifest_sha256": {
+     "lenet5": "7749eb52347eba2cfc09ef50fb79af9a6aa4e51ae324a07db3c463f063fe654b",
+     "cifar10": "21e4eb74b4d9003047b6f4270e87435c537abef39bf23ecd6249857df2a600e5"
+    },
+    "scripts_commit": "e91657aa272f8db8aafc7641da56afae9433579b",
+    "scripts_dirty": false,
+    "data_dirty": false,
+    "allow_dirty": false,
+    "deploy_origin": "DEPLOY_INFO.json",
+    "preflight_utc": "2026-10-01T08:32:09+00:00",
+    "warnings": [],
+    "session_index": 2,
+    "paper_grade": true,
+    "cpu_freq_khz": 1333333,
+    "bit_choice": {
+     "ok": true,
+     "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+     "clock_mhz": 249.997498,
+     "fell_back": true,
+     "reason": "fell back to 249.997 MHz: 299.997 MHz smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+     "attempts": [
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+       "clock_mhz": 299.997009,
+       "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
+       "start_utc": "2026-10-01T08:31:52+00:00",
+       "ok": false,
+       "reason": "smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+       "detail": "pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+       "duration_s": 6.563
+      },
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+       "clock_mhz": 249.997498,
+       "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
+       "start_utc": "2026-10-01T08:31:58+00:00",
+       "ok": true,
+       "reason": "smoke PASS",
+       "clock_readback_mhz": 249.9975,
+       "duration_s": 9.584
+      }
+     ],
+     "skipped": [],
+     "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
+     "decided_utc": "2026-10-01T08:32:08+00:00"
+    },
+    "env": {
+     "paper_grade": true,
+     "pkg_manager_offenders": [],
+     "cpufreq_before": {
+      "root": "/sys/devices/system/cpu",
+      "fake": false,
+      "policies": {
+       "policy0": {
+        "affected_cpus": "0 1 2 3",
+        "scaling_governor": "performance",
+        "scaling_min_freq": "1333333",
+        "scaling_max_freq": "1333333",
+        "scaling_cur_freq": "1333333",
+        "cpuinfo_min_freq": "333333",
+        "cpuinfo_max_freq": "1333333",
+        "scaling_available_governors": "conservative ondemand userspace powersave performance schedutil",
+        "scaling_available_frequencies": "333333 444444 666666 1333333",
+        "scaling_driver": "cpufreq-dt"
+       }
+      },
+      "cpu_cur_freq_khz": {
+       "0": "1333333",
+       "1": "1333333",
+       "2": "1333333",
+       "3": "1333333"
+      }
+     },
+     "cpufreq_apply": {
+      "ok": true,
+      "errors": [],
+      "target_khz": 1333333,
+      "readback": {
+       "errors": [],
+       "governor": {
+        "policy0": "performance"
+       },
+       "policy_cur_freq_khz": {
+        "policy0": "1333333"
+       },
+       "cpu_cur_freq_khz": {
+        "0": "1333333",
+        "1": "1333333",
+        "2": "1333333",
+        "3": "1333333"
+       }
+      }
+     },
+     "cpu_freq_khz": 1333333,
+     "cpu_governor": "performance",
+     "meas_cores": "3",
+     "cpu1_cores": "3",
+     "cpun_cores": "0-3",
+     "housekeeping_cores": "0-2",
+     "orchestrator_pin": {
+      "requested": "0-2",
+      "readback": "0-2",
+      "ok": true,
+      "error": "",
+      "original": "0-3"
+     },
+     "die_temp": {
+      "source": "iio iio:device0 (ams)",
+      "channels_c": {
+       "ps_temp": 36.215,
+       "remote_temp": 34.241,
+       "pl_temp": 34.272
+      },
+      "max_c": 36.215
+     },
+     "fake_tree": false,
+     "paths": {
+      "sysfs_root": "/sys/devices/system/cpu",
+      "proc_root": "/proc",
+      "iio_root": "/sys/bus/iio/devices",
+      "hwmon_root": "/sys/class/hwmon",
+      "fake": false
+     },
+     "warnings": [],
+     "allow_non_paper_grade": false
+    }
+   },
+   "outputs": {
+    "hw_b1_power_ina260_phases_lenet5.csv": "ba4d80b42fbc42c54c22c05119376a2c24c7f92009d914ba61933b75c7622dff",
+    "hw_b1_power_ina260_samples_lenet5.csv": "c25b3e8aa88a9eda52795a1c43cf564a036fe94f205bf041d4b1a2bea8e9e6fe",
+    "hw_b1_power_ina260_summary_lenet5.csv": "dcffbd137e78679dfc3f854e31f2bdb99a930bb75a6025db97045b9927fadd97"
+   },
+   "log": "logs/s3.B1.lenet5.log",
+   "required": true,
+   "die_temp_start": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 36.34,
+     "remote_temp": 35.283,
+     "pl_temp": 34.404
+    },
+    "max_c": 36.34
+   },
+   "run_env": {
+    "session_index": 2,
+    "paper_grade": true,
+    "cpu_governor": "performance",
+    "cpu_freq_khz": 1333333,
+    "f_req_mhz": 250,
+    "note": "paper-grade environment",
+    "f_meas_mhz": 249.893993,
+    "f_meas_ci_lo_mhz": "249.845443",
+    "f_meas_ci_hi_mhz": "249.953952",
+    "f_meas_readback_mhz": 249.9975,
+    "f_meas_source": "cross-check (differential lower envelope, CLOCK_MONOTONIC_RAW)",
+    "f_meas_step": "s3.fcal",
+    "f_meas_rel_diff_pct": "-0.0414",
+    "f_meas_flag": false,
+    "step_id": "s3.B1.lenet5",
+    "die_temp_start_c": 36.34
+   },
+   "affinity": {
+    "requested": "3",
+    "readback": "3",
+    "ok": true
+   },
+   "finished_utc": "2026-10-01T09:04:52+00:00",
+   "duration_s": 1155.737,
+   "exit_code": 0,
+   "die_temp_end": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 36.091,
+     "remote_temp": 35.578,
+     "pl_temp": 34.07
+    },
+    "max_c": 36.091
+   },
+   "log_sha256": "618a830253b76a56257c4dc3672fb67e37cbfeecaa93ad112f3b9db414695b6d"
+  },
+  "s3.B1.cifar10": {
+   "status": "ok",
+   "title": "B1 SOM-rail power (INA260) protocol cifar10 (accel/control/cpu bracketed by idle, random order, x3 + idle, 60 s phases, CPU cpu_ort_int8 x4)",
+   "session": 3,
+   "group": "energy",
+   "params_key": "[\"power_log.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--write-mode\", \"elem\", \"--host-path\", \"fast\", \"--fast-store\", \"block\", \"--protocol\", \"--net\", \"cifar10\", \"--tag\", \"_cifar10\", \"--phase-s\", \"60\", \"--repeats\", \"3\", \"--rate-hz\", \"10\", \"--cpu-kind\", \"cpu_ort_int8\", \"--cpu-threads\", \"4\", \"--cpu-cores\", \"0-3\", \"--order\", \"random\", \"--order-seed\", \"1809043146\"]",
+   "cmd": [
+    "/usr/local/share/pynq-venv/bin/python3",
+    "/home/ubuntu/gos/power_log.py",
+    "--backend",
+    "pynq",
+    "--data-dir",
+    "/home/ubuntu/gos/data",
+    "--bit",
+    "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+    "--write-mode",
+    "elem",
+    "--host-path",
+    "fast",
+    "--fast-store",
+    "block",
+    "--protocol",
+    "--net",
+    "cifar10",
+    "--tag",
+    "_cifar10",
+    "--phase-s",
+    "60",
+    "--repeats",
+    "3",
+    "--rate-hz",
+    "10",
+    "--cpu-kind",
+    "cpu_ort_int8",
+    "--cpu-threads",
+    "4",
+    "--cpu-cores",
+    "0-3",
+    "--order",
+    "random",
+    "--order-seed",
+    "1809043146",
+    "--out-dir",
+    "/home/ubuntu/gos/results/rep2/.staging/s3.B1.cifar10"
+   ],
+   "started_utc": "2026-10-01T09:04:52+00:00",
+   "timeout_s": 3810.0,
+   "provenance": {
+    "backend": "pynq",
+    "source": "hw",
+    "version_hw": "0x474F5302",
+    "build_id_hw": "fd880d43",
+    "build_id_deploy": "fd880d43",
+    "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+    "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
+    "hwh_sha256": "1ad1a01e7edfed5c7826b63aa189efe6039acfc4bfded6beaf32e6552adcacdb",
+    "closed_clock_mhz": 249.997498,
+    "clock_readback_mhz": 249.9975,
+    "clock_requested_mhz": 250,
+    "data_package_sha256": "56c09c9f5a2e02ec078c4d8a4628bb6d9cd6dbd90c333b387fbf2519ef78fbe3",
+    "manifest_sha256": {
+     "lenet5": "7749eb52347eba2cfc09ef50fb79af9a6aa4e51ae324a07db3c463f063fe654b",
+     "cifar10": "21e4eb74b4d9003047b6f4270e87435c537abef39bf23ecd6249857df2a600e5"
+    },
+    "scripts_commit": "e91657aa272f8db8aafc7641da56afae9433579b",
+    "scripts_dirty": false,
+    "data_dirty": false,
+    "allow_dirty": false,
+    "deploy_origin": "DEPLOY_INFO.json",
+    "preflight_utc": "2026-10-01T08:32:09+00:00",
+    "warnings": [],
+    "session_index": 2,
+    "paper_grade": true,
+    "cpu_freq_khz": 1333333,
+    "bit_choice": {
+     "ok": true,
+     "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+     "clock_mhz": 249.997498,
+     "fell_back": true,
+     "reason": "fell back to 249.997 MHz: 299.997 MHz smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+     "attempts": [
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+       "clock_mhz": 299.997009,
+       "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
+       "start_utc": "2026-10-01T08:31:52+00:00",
+       "ok": false,
+       "reason": "smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+       "detail": "pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+       "duration_s": 6.563
+      },
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+       "clock_mhz": 249.997498,
+       "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
+       "start_utc": "2026-10-01T08:31:58+00:00",
+       "ok": true,
+       "reason": "smoke PASS",
+       "clock_readback_mhz": 249.9975,
+       "duration_s": 9.584
+      }
+     ],
+     "skipped": [],
+     "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
+     "decided_utc": "2026-10-01T08:32:08+00:00"
+    },
+    "env": {
+     "paper_grade": true,
+     "pkg_manager_offenders": [],
+     "cpufreq_before": {
+      "root": "/sys/devices/system/cpu",
+      "fake": false,
+      "policies": {
+       "policy0": {
+        "affected_cpus": "0 1 2 3",
+        "scaling_governor": "performance",
+        "scaling_min_freq": "1333333",
+        "scaling_max_freq": "1333333",
+        "scaling_cur_freq": "1333333",
+        "cpuinfo_min_freq": "333333",
+        "cpuinfo_max_freq": "1333333",
+        "scaling_available_governors": "conservative ondemand userspace powersave performance schedutil",
+        "scaling_available_frequencies": "333333 444444 666666 1333333",
+        "scaling_driver": "cpufreq-dt"
+       }
+      },
+      "cpu_cur_freq_khz": {
+       "0": "1333333",
+       "1": "1333333",
+       "2": "1333333",
+       "3": "1333333"
+      }
+     },
+     "cpufreq_apply": {
+      "ok": true,
+      "errors": [],
+      "target_khz": 1333333,
+      "readback": {
+       "errors": [],
+       "governor": {
+        "policy0": "performance"
+       },
+       "policy_cur_freq_khz": {
+        "policy0": "1333333"
+       },
+       "cpu_cur_freq_khz": {
+        "0": "1333333",
+        "1": "1333333",
+        "2": "1333333",
+        "3": "1333333"
+       }
+      }
+     },
+     "cpu_freq_khz": 1333333,
+     "cpu_governor": "performance",
+     "meas_cores": "3",
+     "cpu1_cores": "3",
+     "cpun_cores": "0-3",
+     "housekeeping_cores": "0-2",
+     "orchestrator_pin": {
+      "requested": "0-2",
+      "readback": "0-2",
+      "ok": true,
+      "error": "",
+      "original": "0-3"
+     },
+     "die_temp": {
+      "source": "iio iio:device0 (ams)",
+      "channels_c": {
+       "ps_temp": 36.215,
+       "remote_temp": 34.241,
+       "pl_temp": 34.272
+      },
+      "max_c": 36.215
+     },
+     "fake_tree": false,
+     "paths": {
+      "sysfs_root": "/sys/devices/system/cpu",
+      "proc_root": "/proc",
+      "iio_root": "/sys/bus/iio/devices",
+      "hwmon_root": "/sys/class/hwmon",
+      "fake": false
+     },
+     "warnings": [],
+     "allow_non_paper_grade": false
+    }
+   },
+   "outputs": {
+    "hw_b1_power_ina260_phases_cifar10.csv": "5f85dda96d4bca0b017a48246bfed747c486d02cf5a423fb05cb54a636e1c2a4",
+    "hw_b1_power_ina260_samples_cifar10.csv": "78e0aaf4801463efdd5f39e622c511c4596f988b160fc01b873730af7329b865",
+    "hw_b1_power_ina260_summary_cifar10.csv": "b8748c33f4a82f70f957a86b426ec379448d3241a289aa4486e833ed89f15a0b"
+   },
+   "log": "logs/s3.B1.cifar10.log",
+   "required": true,
+   "die_temp_start": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 35.298,
+     "remote_temp": 37.023,
+     "pl_temp": 34.226
+    },
+    "max_c": 37.023
+   },
+   "run_env": {
+    "session_index": 2,
+    "paper_grade": true,
+    "cpu_governor": "performance",
+    "cpu_freq_khz": 1333333,
+    "f_req_mhz": 250,
+    "note": "paper-grade environment",
+    "f_meas_mhz": 249.893993,
+    "f_meas_ci_lo_mhz": "249.845443",
+    "f_meas_ci_hi_mhz": "249.953952",
+    "f_meas_readback_mhz": 249.9975,
+    "f_meas_source": "cross-check (differential lower envelope, CLOCK_MONOTONIC_RAW)",
+    "f_meas_step": "s3.fcal",
+    "f_meas_rel_diff_pct": "-0.0414",
+    "f_meas_flag": false,
+    "step_id": "s3.B1.cifar10",
+    "die_temp_start_c": 37.023
+   },
+   "affinity": {
+    "requested": "3",
+    "readback": "3",
+    "ok": true
+   },
+   "finished_utc": "2026-10-01T09:24:10+00:00",
+   "duration_s": 1158.125,
+   "exit_code": 0,
+   "die_temp_end": {
+    "source": "iio iio:device0 (ams)",
+    "channels_c": {
+     "ps_temp": 34.941,
+     "remote_temp": 36.106,
+     "pl_temp": 34.303
+    },
+    "max_c": 36.106
+   },
+   "log_sha256": "1666b63982e8ae2ddfd01f20c93e7f0a97c81e31aa0da13e73e5e67e3666fc69"
+  }
+ },
+ "invocations": [
+  {
+   "utc": "2026-10-01T08:32:09+00:00",
+   "args": {
+    "sessions": [
+     1
+    ],
+    "backend": "pynq",
+    "resume": false,
+    "fresh": false,
+    "idle_ref_s": 0.0,
+    "session_index": 2,
+    "budget_min": null,
+    "step_timeout_min": null,
+    "quick": false,
+    "plan": false,
+    "steps": null,
+    "allow_dirty": false,
+    "allow_non_paper_grade": false,
+    "bit": null,
+    "fallback_bits": null,
+    "dryrun_fail_smoke_mhz": null,
+    "data_dir": "/home/ubuntu/gos/data",
+    "results_dir": null,
+    "window_s": null,
+    "gap_s": null,
+    "fcal_s": null,
+    "b2_images": 100,
+    "power_repeats": 3,
+    "b2_power_repeats": 3,
+    "power_rate_hz": 10.0,
+    "write_mode": "elem",
+    "host_path": "safe",
+    "fast_store": "block",
+    "no_power_control": false,
+    "no_b3_cpu": false,
+    "meas_cores": "3",
+    "cpu1_cores": "3",
+    "cpun_cores": "0-3",
+    "cpu_freq_khz": null,
+    "sysfs_root": null,
+    "proc_root": null,
+    "iio_root": null,
+    "hwmon_root": null,
+    "board_id": null,
+    "clock_tol_mhz": 0.5,
+    "min_free_mb": 1000.0,
+    "no_bringup_check": false
+   },
+   "session_log": "logs/run_sessions_20261001_083151.log",
+   "preflight": {
+    "backend": "pynq",
+    "source": "hw",
+    "version_hw": "0x474F5302",
+    "build_id_hw": "fd880d43",
+    "build_id_deploy": "fd880d43",
+    "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+    "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
+    "hwh_sha256": "1ad1a01e7edfed5c7826b63aa189efe6039acfc4bfded6beaf32e6552adcacdb",
+    "closed_clock_mhz": 249.997498,
+    "clock_readback_mhz": 249.9975,
+    "clock_requested_mhz": 250,
+    "data_package_sha256": "56c09c9f5a2e02ec078c4d8a4628bb6d9cd6dbd90c333b387fbf2519ef78fbe3",
+    "manifest_sha256": {
+     "lenet5": "7749eb52347eba2cfc09ef50fb79af9a6aa4e51ae324a07db3c463f063fe654b",
+     "cifar10": "21e4eb74b4d9003047b6f4270e87435c537abef39bf23ecd6249857df2a600e5"
+    },
+    "scripts_commit": "e91657aa272f8db8aafc7641da56afae9433579b",
+    "scripts_dirty": false,
+    "data_dirty": false,
+    "allow_dirty": false,
+    "deploy_origin": "DEPLOY_INFO.json",
+    "preflight_utc": "2026-10-01T08:32:09+00:00",
+    "warnings": [],
+    "session_index": 2,
+    "paper_grade": true,
+    "cpu_freq_khz": 1333333,
+    "bit_choice": {
+     "ok": true,
+     "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+     "clock_mhz": 249.997498,
+     "fell_back": true,
+     "reason": "fell back to 249.997 MHz: 299.997 MHz smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+     "attempts": [
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+       "clock_mhz": 299.997009,
+       "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
+       "start_utc": "2026-10-01T08:31:52+00:00",
+       "ok": false,
+       "reason": "smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+       "detail": "pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+       "duration_s": 6.563
+      },
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+       "clock_mhz": 249.997498,
+       "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
+       "start_utc": "2026-10-01T08:31:58+00:00",
+       "ok": true,
+       "reason": "smoke PASS",
+       "clock_readback_mhz": 249.9975,
+       "duration_s": 9.584
+      }
+     ],
+     "skipped": [],
+     "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
+     "decided_utc": "2026-10-01T08:32:08+00:00"
+    },
+    "env": {
+     "paper_grade": true,
+     "pkg_manager_offenders": [],
+     "cpufreq_before": {
+      "root": "/sys/devices/system/cpu",
+      "fake": false,
+      "policies": {
+       "policy0": {
+        "affected_cpus": "0 1 2 3",
+        "scaling_governor": "performance",
+        "scaling_min_freq": "1333333",
+        "scaling_max_freq": "1333333",
+        "scaling_cur_freq": "1333333",
+        "cpuinfo_min_freq": "333333",
+        "cpuinfo_max_freq": "1333333",
+        "scaling_available_governors": "conservative ondemand userspace powersave performance schedutil",
+        "scaling_available_frequencies": "333333 444444 666666 1333333",
+        "scaling_driver": "cpufreq-dt"
+       }
+      },
+      "cpu_cur_freq_khz": {
+       "0": "1333333",
+       "1": "1333333",
+       "2": "1333333",
+       "3": "1333333"
+      }
+     },
+     "cpufreq_apply": {
+      "ok": true,
+      "errors": [],
+      "target_khz": 1333333,
+      "readback": {
+       "errors": [],
+       "governor": {
+        "policy0": "performance"
+       },
+       "policy_cur_freq_khz": {
+        "policy0": "1333333"
+       },
+       "cpu_cur_freq_khz": {
+        "0": "1333333",
+        "1": "1333333",
+        "2": "1333333",
+        "3": "1333333"
+       }
+      }
+     },
+     "cpu_freq_khz": 1333333,
+     "cpu_governor": "performance",
+     "meas_cores": "3",
+     "cpu1_cores": "3",
+     "cpun_cores": "0-3",
+     "housekeeping_cores": "0-2",
+     "orchestrator_pin": {
+      "requested": "0-2",
+      "readback": "0-2",
+      "ok": true,
+      "error": "",
+      "original": "0-3"
+     },
+     "die_temp": {
+      "source": "iio iio:device0 (ams)",
+      "channels_c": {
+       "ps_temp": 36.215,
+       "remote_temp": 34.241,
+       "pl_temp": 34.272
+      },
+      "max_c": 36.215
+     },
+     "fake_tree": false,
+     "paths": {
+      "sysfs_root": "/sys/devices/system/cpu",
+      "proc_root": "/proc",
+      "iio_root": "/sys/bus/iio/devices",
+      "hwmon_root": "/sys/class/hwmon",
+      "fake": false
+     },
+     "warnings": [],
+     "allow_non_paper_grade": false
+    }
+   }
+  },
+  {
+   "utc": "2026-10-01T08:33:07+00:00",
+   "args": {
+    "sessions": [
+     2
+    ],
+    "backend": "pynq",
+    "resume": false,
+    "fresh": false,
+    "idle_ref_s": 0.0,
+    "session_index": 2,
+    "budget_min": null,
+    "step_timeout_min": null,
+    "quick": false,
+    "plan": false,
+    "steps": [
+     "s2.B3",
+     "s2.CPU"
+    ],
+    "allow_dirty": false,
+    "allow_non_paper_grade": false,
+    "bit": null,
+    "fallback_bits": null,
+    "dryrun_fail_smoke_mhz": null,
+    "data_dir": "/home/ubuntu/gos/data",
+    "results_dir": null,
+    "window_s": null,
+    "gap_s": null,
+    "fcal_s": null,
+    "b2_images": 100,
+    "power_repeats": 3,
+    "b2_power_repeats": 3,
+    "power_rate_hz": 10.0,
+    "write_mode": "elem",
+    "host_path": "safe",
+    "fast_store": "block",
+    "no_power_control": false,
+    "no_b3_cpu": false,
+    "meas_cores": "3",
+    "cpu1_cores": "3",
+    "cpun_cores": "0-3",
+    "cpu_freq_khz": null,
+    "sysfs_root": null,
+    "proc_root": null,
+    "iio_root": null,
+    "hwmon_root": null,
+    "board_id": null,
+    "clock_tol_mhz": 0.5,
+    "min_free_mb": 1000.0,
+    "no_bringup_check": false
+   },
+   "session_log": "logs/run_sessions_20261001_083302.log",
+   "preflight": {
+    "backend": "pynq",
+    "source": "hw",
+    "version_hw": "0x474F5302",
+    "build_id_hw": "fd880d43",
+    "build_id_deploy": "fd880d43",
+    "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+    "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
+    "hwh_sha256": "1ad1a01e7edfed5c7826b63aa189efe6039acfc4bfded6beaf32e6552adcacdb",
+    "closed_clock_mhz": 249.997498,
+    "clock_readback_mhz": 249.9975,
+    "clock_requested_mhz": 250,
+    "data_package_sha256": "56c09c9f5a2e02ec078c4d8a4628bb6d9cd6dbd90c333b387fbf2519ef78fbe3",
+    "manifest_sha256": {
+     "lenet5": "7749eb52347eba2cfc09ef50fb79af9a6aa4e51ae324a07db3c463f063fe654b",
+     "cifar10": "21e4eb74b4d9003047b6f4270e87435c537abef39bf23ecd6249857df2a600e5"
+    },
+    "scripts_commit": "e91657aa272f8db8aafc7641da56afae9433579b",
+    "scripts_dirty": false,
+    "data_dirty": false,
+    "allow_dirty": false,
+    "deploy_origin": "DEPLOY_INFO.json",
+    "preflight_utc": "2026-10-01T08:33:07+00:00",
+    "warnings": [],
+    "session_index": 2,
+    "paper_grade": true,
+    "cpu_freq_khz": 1333333,
+    "bit_choice": {
+     "ok": true,
+     "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+     "clock_mhz": 249.997498,
+     "fell_back": true,
+     "reason": "fell back to 249.997 MHz: 299.997 MHz smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+     "attempts": [
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+       "clock_mhz": 299.997009,
+       "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
+       "start_utc": "2026-10-01T08:31:52+00:00",
+       "ok": false,
+       "reason": "smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+       "detail": "pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+       "duration_s": 6.563
+      },
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+       "clock_mhz": 249.997498,
+       "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
+       "start_utc": "2026-10-01T08:31:58+00:00",
+       "ok": true,
+       "reason": "smoke PASS",
+       "clock_readback_mhz": 249.9975,
+       "duration_s": 9.584
+      }
+     ],
+     "skipped": [],
+     "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
+     "decided_utc": "2026-10-01T08:32:08+00:00"
+    },
+    "env": {
+     "paper_grade": true,
+     "pkg_manager_offenders": [],
+     "cpufreq_before": {
+      "root": "/sys/devices/system/cpu",
+      "fake": false,
+      "policies": {
+       "policy0": {
+        "affected_cpus": "0 1 2 3",
+        "scaling_governor": "performance",
+        "scaling_min_freq": "1333333",
+        "scaling_max_freq": "1333333",
+        "scaling_cur_freq": "1333333",
+        "cpuinfo_min_freq": "333333",
+        "cpuinfo_max_freq": "1333333",
+        "scaling_available_governors": "conservative ondemand userspace powersave performance schedutil",
+        "scaling_available_frequencies": "333333 444444 666666 1333333",
+        "scaling_driver": "cpufreq-dt"
+       }
+      },
+      "cpu_cur_freq_khz": {
+       "0": "1333333",
+       "1": "1333333",
+       "2": "1333333",
+       "3": "1333333"
+      }
+     },
+     "cpufreq_apply": {
+      "ok": true,
+      "errors": [],
+      "target_khz": 1333333,
+      "readback": {
+       "errors": [],
+       "governor": {
+        "policy0": "performance"
+       },
+       "policy_cur_freq_khz": {
+        "policy0": "1333333"
+       },
+       "cpu_cur_freq_khz": {
+        "0": "1333333",
+        "1": "1333333",
+        "2": "1333333",
+        "3": "1333333"
+       }
+      }
+     },
+     "cpu_freq_khz": 1333333,
+     "cpu_governor": "performance",
+     "meas_cores": "3",
+     "cpu1_cores": "3",
+     "cpun_cores": "0-3",
+     "housekeeping_cores": "0-2",
+     "orchestrator_pin": {
+      "requested": "0-2",
+      "readback": "0-2",
+      "ok": true,
+      "error": "",
+      "original": "0-3"
+     },
+     "die_temp": {
+      "source": "iio iio:device0 (ams)",
+      "channels_c": {
+       "ps_temp": 37.226,
+       "remote_temp": 34.381,
+       "pl_temp": 34.591
+      },
+      "max_c": 37.226
+     },
+     "fake_tree": false,
+     "paths": {
+      "sysfs_root": "/sys/devices/system/cpu",
+      "proc_root": "/proc",
+      "iio_root": "/sys/bus/iio/devices",
+      "hwmon_root": "/sys/class/hwmon",
+      "fake": false
+     },
+     "warnings": [],
+     "allow_non_paper_grade": false
+    }
+   }
+  },
+  {
+   "utc": "2026-10-01T08:45:20+00:00",
+   "args": {
+    "sessions": [
+     3
+    ],
+    "backend": "pynq",
+    "resume": false,
+    "fresh": false,
+    "idle_ref_s": 0.0,
+    "session_index": 2,
+    "budget_min": null,
+    "step_timeout_min": null,
+    "quick": false,
+    "plan": false,
+    "steps": [
+     "s3.fcal",
+     "s3.B1.lenet5",
+     "s3.B1.cifar10"
+    ],
+    "allow_dirty": false,
+    "allow_non_paper_grade": false,
+    "bit": null,
+    "fallback_bits": null,
+    "dryrun_fail_smoke_mhz": null,
+    "data_dir": "/home/ubuntu/gos/data",
+    "results_dir": null,
+    "window_s": null,
+    "gap_s": null,
+    "fcal_s": null,
+    "b2_images": 100,
+    "power_repeats": 3,
+    "b2_power_repeats": 3,
+    "power_rate_hz": 10.0,
+    "write_mode": "elem",
+    "host_path": "fast",
+    "fast_store": "block",
+    "no_power_control": false,
+    "no_b3_cpu": false,
+    "meas_cores": "3",
+    "cpu1_cores": "3",
+    "cpun_cores": "0-3",
+    "cpu_freq_khz": null,
+    "sysfs_root": null,
+    "proc_root": null,
+    "iio_root": null,
+    "hwmon_root": null,
+    "board_id": null,
+    "clock_tol_mhz": 0.5,
+    "min_free_mb": 1000.0,
+    "no_bringup_check": false
+   },
+   "session_log": "logs/run_sessions_20261001_084514.log",
+   "preflight": {
+    "backend": "pynq",
+    "source": "hw",
+    "version_hw": "0x474F5302",
+    "build_id_hw": "fd880d43",
+    "build_id_deploy": "fd880d43",
+    "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+    "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
+    "hwh_sha256": "1ad1a01e7edfed5c7826b63aa189efe6039acfc4bfded6beaf32e6552adcacdb",
+    "closed_clock_mhz": 249.997498,
+    "clock_readback_mhz": 249.9975,
+    "clock_requested_mhz": 250,
+    "data_package_sha256": "56c09c9f5a2e02ec078c4d8a4628bb6d9cd6dbd90c333b387fbf2519ef78fbe3",
+    "manifest_sha256": {
+     "lenet5": "7749eb52347eba2cfc09ef50fb79af9a6aa4e51ae324a07db3c463f063fe654b",
+     "cifar10": "21e4eb74b4d9003047b6f4270e87435c537abef39bf23ecd6249857df2a600e5"
+    },
+    "scripts_commit": "e91657aa272f8db8aafc7641da56afae9433579b",
+    "scripts_dirty": false,
+    "data_dirty": false,
+    "allow_dirty": false,
+    "deploy_origin": "DEPLOY_INFO.json",
+    "preflight_utc": "2026-10-01T08:45:20+00:00",
+    "warnings": [],
+    "session_index": 2,
+    "paper_grade": true,
+    "cpu_freq_khz": 1333333,
+    "bit_choice": {
+     "ok": true,
+     "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+     "clock_mhz": 249.997498,
+     "fell_back": true,
+     "reason": "fell back to 249.997 MHz: 299.997 MHz smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+     "attempts": [
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+       "clock_mhz": 299.997009,
+       "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
+       "start_utc": "2026-10-01T08:31:52+00:00",
+       "ok": false,
+       "reason": "smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+       "detail": "pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+       "duration_s": 6.563
+      },
+      {
+       "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+       "clock_mhz": 249.997498,
+       "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
+       "start_utc": "2026-10-01T08:31:58+00:00",
+       "ok": true,
+       "reason": "smoke PASS",
+       "clock_readback_mhz": 249.9975,
+       "duration_s": 9.584
+      }
+     ],
+     "skipped": [],
+     "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
+     "decided_utc": "2026-10-01T08:32:08+00:00"
+    },
+    "env": {
+     "paper_grade": true,
+     "pkg_manager_offenders": [],
+     "cpufreq_before": {
+      "root": "/sys/devices/system/cpu",
+      "fake": false,
+      "policies": {
+       "policy0": {
+        "affected_cpus": "0 1 2 3",
+        "scaling_governor": "performance",
+        "scaling_min_freq": "1333333",
+        "scaling_max_freq": "1333333",
+        "scaling_cur_freq": "1333333",
+        "cpuinfo_min_freq": "333333",
+        "cpuinfo_max_freq": "1333333",
+        "scaling_available_governors": "conservative ondemand userspace powersave performance schedutil",
+        "scaling_available_frequencies": "333333 444444 666666 1333333",
+        "scaling_driver": "cpufreq-dt"
+       }
+      },
+      "cpu_cur_freq_khz": {
+       "0": "1333333",
+       "1": "1333333",
+       "2": "1333333",
+       "3": "1333333"
+      }
+     },
+     "cpufreq_apply": {
+      "ok": true,
+      "errors": [],
+      "target_khz": 1333333,
+      "readback": {
+       "errors": [],
+       "governor": {
+        "policy0": "performance"
+       },
+       "policy_cur_freq_khz": {
+        "policy0": "1333333"
+       },
+       "cpu_cur_freq_khz": {
+        "0": "1333333",
+        "1": "1333333",
+        "2": "1333333",
+        "3": "1333333"
+       }
+      }
+     },
+     "cpu_freq_khz": 1333333,
+     "cpu_governor": "performance",
+     "meas_cores": "3",
+     "cpu1_cores": "3",
+     "cpun_cores": "0-3",
+     "housekeeping_cores": "0-2",
+     "orchestrator_pin": {
+      "requested": "0-2",
+      "readback": "0-2",
+      "ok": true,
+      "error": "",
+      "original": "0-3"
+     },
+     "die_temp": {
+      "source": "iio iio:device0 (ams)",
+      "channels_c": {
+       "ps_temp": 36.091,
+       "remote_temp": 36.215,
+       "pl_temp": 34.303
+      },
+      "max_c": 36.215
+     },
+     "fake_tree": false,
+     "paths": {
+      "sysfs_root": "/sys/devices/system/cpu",
+      "proc_root": "/proc",
+      "iio_root": "/sys/bus/iio/devices",
+      "hwmon_root": "/sys/class/hwmon",
+      "fake": false
+     },
+     "warnings": [],
+     "allow_non_paper_grade": false
+    }
+   }
+  }
+ ],
+ "timing": {
+  "s1.shell": {
+   "backend": "pynq",
+   "params_key": "[\"test_shell.py\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--expect-version\", \"0x474F5302\", \"--skip-scratch\", \"--max-fclk0\", \"250.497498\", \"--set-fclk0\", \"249.997498\"]",
+   "duration_s": 6.872,
+   "images": 0,
+   "fixed_s": 0.0,
+   "rate_s": null
+  },
+  "s1.smoke": {
+   "backend": "pynq",
+   "params_key": "[\"test_core_smoke.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--max-fclk0\", \"250.497498\"]",
+   "duration_s": 7.675,
+   "images": 0,
+   "fixed_s": 0.0,
+   "rate_s": null
+  },
+  "s1.smoke_slice": {
+   "backend": "pynq",
+   "params_key": "[\"test_core_smoke.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--max-fclk0\", \"250.497498\", \"--write-mode\", \"slice\"]",
+   "duration_s": 7.625,
+   "images": 0,
+   "fixed_s": 0.0,
+   "rate_s": null
+  },
+  "s1.fast": {
+   "backend": "pynq",
+   "params_key": "[\"test_core_smoke.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--max-fclk0\", \"250.497498\", \"--host-path\", \"fast\", \"--fast-store\", \"block\"]",
+   "duration_s": 8.211,
+   "images": 0,
+   "fixed_s": 0.0,
+   "rate_s": null
+  },
+  "s1.fcal": {
+   "backend": "pynq",
+   "params_key": "[\"exp_fclk_cal.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--write-mode\", \"elem\", \"--seconds\", \"8\", \"--tag\", \"_s1\", \"--seed\", \"1809043235\"]",
+   "duration_s": 15.942,
+   "images": 0,
+   "fixed_s": 18.0,
+   "rate_s": null
+  },
+  "s2.B3": {
+   "backend": "pynq",
+   "params_key": "[\"exp_b3_breakdown.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--write-mode\", \"elem\", \"--n\", \"1000\", \"--conditions\", \"safe\", \"cpu\", \"--fast-store\", \"block\", \"--seed\", \"1809043137\", \"--conditions-add\", \"fast\"]",
+   "duration_s": 126.326,
+   "images": 6600,
+   "fixed_s": 0.0,
+   "rate_s": 0.01459482829727318
+  },
+  "s2.CPU": {
+   "backend": "pynq",
+   "params_key": "[\"cpu/run_cpu_baselines.py\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--tag\", \"board\", \"--pin-1t\", \"3\", \"--pin-nt\", \"0-3\"]",
+   "duration_s": 593.356,
+   "images": 0,
+   "fixed_s": 0.0,
+   "rate_s": null
+  },
+  "s3.fcal": {
+   "backend": "pynq",
+   "params_key": "[\"exp_fclk_cal.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--write-mode\", \"elem\", \"--seconds\", \"8\", \"--tag\", \"_s3\", \"--seed\", \"1809043435\"]",
+   "duration_s": 16.287,
+   "images": 0,
+   "fixed_s": 18.0,
+   "rate_s": null
+  },
+  "s3.B1.lenet5": {
+   "backend": "pynq",
+   "params_key": "[\"power_log.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--write-mode\", \"elem\", \"--host-path\", \"fast\", \"--fast-store\", \"block\", \"--protocol\", \"--net\", \"lenet5\", \"--tag\", \"_lenet5\", \"--phase-s\", \"60\", \"--repeats\", \"3\", \"--rate-hz\", \"10\", \"--cpu-kind\", \"cpu_ort_int8\", \"--cpu-threads\", \"4\", \"--cpu-cores\", \"0-3\", \"--order\", \"random\", \"--order-seed\", \"1809043145\"]",
+   "duration_s": 1155.737,
+   "images": 0,
+   "fixed_s": 1200.0,
+   "rate_s": null
+  },
+  "s3.B1.cifar10": {
+   "backend": "pynq",
+   "params_key": "[\"power_log.py\", \"--backend\", \"pynq\", \"--data-dir\", \"/home/ubuntu/gos/data\", \"--bit\", \"/home/ubuntu/gos/bit/gos_250/gos_250.bit\", \"--write-mode\", \"elem\", \"--host-path\", \"fast\", \"--fast-store\", \"block\", \"--protocol\", \"--net\", \"cifar10\", \"--tag\", \"_cifar10\", \"--phase-s\", \"60\", \"--repeats\", \"3\", \"--rate-hz\", \"10\", \"--cpu-kind\", \"cpu_ort_int8\", \"--cpu-threads\", \"4\", \"--cpu-cores\", \"0-3\", \"--order\", \"random\", \"--order-seed\", \"1809043146\"]",
+   "duration_s": 1158.125,
+   "images": 0,
+   "fixed_s": 1200.0,
+   "rate_s": null
+  }
+ },
+ "order_seed": 1809043135,
+ "env_last": {
+  "paper_grade": true,
+  "pkg_manager_offenders": [],
+  "cpufreq_before": {
+   "root": "/sys/devices/system/cpu",
+   "fake": false,
+   "policies": {
+    "policy0": {
+     "affected_cpus": "0 1 2 3",
+     "scaling_governor": "performance",
+     "scaling_min_freq": "1333333",
+     "scaling_max_freq": "1333333",
+     "scaling_cur_freq": "1333333",
+     "cpuinfo_min_freq": "333333",
+     "cpuinfo_max_freq": "1333333",
+     "scaling_available_governors": "conservative ondemand userspace powersave performance schedutil",
+     "scaling_available_frequencies": "333333 444444 666666 1333333",
+     "scaling_driver": "cpufreq-dt"
+    }
+   },
+   "cpu_cur_freq_khz": {
+    "0": "1333333",
+    "1": "1333333",
+    "2": "1333333",
+    "3": "1333333"
+   }
+  },
+  "cpufreq_apply": {
+   "ok": true,
+   "errors": [],
+   "target_khz": 1333333,
+   "readback": {
+    "errors": [],
+    "governor": {
+     "policy0": "performance"
+    },
+    "policy_cur_freq_khz": {
+     "policy0": "1333333"
+    },
+    "cpu_cur_freq_khz": {
+     "0": "1333333",
+     "1": "1333333",
+     "2": "1333333",
+     "3": "1333333"
+    }
+   }
+  },
+  "cpu_freq_khz": 1333333,
+  "cpu_governor": "performance",
+  "meas_cores": "3",
+  "cpu1_cores": "3",
+  "cpun_cores": "0-3",
+  "housekeeping_cores": "0-2",
+  "orchestrator_pin": {
+   "requested": "0-2",
+   "readback": "0-2",
+   "ok": true,
+   "error": "",
+   "original": "0-3"
+  },
+  "die_temp": {
+   "source": "iio iio:device0 (ams)",
+   "channels_c": {
+    "ps_temp": 36.091,
+    "remote_temp": 36.215,
+    "pl_temp": 34.303
+   },
+   "max_c": 36.215
+  },
+  "fake_tree": false,
+  "paths": {
+   "sysfs_root": "/sys/devices/system/cpu",
+   "proc_root": "/proc",
+   "iio_root": "/sys/bus/iio/devices",
+   "hwmon_root": "/sys/class/hwmon",
+   "fake": false
+  },
+  "warnings": [],
+  "allow_non_paper_grade": false
+ }
+}

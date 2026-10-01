@@ -1,0 +1,32 @@
+{
+ "ok": true,
+ "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+ "clock_mhz": 249.997498,
+ "fell_back": true,
+ "reason": "fell back to 249.997 MHz: 299.997 MHz smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+ "attempts": [
+  {
+   "bit": "/home/ubuntu/gos/bit/gos_300/gos_300.bit",
+   "clock_mhz": 299.997009,
+   "bit_sha256": "2d40e2c8de2fb0183fffbccec529c92da67e4d964c05505d4178c4752d4ffeb5",
+   "start_utc": "2026-10-01T08:31:52+00:00",
+   "ok": false,
+   "reason": "smoke FAIL (returned False): pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+   "detail": "pre-flight failed: - could not open the pynq backend / overlay: GosError: pl_clk0 299.997009 MHz is not reachable on this board: source PLL 999.990 MHz (PL0_REF_CTRL SRCSEL 0), nearest 333.330000 MHz (div 3 x 1), tolerance +-0.1 MHz; pl_clk0 left at 199.998000 MHz",
+   "duration_s": 6.563
+  },
+  {
+   "bit": "/home/ubuntu/gos/bit/gos_250/gos_250.bit",
+   "clock_mhz": 249.997498,
+   "bit_sha256": "7b2dac6026acf6ae9e6d87f80a457fb07b6e56c167dd2a168593b2105c9e130e",
+   "start_utc": "2026-10-01T08:31:58+00:00",
+   "ok": true,
+   "reason": "smoke PASS",
+   "clock_readback_mhz": 249.9975,
+   "duration_s": 9.584
+  }
+ ],
+ "skipped": [],
+ "policy": "highest closed clock first; fall back down to 250 MHz; lower clocks never tried without the explicit option",
+ "decided_utc": "2026-10-01T08:32:08+00:00"
+}
