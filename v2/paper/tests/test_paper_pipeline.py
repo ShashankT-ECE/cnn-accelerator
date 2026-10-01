@@ -536,4 +536,7 @@ def test_real_board_results_generate_without_failures(tmp_path):
     pct = tex(out, "tab_percentiles")
     assert "spread" in pct and "DPU" in pct and pct.index("fast host path") < pct.index("safe host path")
     eff = tex(out, "tab_efficiency")
-    assert "MAC lane" in eff and "n/a" in eff or "TBD" in eff
+    assert "MAC lane" in eff
+    assert "no DPU per-DSP figure" in eff or "TBD" in eff            # DPU per-DSP rows dropped, stated in the notes
+    assert "DPU, runner only: GOPS / DSP" not in eff and "DPU, e2e: images/s / DSP" not in eff
+    assert "Lane clock" in eff and "pynqdpu.dpu.kv260_som" in eff or "TBD" in eff
