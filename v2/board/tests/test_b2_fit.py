@@ -129,3 +129,66 @@ def test_sweep_aborts_when_a_clock_is_not_reached(tmp_path, monkeypatch):
         B.main(["--backend", "model", "--allow-dirty", "--clock-mhz", "249.997498", "--max-mhz", "249.997498",
                 "--images", "2", "--window-s", "0.2", "--power-repeats", "1", "--sensor", "mock",
                 "--out-dir", str(tmp_path / "dryrun")])
+
+
+def test_fit_with_temp_recovers_known_coefficients():
+    f = np.array([100.0, 111.0, 125.0, 143.0, 167.0, 200.0, 250.0])
+    t = np.array([33.0, 36.0, 34.0, 38.0, 35.0, 37.0, 39.0])           # not collinear with f
+    y = 3.0 + 0.001 * f + 0.01 * (t - t.mean())
+    g = B.fit_with_temp(f, t, y)
+    assert g["a"] == pytest.approx(3.0) and g["k"] == pytest.approx(0.001) and g["c"] == pytest.approx(0.01)
+    assert g["dof"] == 4 and g["t"] == 2.776 and g["r2"] == pytest.approx(1.0)
+    assert g["t_mean"] == pytest.approx(t.mean()) and g["t_range"] == pytest.approx(6.0)
+    assert -1 <= g["corr"] <= 1
+
+
+def test_fit_with_temp_removes_a_pure_temperature_confound():
+    """Ascending sweep: T rises with f. Power depends on T only (k = 0). The plain fit reports k > 0,
+    the covariate fit k ~ 0 once T varies independently of f at all."""
+    f = np.array([100.0, 111.0, 125.0, 143.0, 167.0, 200.0, 250.0])
+    t = np.array([30.0, 33.0, 31.0, 34.0, 32.0, 35.0, 36.5])
+    y = 3.0 + 0.02 * (t - 30.0)
+    plain = B.fit_linear(f, y)
+    cov = B.fit_with_temp(f, t, y)
+    assert plain["k"] > 5e-5 and cov["k"] == pytest.approx(0.0, abs=1e-9) and cov["c"] == pytest.approx(0.02)
+
+
+def test_fit_with_temp_degenerate():
+    f = [100.0, 150.0, 200.0]
+    assert math.isnan(B.fit_with_temp(f, [30, 31, 32], [1, 2, 3])["k"])               # n < 4
+    assert math.isnan(B.fit_with_temp(f + [250.0], [30, 30, 30, 30], [1, 2, 3, 4])["k"])   # T constant
+
+
+def _summ_t(clk, temp):
+    rows = [{"row_kind": "repeat", "accel_p_run_w": "1.2", "accel_dp_w": "0.2", "accel_p_idle_w": "1.0",
+             "accel_temp_pl_c": f"{temp}", "accel_idle_temp_pl_c": f"{temp - 1}"}]
+    rows.append({**rows[0], "row_kind": "mean"})
+    return (clk, rows, f"s_{int(clk)}.csv")
+
+
+def test_fit_rows_add_temperature_basis_only_with_temps():
+    clks = (100, 140, 180, 220, 260)
+    temps = (30.0, 33.5, 31.0, 35.0, 32.0)
+    rows = B.fit_rows(B.fit_points([_summ_t(c, t) for c, t in zip(clks, temps)]), lambda q, b, n: {})
+    tr = [r for r in rows if r["basis"] == "per_clock_mean_temp"]
+    assert len(tr) == 3 and all(r["dof"] == 2 and r["temp_covariate"] for r in tr)
+    assert {r["temp_covariate"] for r in tr} == {"accel_temp_pl_c", "accel_idle_temp_pl_c"}
+    assert all(r["c_w_per_c"] != "" and r["corr_f_temp"] != "" and r["temp_range_c"] == "5.000" for r in tr)
+    assert len(rows) == 9
+    # no temperature columns -> only the 6 plain rows
+    assert len(B.fit_rows(B.fit_points([_summ(100, 0.2), _summ(200, 0.4), _summ(300, 0.6)]), lambda q, b, n: {})) == 6
+
+
+def test_dry_run_records_seeded_random_order(tmp_path):
+    def run(seed, order="random"):
+        out = tmp_path / "dryrun" / f"{seed}_{order}"
+        assert B.main(["--backend", "model", "--allow-dirty", "--clock-mhz", "249.997498", "--max-mhz", "249.997498",
+                       "--images", "2", "--window-s", "0.2", "--power-repeats", "1", "--sensor", "mock",
+                       "--order", order, "--order-seed", str(seed), "--out-dir", str(out)]) == 0
+        return list(csv.DictReader(open(out / "hw_b2_clock.csv")))
+    a, b, asc = run(11), run(11), run(11, "ascending")
+    assert [r["sweep_order"] for r in a] == [r["sweep_order"] for r in b]          # same seed, same order
+    assert a[0]["order_seed"] == "11" and sorted(int(r["sweep_pos"]) for r in a) == list(range(1, 8))
+    assert [float(r["clock_requested_mhz"]) for r in a] == sorted(float(r["clock_requested_mhz"]) for r in a)
+    assert a[0]["sweep_order"] != asc[0]["sweep_order"]
+    assert [int(r["sweep_pos"]) for r in asc] == list(range(1, 8))

@@ -846,6 +846,32 @@ def _f(x, nd=6):
     return "" if x is None or (isinstance(x, float) and math.isnan(x)) else f"{x:.{nd}f}"
 
 
+def _num_or_nan(v) -> float:
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return math.nan
+
+
+def _mean_or_nan(vals) -> float:
+    v = [_num_or_nan(x) for x in vals]
+    v = [x for x in v if x == x]
+    return sum(v) / len(v) if v else math.nan
+
+
+def die_temps(read=None) -> dict:
+    """Die temperatures (deg C) of the Zynq AMS (board_env.read_die_temp): {'pl','ps','remote'} or {}
+    when unavailable (laptop / dry run). The PL temperature is the leakage-relevant one."""
+    try:
+        if read is None:
+            import board_env
+            read = board_env.read_die_temp
+        ch = read().get("channels_c", {})
+    except Exception:
+        return {}
+    return {k: ch[n] for k, n in (("pl", "pl_temp"), ("ps", "ps_temp"), ("remote", "remote_temp")) if n in ch}
+
+
 def summarize(phases: list[dict], repeats: int, clock_mhz=None) -> list[dict]:
     """phases (in schedule order): dicts with repeat, phase, kind, mean_w, duration_s, images
     (accel optionally total_cyc_median). clock_mhz: pl_clk0 (read back) for t_PL = TOTAL_CYC / f.
@@ -875,7 +901,9 @@ def summarize(phases: list[dict], repeats: int, clock_mhz=None) -> list[dict]:
                         f"{kind}_dp_w": dp, f"{kind}_images": imgs,
                         f"{kind}_duration_s": run["duration_s"],
                         f"{kind}_time_per_image_s": tpi, f"{kind}_energy_per_image_j": e,
-                        f"{kind}_energy_per_image_mj": e * 1e3})
+                        f"{kind}_energy_per_image_mj": e * 1e3,
+                        f"{kind}_temp_pl_c": _num_or_nan(run.get("temp_pl_c")),
+                        f"{kind}_idle_temp_pl_c": _mean_or_nan([p.get("temp_pl_c") for p in ref])})
             if kind == "accel":
                 tc = run.get("total_cyc_median")
                 t_pl = (float(tc) / f_hz) if tc not in (None, "") and f_hz == f_hz else math.nan
@@ -902,7 +930,7 @@ def summarize(phases: list[dict], repeats: int, clock_mhz=None) -> list[dict]:
 
 NUM_SUMMARY = [f"{k}_{f}" for k in RUN_KINDS for f in
                ("p_idle_w", "p_run_w", "dp_w", "images", "duration_s", "time_per_image_s",
-                "energy_per_image_j", "energy_per_image_mj")] + [
+                "energy_per_image_j", "energy_per_image_mj", "temp_pl_c", "idle_temp_pl_c")] + [
     "accel_e_sys_mj", "accel_total_cyc", "accel_t_pl_s", "accel_e_comp_mj", "accel_duty",
     "accel_dp_net_w", "accel_e_sys_net_mj", "accel_e_comp_net_mj"]
 SENSOR_FIELDS = ["measurement", "rail", "sensor_backend", "sensor_device", "sensor_limits",
@@ -914,7 +942,9 @@ PHASE_FIELDS = SENSOR_FIELDS + ["repeat", "phase", "kind", "workload", "start_ut
                                 "phase_s", "images", "power_mean_w", "power_std_w", "n_samples",
                                 "phase_rate_hz", "phase_max_gap_s", "host_path", "total_cyc_median",
                                 "total_cyc_min", "total_cyc_max", "start_done_median_us",
-                                "pace_us", "pace_source", "phase_order", "order_seed"]
+                                "pace_us", "pace_source", "phase_order", "order_seed",
+                                "temp_pl_start_c", "temp_pl_end_c", "temp_ps_start_c",
+                                "temp_ps_end_c", "temp_remote_start_c", "temp_remote_end_c"]
 SUMMARY_FIELDS = SENSOR_FIELDS + ["row_kind", "repeat", "n_repeats", "p_idle_rule", "energy_rule",
                                   "host_path", "accel_p_idle_ref", "control_p_idle_ref",
                                   "cpu_p_idle_ref", "accel_workload", "control_workload",
@@ -1005,7 +1035,7 @@ def run_power_protocol(ctx, net: str, cpu_fn=None, *, accel_fn=None, sensor="aut
                        clock_mhz=None, accel_label: str = "", cpu_label: str = "",
                        label: str = "B1", sensor_kw: dict | None = None, control: bool = False,
                        control_fn=None, control_label: str = "",
-                       order_seed: int | None = None) -> dict:
+                       order_seed: int | None = None, temp_fn=None) -> dict:
     """Run the SOM-rail power protocol and write the three CSVs. Returns a summary dict.
 
     ctx       board_common.RunContext (or SensorOnlyContext): provenance, source, out_dir
@@ -1018,6 +1048,9 @@ def run_power_protocol(ctx, net: str, cpu_fn=None, *, accel_fn=None, sensor="aut
               real sensors in order on hardware, the mock in a dry run (never mixed)
     durations {'idle','accel','cpu'} seconds (default phase_s each); repeats; rate_hz
     prefix/tag  output names <prefix>_{samples,phases,summary}<tag>.csv
+    temp_fn   fn() -> {'pl','ps','remote'} die temperatures (deg C); default die_temps() on hardware,
+              none in a dry run. Read at the start and end of every phase (phases CSV temp_*_c columns;
+              summary accel_temp_pl_c / accel_idle_temp_pl_c = mean of start and end).
     """
     dry = ctx.source != bc.SOURCE_HW
     if not isinstance(sensor, Sensor):
@@ -1071,9 +1104,13 @@ def run_power_protocol(ctx, net: str, cpu_fn=None, *, accel_fn=None, sensor="aut
           f"{len(sch)} phases, {tot:.0f} s; source={ctx.source}")
     if dry:
         print(f"[{label} power] DRY RUN: mock sensor + model accelerator — NOT measurements.")
+    if temp_fn is None:
+        temp_fn = (lambda: {}) if dry else die_temps
+    temp_rec: list[tuple[dict, dict]] = []
     logger = PowerLogger(sensor, rate_hz)
     with logger:
         for p in sch:
+            tmp0 = temp_fn()
             extra = (f"{label} {LABEL} phase={p['phase']} repeat={p['repeat']}/{repeats} "
                      f"net={net if p['kind'] != 'idle' else '-'} window={p['dur']:g}s")
             s0 = logger.begin(p["phase"], extra)
@@ -1082,6 +1119,7 @@ def run_power_protocol(ctx, net: str, cpu_fn=None, *, accel_fn=None, sensor="aut
             imgs = info.pop("images")
             w = logger.end(p["phase"], s0, f"{extra} images={imgs}", repeat=p["repeat"],
                            kind=p["kind"], images=imgs, extras=info)
+            temp_rec.append((tmp0, temp_fn()))
             st = _phase_stats(logger, w)
             print(f"  [{label} power] {p['phase']}#{p['repeat']}: {LABEL} mean "
                   f"{_f(st['mean_w'], 4) or 'n/a'} W (std {_f(st['std_w'], 4) or 'n/a'}, "
@@ -1090,12 +1128,15 @@ def run_power_protocol(ctx, net: str, cpu_fn=None, *, accel_fn=None, sensor="aut
     base = _sensor_cols(sensor, logger, ov)
     starved = undersampled_phases(logger)
     phases, prow = [], []
-    for w in logger.windows:
+    for w, (tmp0, tmp1) in zip(logger.windows, temp_rec):
         st = _phase_stats(logger, w)
         ex = w.get("extras", {})
+        tcols = {f"temp_{k}_{e}_c": _f(float(t[k]), 3) for k in ("pl", "ps", "remote")
+                 for e, t in (("start", tmp0), ("end", tmp1)) if k in t}
         phases.append({"repeat": w["repeat"], "phase": w["phase"], "kind": w["kind"],
                        "mean_w": st["mean_w"], "duration_s": st["duration_s"],
-                       "images": w["images"], **ex})
+                       "images": w["images"], **ex,
+                       "temp_pl_c": _mean_or_nan([tmp0.get("pl"), tmp1.get("pl")])})
         r = ctx.meta(net, "all", st["duration_s"],
                      w["images"], clock_mhz=clk)
         r.update(base, repeat=w["repeat"], phase=w["phase"], kind=w["kind"],
@@ -1107,7 +1148,7 @@ def run_power_protocol(ctx, net: str, cpu_fn=None, *, accel_fn=None, sensor="aut
                  power_mean_w=_f(st["mean_w"]), power_std_w=_f(st["std_w"]), n_samples=st["n"],
                  phase_rate_hz=_f(st["rate_hz"], 3), phase_max_gap_s=_f(st["max_gap_s"], 4),
                  host_path=host_path if w["kind"] in ("accel", "control") else "", **order_cols,
-                 **{k: (_f(v, 3) if isinstance(v, float) else v) for k, v in ex.items()
+                 **tcols, **{k: (_f(v, 3) if isinstance(v, float) else v) for k, v in ex.items()
                     if k in PHASE_FIELDS})
         prow.append(r)
     summ = summarize(phases, repeats, f_comp)
@@ -1167,15 +1208,20 @@ def run_power_protocol(ctx, net: str, cpu_fn=None, *, accel_fn=None, sensor="aut
 
 
 def sample_only(ctx, seconds: float, sensor: Sensor, rate_hz: float = DEFAULT_RATE_HZ,
-                prefix: str = PREFIX_B1, tag: str = "_sensorcheck") -> dict:
-    """Sensor check: one 'sample_only' window; writes <prefix>_samples/phases<tag>.csv."""
+                prefix: str = PREFIX_B1, tag: str = "_sensorcheck", temp_fn=None) -> dict:
+    """Sensor check: one 'sample_only' window; writes <prefix>_samples/phases<tag>.csv
+    (die temperatures at the start and end of the window in the phases CSV, hardware runs)."""
     _check_source(ctx, sensor)
     out = ctx.out_dir
+    if temp_fn is None:
+        temp_fn = (lambda: {}) if ctx.source != bc.SOURCE_HW else die_temps
+    tmp0 = temp_fn()
     logger = PowerLogger(sensor, rate_hz)
     with logger:
         s0 = logger.begin("sample_only", f"sensor check {LABEL} {seconds:g}s")
         idle_until(s0["mono"] + seconds)
         w = logger.end("sample_only", s0, "sensor check", repeat=0, kind="idle", images=0)
+    tmp1 = temp_fn()
     ov = logger.overall()
     base = _sensor_cols(sensor, logger, ov)
     st = _phase_stats(logger, w)
@@ -1185,7 +1231,9 @@ def sample_only(ctx, seconds: float, sensor: Sensor, rate_hz: float = DEFAULT_RA
              stop_local=w["stop"]["local"], start_epoch=f"{w['start']['epoch']:.3f}",
              stop_epoch=f"{w['stop']['epoch']:.3f}", phase_s=f"{st['duration_s']:.3f}", images=0,
              power_mean_w=_f(st["mean_w"]), power_std_w=_f(st["std_w"]), n_samples=st["n"],
-             phase_rate_hz=_f(st["rate_hz"], 3), phase_max_gap_s=_f(st["max_gap_s"], 4))
+             phase_rate_hz=_f(st["rate_hz"], 3), phase_max_gap_s=_f(st["max_gap_s"], 4),
+             **{f"temp_{k}_{e}_c": _f(float(t[k]), 3) for k in ("pl", "ps", "remote")
+                for e, t in (("start", tmp0), ("end", tmp1)) if k in t})
     bc.write_csv(out / f"{prefix}_samples{tag}.csv",
                  _sample_rows(ctx, logger, sensor, "", "", base), SAMPLE_FIELDS, ctx.source)
     bc.write_csv(out / f"{prefix}_phases{tag}.csv", [r], PHASE_FIELDS, ctx.source)

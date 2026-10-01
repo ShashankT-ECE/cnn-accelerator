@@ -32,6 +32,15 @@ P_accel, for dP_accel = P_accel - P_idle, and for P_idle; P_static (W), k (W/MHz
 errors, 95 % confidence intervals (Student t, n-2 dof), R^2, n points; a supplementary fit on the
 per-repeat values (basis per_repeat). Label "SOM-rail power (INA260)". -> hw_b2_fit.csv.
 Recompute the fit from existing summary CSVs (no device): --fit-only --in-dir <dir>.
+Clock ORDER (2026-10-01): the sweep visits the clocks in a seeded random order (--order-seed, default a
+fresh seed recorded in hw_b2_clock.csv as order_seed / sweep_pos; --order ascending restores the old
+100 -> 250 MHz order). The first run (ascending) warmed the die 30.6 -> 34.6 C while f rose, so k was
+confounded with temperature. Every phase logs the PL / PS / remote die temperature at its start and
+end (power_log phases CSV); the summary rows carry accel_temp_pl_c and accel_idle_temp_pl_c.
+Temperature covariate: besides P = P_static + k*f the fit also reports
+P = P_static + k*f + c*(T_PL - mean(T_PL)) (basis per_clock_mean_temp; T_PL = mean PL die temperature of
+the quantity's phases, c in W/degC; P_static is then the f -> 0 value at the mean sweep temperature;
+n - 3 dof, so >= 4 clocks; corr_f_temp = correlation of f and T over the clocks).
 Dry run only: --mock-slope-w-per-mhz S (+ --mock-noise-w) makes the mock sensor clock-dependent
 (synthetic levels, NOT measurements) so that the fit path is exercised.
 Writes hw_b2_clock.csv (one row per clock, incl. the INA260 mean/std over repeats),
@@ -49,6 +58,7 @@ for _k in ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS"):
 import argparse  # noqa: E402
 import csv  # noqa: E402
 import math  # noqa: E402
+import random  # noqa: E402
 import time  # noqa: E402
 from pathlib import Path  # noqa: E402
 
@@ -56,6 +66,7 @@ import board_common as bc  # noqa: E402
 import gos_driver as D  # noqa: E402
 import exp_a2_a3_cycles as a2  # noqa: E402
 import power_log as pl  # noqa: E402
+import stats  # noqa: E402
 
 FIELDS = ["clock_requested_mhz", "clock_readback_mhz", "clock_readback_equal", "max_closed_mhz", "images",
           "model_total_cycles", "hw_total_cycles", "hw_min", "hw_max", "cycles_equal_model",
@@ -64,16 +75,24 @@ FIELDS = ["clock_requested_mhz", "clock_readback_mhz", "clock_readback_equal", "
           "ina260_dp_w", "ina260_dp_std_w", "ina260_time_per_image_s",
           "ina260_energy_per_image_mj", "ina260_energy_per_image_std_mj", "ina260_rate_achieved_hz",
           "ina260_max_gap_s", "ina260_summary_csv", "model_layer_cycles", "hw_layer_cycles",
-          "layers_equal_model", "cycles_identical_across_clocks", "cycle_check", "skipped_reason"]
+          "layers_equal_model", "cycles_identical_across_clocks", "cycle_check", "skipped_reason",
+          "sweep_order", "order_seed", "sweep_pos", "temp_pl_idle_c", "temp_pl_accel_c"]
 CYC_FIELDS = ["clock_requested_mhz", "clock_readback_mhz", "images", "model_cycles", "hw_cycles",
               "hw_min", "hw_max", "hw_distinct", "hw_images_equal_model", "clocks_compared",
               "identical_across_clocks", "cycle_check"]
 FIT_FIELDS = ["power_label", "quantity", "basis", "model", "fit_method", "n_points", "dof",
               "clocks_mhz", "p_static_w", "p_static_se_w", "p_static_ci95_lo_w", "p_static_ci95_hi_w",
               "k_w_per_mhz", "k_se_w_per_mhz", "k_ci95_lo_w_per_mhz", "k_ci95_hi_w_per_mhz",
-              "k_mw_per_mhz", "r2", "resid_std_w", "t_crit_95", "intercept_meaning", "inputs", "note"]
+              "k_mw_per_mhz", "r2", "resid_std_w", "t_crit_95", "intercept_meaning", "inputs", "note",
+              "temp_covariate", "c_w_per_c", "c_se_w_per_c", "c_ci95_lo_w_per_c", "c_ci95_hi_w_per_c",
+              "temp_mean_c", "temp_range_c", "corr_f_temp"]
 FIT_METHOD = ("ordinary least squares y = P_static + k*f (numpy lstsq); f = read-back pl_clk0 (MHz); "
               "SE from the residual variance (n-2 dof); 95 % CI = estimate +- t(0.975, n-2) * SE")
+# quantity -> summary column of the PL die temperature of the phases that quantity is measured in
+FIT_TEMP_COL = {"p_accel_w": "accel_temp_pl_c", "dp_accel_w": "accel_temp_pl_c", "p_idle_w": "accel_idle_temp_pl_c"}
+FIT_METHOD_T = ("ordinary least squares y = P_static + k*f + c*(T_PL - mean T_PL) (numpy lstsq); f = read-back "
+                "pl_clk0 (MHz); T_PL = mean PL die temperature of the phases of the quantity (AMS pl_temp); "
+                "SE from the residual variance (n-3 dof); 95 % CI = estimate +- t(0.975, n-3) * SE")
 FIT_QUANTITIES = {   # quantity -> (summary column, meaning of the intercept)
     "p_accel_w": ("accel_p_run_w", "P_static = extrapolated SOM-rail power at f -> 0 with the accelerator loop running"),
     "dp_accel_w": ("accel_dp_w", "intercept of dP_accel = P_accel - P_idle (clock-independent part of the loop's extra power)"),
@@ -123,6 +142,38 @@ def fit_linear(xs, ys) -> dict:
     return out
 
 
+def fit_with_temp(xs, ts, ys) -> dict:
+    """OLS y = a + k*f + c*(T - mean T) (n - 3 dof). Returns a, k, c with SEs / 95 % CIs, R^2, n, dof,
+    the mean / range of T and corr(f, T). NaN where undefined (n < 4, or f / T constant)."""
+    import numpy as np
+    f = np.asarray(xs, dtype=np.float64)
+    t = np.asarray(ts, dtype=np.float64)
+    y = np.asarray(ys, dtype=np.float64)
+    n = int(f.size)
+    nan = math.nan
+    out = {k: nan for k in ("a", "k", "c", "a_se", "k_se", "c_se", "a_lo", "a_hi", "k_lo", "k_hi",
+                            "c_lo", "c_hi", "r2", "resid_std", "t", "t_mean", "t_range", "corr")}
+    out.update(n=n, dof=n - 3)
+    if n < 4 or np.ptp(f) == 0 or np.ptp(t) == 0:
+        return out
+    tc = t - t.mean()
+    X = np.column_stack([np.ones(n), f, tc])
+    beta, *_ = np.linalg.lstsq(X, y, rcond=None)
+    res = y - X @ beta
+    sse = float((res ** 2).sum())
+    sst = float(((y - y.mean()) ** 2).sum())
+    s2 = sse / (n - 3)
+    cov = s2 * np.linalg.inv(X.T @ X)
+    se = np.sqrt(np.diag(cov))
+    tcr = t_crit_95(n - 3)
+    out.update(a=float(beta[0]), k=float(beta[1]), c=float(beta[2]), a_se=float(se[0]), k_se=float(se[1]),
+               c_se=float(se[2]), t=tcr, r2=(1.0 - sse / sst) if sst > 0 else nan, resid_std=math.sqrt(s2),
+               t_mean=float(t.mean()), t_range=float(np.ptp(t)), corr=float(np.corrcoef(f, t)[0, 1]))
+    for key, i in (("a", 0), ("k", 1), ("c", 2)):
+        out[f"{key}_lo"], out[f"{key}_hi"] = float(beta[i] - tcr * se[i]), float(beta[i] + tcr * se[i])
+    return out
+
+
 def fit_points(summaries: list[tuple[float, list[dict], str]]) -> dict:
     """summaries: [(read-back clock MHz, summary rows of that clock, file name)] ->
     {(quantity, basis): (xs, ys, files)}."""
@@ -139,6 +190,9 @@ def fit_points(summaries: list[tuple[float, list[dict], str]]) -> dict:
                     xs, ys, fs = pts.setdefault((q, basis), ([], [], []))
                     xs.append(float(clk))
                     ys.append(v)
+                    tv = r.get(FIT_TEMP_COL[q])
+                    pts.setdefault((q, basis, "T"), []).append(
+                        float(tv) if tv not in ("", None) else math.nan)
                     if fname not in fs:
                         fs.append(fname)
     return pts
@@ -169,6 +223,31 @@ def fit_rows(pts: dict, base_meta) -> list[dict]:
                        k_mw_per_mhz=g(f["k"] * 1e3 if not math.isnan(f["k"]) else math.nan, 6),
                        r2=g(f["r2"]), resid_std_w=g(f["resid_std"]), t_crit_95=g(f["t"], 3),
                        intercept_meaning=FIT_QUANTITIES[q][1], inputs=" ".join(files), note=note)
+            rows.append(row)
+        xs, ys, files = pts.get((q, "per_clock_mean"), ([], [], []))
+        ts = pts.get((q, "per_clock_mean", "T"), [])
+        ok = [i for i, t in enumerate(ts) if not math.isnan(t)]
+        if len(ok) == len(xs) and xs:
+            g3 = fit_with_temp(xs, ts, ys)
+            note = ("" if g3["n"] > 3 and not math.isnan(g3["k"]) else
+                    "fewer than 4 clocks or constant f / T: no covariate fit")
+            row = base_meta(q, "per_clock_mean_temp", len(xs))
+            row.update(power_label=pl.LABEL, quantity=q, basis="per_clock_mean_temp",
+                       model="P = P_static + k*f + c*(T_PL - mean T_PL)",
+                       fit_method=FIT_METHOD_T, n_points=g3["n"], dof=g3["dof"] if g3["n"] >= 4 else "",
+                       clocks_mhz=" ".join(f"{c:.6f}" for c in sorted(set(xs))),
+                       p_static_w=g(g3["a"]), p_static_se_w=g(g3["a_se"]),
+                       p_static_ci95_lo_w=g(g3["a_lo"]), p_static_ci95_hi_w=g(g3["a_hi"]),
+                       k_w_per_mhz=g(g3["k"], 9), k_se_w_per_mhz=g(g3["k_se"], 9),
+                       k_ci95_lo_w_per_mhz=g(g3["k_lo"], 9), k_ci95_hi_w_per_mhz=g(g3["k_hi"], 9),
+                       k_mw_per_mhz=g(g3["k"] * 1e3 if not math.isnan(g3["k"]) else math.nan, 6),
+                       r2=g(g3["r2"]), resid_std_w=g(g3["resid_std"]), t_crit_95=g(g3["t"], 3),
+                       intercept_meaning=FIT_QUANTITIES[q][1] + " (at the mean sweep PL temperature)",
+                       inputs=" ".join(files), note=note, temp_covariate=FIT_TEMP_COL[q],
+                       c_w_per_c=g(g3["c"], 9), c_se_w_per_c=g(g3["c_se"], 9),
+                       c_ci95_lo_w_per_c=g(g3["c_lo"], 9), c_ci95_hi_w_per_c=g(g3["c_hi"], 9),
+                       temp_mean_c=g(g3["t_mean"], 3), temp_range_c=g(g3["t_range"], 3),
+                       corr_f_temp=g(g3["corr"], 3))
             rows.append(row)
     return rows
 
@@ -259,6 +338,10 @@ def main(argv=None) -> int:
                     help="default: board_common.b2_sweep_clocks(closed clock)")
     ap.add_argument("--max-mhz", type=float, default=None)
     ap.add_argument("--net", default="lenet5", choices=bc.NETS)
+    ap.add_argument("--order", default="random", choices=("random", "ascending"),
+                    help="clock visiting order: seeded random (default) or ascending (the old order)")
+    ap.add_argument("--order-seed", type=int, default=None,
+                    help="seed of the random clock order (default: fresh seed, recorded in the CSV)")
     ap.add_argument("--images", type=int, default=100)
     ap.add_argument("--window-s", type=float, default=60.0)
     ap.add_argument("--gap-s", type=float, default=10.0)
@@ -289,7 +372,13 @@ def main(argv=None) -> int:
     max_mhz = float(max_mhz)
     if a.clocks is None:
         a.clocks = bc.b2_sweep_clocks(max_mhz)
-    print(f"[B2] sweep {a.clocks} MHz (closed clock {max_mhz} MHz)")
+    order_seed = a.order_seed if a.order_seed is not None else stats.new_seed()
+    visit = list(a.clocks)
+    if a.order == "random":
+        random.Random(order_seed).shuffle(visit)
+    sweep_order = " ".join(f"{c:g}" for c in visit)
+    print(f"[B2] sweep {a.clocks} MHz (closed clock {max_mhz} MHz); visiting order ({a.order}, "
+          f"seed {order_seed}): {sweep_order}")
     dry = ctx.source != bc.SOURCE_HW
     try:
         ina, plog = pl.discover(a.sensor, allow_hw=not dry, allow_mock=dry)
@@ -306,13 +395,14 @@ def main(argv=None) -> int:
     per_clock, summaries = [], []
     ok = True
     try:
-        for req in a.clocks:
+        for pos, req in enumerate(visit, 1):
             row = None
             if req > max_mhz + bc.FCLK_SET_TOL_MHZ:
                 print(f"[B2] SKIP {req:g} MHz: above the closed clock {max_mhz} MHz")
                 row = ctx.meta(a.net, "all", "", 0, clock_mhz="")
                 row.update(clock_requested_mhz=req, max_closed_mhz=max_mhz,
-                           skipped_reason=f"above closed clock {max_mhz} MHz")
+                           skipped_reason=f"above closed clock {max_mhz} MHz",
+                           sweep_order=sweep_order, order_seed=order_seed, sweep_pos=pos)
                 rows.append(row)
                 continue
             try:
@@ -374,7 +464,10 @@ def main(argv=None) -> int:
                        ina260_summary_csv=Path(res["files"]["summary"]).name,
                        model_layer_cycles=",".join(str(x["model_cycles"]) for x in crows[:-1]),
                        hw_layer_cycles=",".join(str(x["hw_cycles"]) for x in crows[:-1]),
-                       layers_equal_model=all(x["hw_images_equal_model"] == x["images"] for x in crows))
+                       layers_equal_model=all(x["hw_images_equal_model"] == x["images"] for x in crows),
+                       sweep_order=sweep_order, order_seed=order_seed, sweep_pos=pos,
+                       temp_pl_idle_c=f(mean.get("accel_idle_temp_pl_c"), 3),
+                       temp_pl_accel_c=f(mean.get("accel_temp_pl_c"), 3))
             rows.append(row)
     finally:
         try:
@@ -382,6 +475,9 @@ def main(argv=None) -> int:
             print(f"[B2] restored pl_clk0 to {back:.6f} MHz (was {clk0:.6f})")
         except D.GosError as e:       # the next overlay load sets and verifies the clock anyway (D19)
             print(f"[B2] WARNING: pl_clk0 not restored to {clk0:.6f} MHz: {e}")
+    per_clock.sort(key=lambda x: x[0])           # reports in ascending clock order whatever the visiting order
+    summaries.sort(key=lambda x: x[0])
+    rows.sort(key=lambda r: float(r["clock_requested_mhz"]))
     cyc, per_req, ident_ok = cycle_identity(per_clock)
     ok &= ident_ok
     for r in rows:
