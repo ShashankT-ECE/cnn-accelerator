@@ -1245,7 +1245,8 @@ def results_dir_for(source: str, results_dir, index: int) -> Path:
     return root
 
 
-def login_check(rd: Path, since_utc: str, say, fake: bool = False, journal_text: str | None = None) -> list:
+def login_check(rd: Path, since_utc: str, say, fake: bool = False, journal_text: str | None = None,
+                units_text: str | None = None) -> list:
     """After the run: every ssh login since the invocation started that fell inside an INA260 power
     phase or coincides with a sample burst is flagged (hygiene rule: no new login during a phase).
     Informational: the flagged phases are listed in the session log; re-run them if the burst matters."""
@@ -1263,7 +1264,18 @@ def login_check(rd: Path, since_utc: str, say, fake: bool = False, journal_text:
     say(f"[session] ssh login check: {len(logins)} login(s) since {since_utc}, {len(found)} flagged")
     for f in found:
         say("  FLAG " + login_spikes.fmt(f))
-    return found
+    try:                      # system activity (daily apt upgrade, PackageKit): a phase overlapping it is suspect
+        utext = units_text if units_text is not None else login_spikes.fetch_units(since_utc.replace("T", " ")[:19])
+        wins = login_spikes.service_windows(utext)
+    except Exception as e:
+        say(f"[session] system-activity check skipped: {type(e).__name__}: {e}")
+        wins = []
+    sysf = login_spikes.analyse_windows(login_spikes.read_phases(rd), wins)
+    say(f"[session] system-activity check (apt/PackageKit units): {len(wins)} window(s) since {since_utc}, "
+        f"{len(sysf)} power phase(s) overlap")
+    for f in sysf:
+        say("  FLAG " + login_spikes.fmt_window(f))
+    return found + sysf
 
 
 def main(argv=None, open_backend=open_backend_default, verify_data=bc.verify_manifest,

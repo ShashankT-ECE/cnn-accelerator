@@ -70,6 +70,13 @@ phase runs. `run_sessions.py` ends with an "ssh login check" (journalctl `_COMM=
 the invocation -> `logs/ssh_logins_<ts>.txt`) that flags every login inside a power phase or followed by a
 sample burst within 10 s; `login_spikes.py --results-dir R --journal-file F` runs the same check offline.
 
+Also stop the daily apt jobs for the whole measurement day: `sudo systemctl stop apt-daily.timer
+apt-daily-upgrade.timer` (not persistent: a reboot restores them). On 2026-10-01 06:34:59 UTC the daily
+unattended upgrade (3 min 25 s CPU, apt transactions 06:35-06:40, libssl/openssl among the upgraded packages) ran
+inside a B2 sweep and raised the SOM-rail power by up to 0.2 W with sd 0.13-0.22 W for ~6 min; the pre-flight
+guard only looks at step start. The session-end check now also reports every power phase that overlaps an
+apt-daily / apt-daily-upgrade / PackageKit / unattended-upgrades unit window.
+
 ### On the board: one command per session (`ssh ubuntu@<board-ip>`, `cd ~/gos`)
 
 Run inside `tmux` (an ssh drop then does not stop the run; if the orchestrator does receive

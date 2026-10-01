@@ -575,3 +575,23 @@ def test_idle_reference_refused_when_the_pl_was_loaded_this_boot(tmp_path):
     assert RS.run_idle_ref(a, tmp_path, {"paper_grade": True, "cpu_governor": "", "cpu_freq_khz": ""},
                            out.append, kmsg_text=loaded) == []
     assert any("REFUSED" in m and "1 bitstream load" in m for m in out)
+
+
+def test_system_activity_windows_flag_overlapping_phases(tmp_path):
+    import login_spikes as LS
+    t0 = 1_790_000_000.0
+    _samples_csv(tmp_path / "hw_x_power_ina260_samples_a.csv", t0, [("1", "accel", None), ("1", "idle", None)])
+    iso = lambda t: __import__("datetime").datetime.fromtimestamp(t, __import__("datetime").timezone.utc).strftime(
+        "%Y-%m-%dT%H:%M:%S+0000")
+    j = (f"{iso(t0 + 70)} kria systemd[1]: Starting Daily apt upgrade and clean activities...\n"
+         f"{iso(t0 + 100)} kria systemd[1]: Finished Daily apt upgrade and clean activities.\n"
+         f"{iso(t0 + 200)} kria systemd[1]: Starting Refresh fwupd metadata.\n")           # not apt/PackageKit
+    w = LS.service_windows(j)
+    assert w == [(t0 + 70, t0 + 100)]
+    f = LS.analyse_windows(LS.read_phases(tmp_path), w)
+    assert [(x["phase"], round(x["overlap_s"])) for x in f] == [("idle", 30)]
+    out = []
+    rd = tmp_path / "dryrun_r"; rd.mkdir()
+    _samples_csv(rd / "hw_x_power_ina260_samples_a.csv", t0, [("1", "accel", None), ("1", "idle", None)])
+    found = RS.login_check(rd, "2026-09-26T00:00:00+00:00", out.append, journal_text="", units_text=j)
+    assert any("system-activity check" in m and "1 power phase" in m for m in out) and len(found) == 1

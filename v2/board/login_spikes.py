@@ -119,6 +119,63 @@ def fmt(f: dict) -> str:
     return s
 
 
+_UNIT = re.compile(r"systemd\[1\]: (Starting|Finished|Failed to start) (.+?)(?:\.\.\.|\.)?$")
+
+
+def service_windows(text: str, pattern: str = r"apt|PackageKit|unattended") -> list[tuple[float, float]]:
+    """(start, end) epoch pairs of systemd units whose description matches `pattern`, from journal
+    lines `Starting X...` ... `Finished X.` (short-iso format). An unterminated start ends at the last
+    line of the text. Used for the daily apt upgrade (apt-daily-upgrade.service) that raised the SOM-rail
+    power and its noise for 5.6 minutes in the 2026-10-01 B2 run."""
+    out, open_, last = [], {}, None
+    for line in text.splitlines():
+        m = _ISO.match(line)
+        if not m:
+            continue
+        t = datetime.fromisoformat(m.group(1) + f"{m.group(2)}:{m.group(3) or '00'}").timestamp()
+        last = t
+        u = _UNIT.search(line.rstrip())
+        if not u or not re.search(pattern, u.group(2), re.I):
+            continue
+        if u.group(1) == "Starting":
+            open_[u.group(2)] = t
+        elif u.group(2) in open_:
+            out.append((open_.pop(u.group(2)), t))
+    out += [(t0, last) for t0 in open_.values() if last]
+    return sorted(out)
+
+
+def analyse_windows(phases: dict, windows: list[tuple[float, float]]) -> list[dict]:
+    """Power phases overlapping a system-activity window (apt upgrade etc.)."""
+    found = []
+    merged: list[list[float]] = []
+    for a, b in sorted(windows):                      # overlapping windows count once
+        if merged and a <= merged[-1][1]:
+            merged[-1][1] = max(merged[-1][1], b)
+        else:
+            merged.append([a, b])
+    for (fname, rep, phase), s in sorted(phases.items()):
+        t0, t1 = min(t for t, _ in s), max(t for t, _ in s)
+        for a, b in merged:
+            if a <= t1 and b >= t0:
+                found.append(dict(file=fname, repeat=rep, phase=phase, win=(a, b), overlap_s=min(b, t1) - max(a, t0)))
+    return found
+
+
+def fmt_window(f: dict) -> str:
+    ts = lambda t: datetime.fromtimestamp(t, timezone.utc).strftime("%H:%M:%S")
+    return (f"{f['file']} rep{f['repeat']} {f['phase']}: overlaps system activity {ts(f['win'][0])}-"
+            f"{ts(f['win'][1])} UTC by {f['overlap_s']:.0f} s")
+
+
+def fetch_units(since: str, until: str | None = None) -> str:
+    cmd = ["journalctl", "-u", "apt-daily.service", "-u", "apt-daily-upgrade.service", "-u", "packagekit.service",
+           "-u", "unattended-upgrades.service", "--since", since, "--output=short-iso", "--no-pager"]
+    if until:
+        cmd += ["--until", until]
+    return subprocess.run(cmd, capture_output=True, text=True, check=True).stdout
+
+
 def fetch_journal(since: str, until: str | None) -> str:
     cmd = ["journalctl", "_COMM=sshd", "--since", since, "--output=short-iso", "--no-pager"]
     if until:
