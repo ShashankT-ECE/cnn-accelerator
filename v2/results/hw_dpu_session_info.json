@@ -1,6 +1,6 @@
 {
  "source": "hw",
- "utc": "2026-09-30T19:08:59+00:00",
+ "utc": "2026-10-01T05:59:08+00:00",
  "argv": [
   "/home/ubuntu/gos/dpu/dpu_session.py",
   "--data-dir",
@@ -35,8 +35,8 @@
   "allow_overlay_mismatch": false
  },
  "dpu_info": {
-  "created_utc": "2026-09-30T17:01:04+00:00",
-  "git_commit": "7ef1572bbccc9cd239e8c417c54babae32f4c13a",
+  "created_utc": "2026-10-01T05:22:08+00:00",
+  "git_commit": "28d0602987cf1c482a73dbfa656d040059df0e26",
   "git_dirty": false,
   "vitis_ai_version": "2.5.0",
   "docker_image": "xilinx/vitis-ai-cpu:2.5.0",
