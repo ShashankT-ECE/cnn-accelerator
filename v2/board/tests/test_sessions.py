@@ -512,3 +512,55 @@ def test_archive_everything_honours_keep_for_result_files(tmp_path):
     assert all(p.exists() for p in keep)                  # kept files stay in results/
     assert not (rd / "hw_old.csv").exists()               # everything else is archived
     assert (ar.root / "hw_old.csv").exists()
+
+
+def _samples_csv(path, start, phases):
+    import csv as _csv
+    with open(path, "w", newline="") as fh:
+        w = _csv.writer(fh)
+        w.writerow(["repeat", "phase", "t_epoch", "power_w"])
+        t = start
+        for rep, phase, spike_at in phases:
+            for i in range(600):
+                p = 3.30 + (0.4 if spike_at is not None and spike_at <= i < spike_at + 5 else 0.0)
+                w.writerow([rep, phase, f"{t:.3f}", f"{p:.3f}"])
+                t += 0.1
+        w.writerow(["", "", f"{t:.3f}", "9.9"])        # inter-phase filler row is ignored
+
+
+def test_login_spikes_flags_burst_after_login_and_login_in_phase(tmp_path):
+    import login_spikes as LS
+    t0 = 1_790_000_000.0
+    # phase 1 has a burst at +10.0 s (sample 100), phase 2 is clean
+    _samples_csv(tmp_path / "hw_x_power_ina260_samples_a.csv", t0, [("1", "accel", 100), ("1", "idle", None)])
+    iso = lambda t: __import__("datetime").datetime.fromtimestamp(t, __import__("datetime").timezone.utc).strftime(
+        "%Y-%m-%dT%H:%M:%S+0000")
+    journal = (f"{iso(t0 + 9.5)} kria sshd[1]: Accepted publickey for ubuntu from 1.2.3.4\n"      # -> burst
+               f"{iso(t0 + 70.0)} kria sshd[2]: Accepted publickey for ubuntu from 1.2.3.4\n"     # in phase 2, no burst
+               f"{iso(t0 + 500.0)} kria sshd[3]: Accepted publickey for ubuntu from 1.2.3.4\n"    # outside every phase
+               f"{iso(t0 + 20.0)} kria sshd[4]: Failed password for x\n")                         # not a login
+    logins = LS.parse_logins(journal)
+    assert len(logins) == 3
+    found = LS.analyse(LS.read_phases(tmp_path), logins)
+    kinds = [(f["phase"], f["kind"]) for f in found]
+    assert ("accel", "spike") in kinds and ("idle", "in_phase") in kinds
+    assert not any(f["login"] == logins[2] for f in found)
+    assert LS.main(["--results-dir", str(tmp_path), "--journal-file", _w(tmp_path, journal)]) == 1
+
+
+def _w(tmp_path, text):
+    p = tmp_path / "journal.txt"
+    p.write_text(text)
+    return str(p)
+
+
+def test_login_check_writes_log_and_reports(tmp_path):
+    t0 = 1_790_000_000.0
+    rd = tmp_path / "dryrun_results"
+    rd.mkdir()
+    _samples_csv(rd / "hw_x_power_ina260_samples_a.csv", t0, [("1", "accel", None)])
+    out = []
+    journal = "2026-09-26T00:00:00+0000 kria sshd[1]: Accepted publickey for ubuntu from 1.2.3.4\n"
+    found = RS.login_check(rd, "2026-09-26T00:00:00+00:00", out.append, journal_text=journal)
+    assert list(rd.glob("logs/ssh_logins_*.txt")) and any("ssh login check" in m for m in out)
+    assert isinstance(found, list)

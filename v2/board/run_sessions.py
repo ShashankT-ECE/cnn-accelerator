@@ -101,6 +101,7 @@ from types import SimpleNamespace
 
 import board_common as bc
 import board_env as benv
+import login_spikes
 import stats
 
 STATE_NAME = "session_state.json"
@@ -1243,6 +1244,27 @@ def results_dir_for(source: str, results_dir, index: int) -> Path:
     return root
 
 
+def login_check(rd: Path, since_utc: str, say, fake: bool = False, journal_text: str | None = None) -> list:
+    """After the run: every ssh login since the invocation started that fell inside an INA260 power
+    phase or coincides with a sample burst is flagged (hygiene rule: no new login during a phase).
+    Informational: the flagged phases are listed in the session log; re-run them if the burst matters."""
+    if fake and journal_text is None:
+        return []
+    try:
+        text = journal_text if journal_text is not None else login_spikes.fetch_journal(since_utc.replace("T", " ")[:19], None)
+    except Exception as e:                       # no journalctl / not permitted: say so, do not fail
+        say(f"[session] login check skipped: {type(e).__name__}: {e}")
+        return []
+    logins = login_spikes.parse_logins(text)
+    (rd / "logs").mkdir(parents=True, exist_ok=True)
+    (rd / "logs" / f"ssh_logins_{stamp()}.txt").write_text(text)
+    found = login_spikes.analyse(login_spikes.read_phases(rd), logins)
+    say(f"[session] ssh login check: {len(logins)} login(s) since {since_utc}, {len(found)} flagged")
+    for f in found:
+        say("  FLAG " + login_spikes.fmt(f))
+    return found
+
+
 def main(argv=None, open_backend=open_backend_default, verify_data=bc.verify_manifest,
          steps_hook=None) -> int:
     a = make_parser().parse_args(argv)
@@ -1356,6 +1378,7 @@ def _main(a, board_dir, data_dir, rd, window_s, gap_s, say, lock_fd, open_backen
     dry = a.backend == "model"
     tag = "DRY RUN " if dry else ""
     t_start = time.monotonic()
+    t_start_utc = utc_now()
     info = bc.deploy_info()
     say(f"[session] {tag}sessions {a.sessions} session_index {a.session_index} backend={a.backend} "
         f"results={rd} budget={a.budget_min} min quick={a.quick} {utc_now()}")
@@ -1600,6 +1623,7 @@ def _main(a, board_dir, data_dir, rd, window_s, gap_s, say, lock_fd, open_backen
             else:
                 say(f"  ({st.id} is informational: not counted as a failure)")
 
+    login_check(rd, t_start_utc, say, fake=bool(a.backend == "model"))
     say(f"\n[session] {tag}SUMMARY ({(time.monotonic() - t_start) / 60:.1f} min, results {rd}, "
         f"session_index {a.session_index}, paper_grade {envp['paper_grade']})")
     say(f"  {'step':16} {'status':16} {'dur_s':>9} {'est_s':>9}  note")

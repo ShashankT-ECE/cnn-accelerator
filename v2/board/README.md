@@ -60,6 +60,16 @@ write hardware rows if `DEPLOY_INFO.json` or the data manifest says dirty (overr
 v2/board/deploy.sh <board-ip>            # ships gos_300 + gos_250 (+ .hwh, .sha256, summary.json); prints the run commands
 ```
 
+### ssh hygiene during power measurements
+
+A new ssh login costs the board ~2 s of CPU and shows as a +0.1..0.4 W burst on the SOM rail (seen:
+2026-09-30 20:24:01 in a B2 idle phase, 18:55:00 in a DPU accel phase). Rules: use ONE persistent
+connection (`ssh -o ControlMaster=yes -o ControlPath=~/.ssh/cm/%C -o ControlPersist=yes -fN ubuntu@<ip>`,
+then pass the same `-o ControlPath=...` to every ssh/rsync); poll at >= 60 s; no new login while a power
+phase runs. `run_sessions.py` ends with an "ssh login check" (journalctl `_COMM=sshd` since the start of
+the invocation -> `logs/ssh_logins_<ts>.txt`) that flags every login inside a power phase or followed by a
+sample burst within 10 s; `login_spikes.py --results-dir R --journal-file F` runs the same check offline.
+
 ### On the board: one command per session (`ssh ubuntu@<board-ip>`, `cd ~/gos`)
 
 Run inside `tmux` (an ssh drop then does not stop the run; if the orchestrator does receive
