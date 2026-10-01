@@ -1,6 +1,6 @@
 {
  "provenance": {
-  "git_commit": "7ef1572bbccc9cd239e8c417c54babae32f4c13a",
+  "git_commit": "2d280c7862041cee1dd36a2ac164af8b7f9dcec3",
   "git_dirty": false,
   "board_id": "ZynqMP KV260 revB machine-id:a435d1c5",
   "commit_source": "/home/ubuntu/gos/DEPLOY_INFO.json"
@@ -53,5 +53,5 @@
   "accuracy": false,
   "acc_n": 10000
  },
- "total_s": 589.9
+ "total_s": 611.6
 }

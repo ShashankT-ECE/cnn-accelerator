@@ -1,8 +1,16 @@
 {
  "source": "hw",
- "utc": "2026-09-30T17:46:39+00:00",
+ "utc": "2026-09-30T19:08:59+00:00",
  "argv": [
-  "dpu_session.py"
+  "/home/ubuntu/gos/dpu/dpu_session.py",
+  "--data-dir",
+  "/home/ubuntu/gos/data",
+  "--phase-s",
+  "60",
+  "--repeats",
+  "3",
+  "--out-dir",
+  "/home/ubuntu/gos/results/.staging/s2.DPU"
  ],
  "args": {
   "dry_run": false,
@@ -13,7 +21,7 @@
    "cifar10"
   ],
   "overlay": "dpu.bit",
-  "out_dir": null,
+  "out_dir": "/home/ubuntu/gos/results/.staging/s2.DPU",
   "limit": null,
   "warmup": 50,
   "no_power": false,
@@ -225,14 +233,14 @@
  },
  "power_files": {
   "lenet5": {
-   "samples": "/home/ubuntu/gos/results/hw_dpu_power_ina260_samples_lenet5.csv",
-   "phases": "/home/ubuntu/gos/results/hw_dpu_power_ina260_phases_lenet5.csv",
-   "summary": "/home/ubuntu/gos/results/hw_dpu_power_ina260_summary_lenet5.csv"
+   "samples": "/home/ubuntu/gos/results/.staging/s2.DPU/hw_dpu_power_ina260_samples_lenet5.csv",
+   "phases": "/home/ubuntu/gos/results/.staging/s2.DPU/hw_dpu_power_ina260_phases_lenet5.csv",
+   "summary": "/home/ubuntu/gos/results/.staging/s2.DPU/hw_dpu_power_ina260_summary_lenet5.csv"
   },
   "cifar10": {
-   "samples": "/home/ubuntu/gos/results/hw_dpu_power_ina260_samples_cifar10.csv",
-   "phases": "/home/ubuntu/gos/results/hw_dpu_power_ina260_phases_cifar10.csv",
-   "summary": "/home/ubuntu/gos/results/hw_dpu_power_ina260_summary_cifar10.csv"
+   "samples": "/home/ubuntu/gos/results/.staging/s2.DPU/hw_dpu_power_ina260_samples_cifar10.csv",
+   "phases": "/home/ubuntu/gos/results/.staging/s2.DPU/hw_dpu_power_ina260_phases_cifar10.csv",
+   "summary": "/home/ubuntu/gos/results/.staging/s2.DPU/hw_dpu_power_ina260_summary_cifar10.csv"
   }
  }
 }
