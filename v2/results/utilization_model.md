@@ -1,6 +1,6 @@
 # PE-array utilization per layer (model)
 
-Rendered by `v2/analysis/utilization.py` from `utilization_model.csv` (source=model; rows git_commit e9cbb886, git_dirty False).
+Rendered by `v2/analysis/utilization.py` from `utilization_model.csv` (source=model; rows git_commit 33cf9006, git_dirty False).
 
 Definitions: spatial = OC*OH*OW*K / (64*T*K); temporal = T*K / LAYER_CYC (MAC_ACTIVE/LAYER_CYC); total = spatial x temporal. All numbers are the analytical cycle model, not RTL or hardware measurements.
 
