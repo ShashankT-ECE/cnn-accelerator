@@ -151,3 +151,20 @@ def test_dry_run_end_to_end(tmp_path):
         assert sm[0]["accel_workload"].startswith("DPU (Vitis AI 2.5.0")
     info = json.loads((out / "hw_dpu_session_info.json").read_text())
     assert info["source"] == "dryrun_model"
+
+
+@pytest.mark.skipif(not all((DATA / n / "MANIFEST.json").is_file() for n in ("lenet5", "cifar10")),
+                    reason="board data package not built")
+def test_rows_carry_the_run_environment(tmp_path, monkeypatch):
+    """Rows of the orchestrated step carry session_index / env_step / paper_grade columns ($GOS_RUN_ENV).
+    (The 2026-09-30 DPU rows had them empty -> rejected by the paper tables.) Dry run: paper_grade False."""
+    monkeypatch.setenv("GOS_RUN_ENV", json.dumps({"session_index": 2, "paper_grade": True, "step_id": "s2.DPU",
+                                                  "cpu_governor": "performance", "cpu_freq_khz": 1333333}))
+    root = fake_pkg(tmp_path / "pkg")
+    out = tmp_path / "dryrun" / "dpu"
+    assert ds.main(["--dry-run", "--pkg-dir", str(root), "--nets", "lenet5", "--limit", "20", "--warmup", "2",
+                    "--phase-s", "0.2", "--repeats", "1", "--rate-hz", "20", "--out-dir", str(out)]) == 0
+    for f in ("hw_dpu_accuracy.csv", "hw_dpu_latency.csv", "hw_dpu_power_ina260_phases_lenet5.csv"):
+        rows = list(csv.DictReader((out / f).open()))
+        assert rows and all(r["session_index"] == "2" and r["env_step"] == "s2.DPU"
+                            and r["cpu_governor"] == "performance" and r["paper_grade"] == "False" for r in rows), f

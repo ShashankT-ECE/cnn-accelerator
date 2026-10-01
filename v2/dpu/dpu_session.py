@@ -305,7 +305,10 @@ class DpuContext:
                 "data_manifest_sha256": pkg.manifest_sha256 if pkg else "",
                 "data_git_commit": pkg.manifest.get("git_commit", "") if pkg else "",
                 "data_git_dirty": pkg.manifest.get("git_dirty", "") if pkg else "",
-                "backend": "fake_runner (dry run)" if self.args.dry_run else "pynq_dpu"}
+                "backend": "fake_runner (dry run)" if self.args.dry_run else "pynq_dpu",
+                # measurement environment handed down by run_sessions.py ($GOS_RUN_ENV): without it
+                # paper_grade/session_index/... stayed empty and the rows were rejected by the paper tables
+                **bc.env_meta(self.source, self.dirty)}
 
 
 def dpu_label(info: dict, dn: DpuNet) -> str:
