@@ -595,3 +595,14 @@ def test_system_activity_windows_flag_overlapping_phases(tmp_path):
     _samples_csv(rd / "hw_x_power_ina260_samples_a.csv", t0, [("1", "accel", None), ("1", "idle", None)])
     found = RS.login_check(rd, "2026-09-26T00:00:00+00:00", out.append, journal_text="", units_text=j)
     assert any("system-activity check" in m and "1 power phase" in m for m in out) and len(found) == 1
+
+
+def test_service_windows_close_on_stopped():
+    import login_spikes as LS
+    j = ("2026-10-01T06:36:01+0000 kria systemd[1]: Starting PackageKit Daemon...\n"
+         "2026-10-01T06:36:01+0000 kria systemd[1]: Started PackageKit Daemon.\n"
+         "2026-10-01T06:39:15+0000 kria systemd[1]: Stopping PackageKit Daemon...\n"
+         "2026-10-01T06:39:16+0000 kria systemd[1]: Stopped PackageKit Daemon.\n"
+         "2026-10-01T09:00:00+0000 kria sshd[1]: something later\n")
+    (a, b), = LS.service_windows(j)
+    assert b - a == 195          # 06:36:01 -> 06:39:16, not open-ended to the end of the text

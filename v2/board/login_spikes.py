@@ -119,7 +119,7 @@ def fmt(f: dict) -> str:
     return s
 
 
-_UNIT = re.compile(r"systemd\[1\]: (Starting|Finished|Failed to start) (.+?)(?:\.\.\.|\.)?$")
+_UNIT = re.compile(r"systemd\[1\]: (Starting|Finished|Stopped|Failed to start) (.+?)(?:\.\.\.|\.)?$")
 
 
 def service_windows(text: str, pattern: str = r"apt|PackageKit|unattended") -> list[tuple[float, float]]:
