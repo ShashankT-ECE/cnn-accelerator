@@ -798,11 +798,20 @@ def efficiency(c: Ctx) -> Artifact:
                                     ("images_per_s_per_dsp", "images/s / DSP", "f1")):
             if sysname.startswith("cpu") and colname not in ("images_per_s", "gops"):
                 continue
+            if sysname.startswith("dpu") and colname.endswith("_dsp"):
+                continue                                   # no DPU per-DSP figure (no resource counts)
             body.append([f"{text}: {title}"] + [cell(n, sysname, colname, fmt) for n in NETS])
     body.append(r"\midrule")
     body.append(["MAC lanes (ours / DPU)"] + [f"{cell(n, 'ours_pl', 'mac_lanes', 'int')} / {cell(n, 'dpu_runner', 'mac_lanes', 'int')}"
                                               for n in NETS])
+    body.append(["Lane clock, MHz (ours / DPU)"] + [f"{cell(n, 'ours_pl', 'clock_mhz', 'f1')} / {cell(n, 'dpu_runner', 'clock_mhz', 'f1')}"
+                                                   for n in NETS])
+    body.append(["Peak GOPS (ours / DPU)"] + [f"{cell(n, 'ours_pl', 'peak_gops', 'f1')} / {cell(n, 'dpu_runner', 'peak_gops', 'f1')}"
+                                             for n in NETS])
+    body.append(["PL / runner time as \\% of peak (ours / DPU)"] + [
+        f"{cell(n, 'ours_pl', 'pct_of_peak', 'f1')} / {cell(n, 'dpu_runner', 'pct_of_peak', 'f2')}" for n in NETS])
     hw = params.get("mac_lanes")
+    prow = params
     return c.table(art, "@{}lrr@{}", ["Quantity & LeNet-5 & CIFAR-10"], body,
                    "Throughput and efficiency per image: accelerator vs DPU (vs best CPU).", "tab:eff",
                    notes=["GOPS = twice the MACs per image (cycle\\_model.csv) divided by the time, the same operation count for "
@@ -811,11 +820,17 @@ def efficiency(c: Ctx) -> Artifact:
                           "ARCH\\_PP $\\times$ ARCH\\_ICP $\\times$ ARCH\\_OCP from the overlay's "
                           + (art.label(tex_escape(hw["hwh_file"].split("/")[-1]), f"dpu_overlay_params.csv:{hw['_line']}:hwh_file")
                              if hw else "hwh")
-                          + " (dpu\\_overlay\\_params.csv). DSP: accelerator from impl\\_gos.csv (post-implementation); "
-                          "\\emph{n/a}: the DPU overlay's hwh and xclbin carry no resource counts (no DSP/LUT/FF/BRAM "
-                          "figure can be read from them), so per-DSP efficiency is given for the accelerator only and "
-                          "per-MAC-lane efficiency for both. A MAC lane is not a DSP: the DPU packs INT8 MACs in "
-                          "DSP48E2 slices. Source: board\\_efficiency.csv (derived from committed board results)."])
+                          + " (dpu\\_overlay\\_params.csv). Formulas: ops/image $=2\\times$MACs; GOPS $=$ ops/image "
+                          "$/$ time; GOPS per MAC lane $=$ GOPS $/$ MAC lanes; peak GOPS $=2\\times$ MAC lanes $\\times$ "
+                          "lane clock; \\% of peak $=100\\times$ GOPS $/$ peak GOPS (PL / runner time rows). Lane clock: "
+                          "accelerator = pl\\_clk0 PLL read-back of the A2 run (hw\\_a2\\_a3\\_cycles.csv); DPU = "
+                          "\\texttt{aclk} of DPUCZDX8G\\_1, 300~MHz, from "
+                          + (art.label(tex_escape(prow["aclk"]["hwh_file"].split("/")[-1]), f"dpu_overlay_params.csv:{prow['aclk']['_line']}:hwh_file")
+                             if prow.get("aclk") else "hwh")
+                          + " (PORT CLKFREQUENCY; the 600~MHz ap\\_clk\\_2 is the DSP double-rate clock, not the lane clock). "
+                          "DSP: accelerator only (impl\\_gos.csv, post-implementation); there is no DPU per-DSP figure "
+                          "because the overlay's hwh and xclbin carry no resource counts. A MAC lane is not a DSP. "
+                          "Source: board\\_efficiency.csv (derived from committed board results)."])
 
 
 ALL = [t1_impl, a1_accuracy, a2_latency, a3_cycles, a4_util, a5_cpu, percentiles, efficiency, b1_power, power_compare,

@@ -41,4 +41,14 @@ def test_efficiency_formulas(tmp_path):
         if r["system"].startswith("ours"):
             assert r["mac_lanes"] == 64 and float(r["gops_per_dsp"]) == pytest.approx(float(r["gops"]) / int(r["dsps"]), rel=1e-3)
         if r["system"].startswith("dpu"):
-            assert r["mac_lanes"] == 2048 and r["dsps"] == "" and "gops_per_dsp" not in r or r.get("gops_per_dsp", "") == ""
+            assert r["mac_lanes"] == 2048 and r["dsps"] == "" and r.get("gops_per_dsp", "") == ""
+            assert r.get("images_per_s_per_dsp", "") == ""                 # no DPU per-DSP figure
+            assert float(r["clock_mhz"]) == 300.0 and "pynqdpu.dpu.kv260_som.2.5.0.hwh" in r["clock_source"]
+        if r["mac_lanes"]:
+            peak = 2 * int(r["mac_lanes"]) * float(r["clock_mhz"]) / 1e3
+            assert float(r["peak_gops"]) == pytest.approx(peak, rel=1e-3)
+            assert float(r["pct_of_peak"]) == pytest.approx(100 * float(r["gops"]) / peak, rel=2e-3)
+            assert float(r["gops_per_mac_lane"]) == pytest.approx(float(r["gops"]) / int(r["mac_lanes"]), abs=2e-5)
+            assert "ops_per_image = 2*macs" in r["formula"] and "peak_gops" in r["formula"]
+        if r["system"].startswith("ours"):
+            assert float(r["clock_mhz"]) == pytest.approx(249.9975, abs=0.01)
