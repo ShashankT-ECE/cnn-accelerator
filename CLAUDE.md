@@ -315,6 +315,21 @@ Superseded: `out/gos_200_c88e71a0` (STALE, pre-D17 CSR), `out/shell_c6ff5d96` (o
 `synth_scan_pass=False` on these rows = truncated BD synth log only (D18-3); the
 untruncated netlist scan passes.
 
+### KV260 board: package-manager jobs are masked for the experiment period (2026-10-01)
+
+An unattended upgrade (06:35-06:40 UTC, libssl/openssl among the packages) ran inside a B2 power sweep, so on the
+board `apt-daily.timer`, `apt-daily-upgrade.timer` and `packagekit.service` are **disabled and masked**
+(`unattended-upgrades` is stopped). The board therefore gets NO security updates until they are re-enabled.
+**After the paper is submitted (deadline 2026-10-09 AoE) re-enable them on the board:**
+```bash
+sudo systemctl unmask apt-daily.timer apt-daily-upgrade.timer packagekit.service
+sudo systemctl enable --now apt-daily.timer apt-daily-upgrade.timer
+sudo systemctl start unattended-upgrades
+sudo apt update && sudo apt upgrade      # catch up, then reboot once
+```
+Other hygiene rules (v2/board/README.md): one ssh ControlMaster connection (`~/.ssh/config` Host kv260), poll >= 60 s,
+no new login during a power phase; the session-end checks flag logins and apt/PackageKit windows overlapping a phase.
+
 ### Pending (in order)
 
 1. **KV260 board sessions 2 and 3** (Session 1 done at 250 MHz, state on the board). Open before
