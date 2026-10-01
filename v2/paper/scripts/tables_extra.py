@@ -150,6 +150,22 @@ def b2_fit_table(c: T.Ctx) -> Artifact:
                             "k_ci95_hi_w_per_mhz", "f3", 1e3),
                      art.cell(r, "r2", "f4") if r.get("r2") else "--",
                      art.cell(r, "n_points", "int")])
+    old = latest(art.rows("hw_b2_fit_ascending_superseded.csv", hw=True, basis=FIT_BASIS) or [],
+                 lambda r: r["quantity"])
+    diffs = []
+    for q, lab in FIT_Q:
+        rn, ro = by.get(q), old.get(q)
+        if rn and ro and rn.get("k_w_per_mhz") and ro.get("k_w_per_mhz"):
+            kn, ko = fnum(rn["k_w_per_mhz"]), fnum(ro["k_w_per_mhz"])
+            diffs.append(f"{lab} " + art.num(abs(kn - ko) / ko * 100.0, "f0", row=rn, col="k_w_per_mhz",
+                                              origin="derived: |k - k_ascending| / k_ascending, k_ascending from "
+                                                     "hw_b2_fit_ascending_superseded.csv"))
+    sweep_note = (" Two clean sweeps were run: this randomized-order one and an earlier ascending-order one "
+                  "(superseded; hw\\_b2\\_fit\\_ascending\\_superseded.csv). Their $k$ differ by "
+                  + ", ".join(d + "\\,\\%" for d in diffs)
+                  + " (relative to the ascending sweep), comparable to or larger than the within-sweep standard errors (it exceeds "
+                    "them for $P_\\mathrm{idle}$), so the slope uncertainty is larger than the interval shown. The first randomized attempt was discarded "
+                    "(an unattended package upgrade ran inside it)." if diffs else "")
     r2 = art.label("$R^2$", "notation: coefficient of determination (hw_b2_fit.csv column r2)")
     ci = art.label("95", "hw_b2_fit.csv fit_method: 95 % CI (Student t, n-2 dof)")
     hdr = [f"Quantity & $P_\\mathrm{{static}}$ (W) & $k$ (mW/MHz) & {r2} & $n$"]
@@ -159,7 +175,7 @@ def b2_fit_table(c: T.Ctx) -> Artifact:
                    notes=[f"Estimate $\\pm$ standard error [{ci}\\,\\% confidence interval, Student $t$, $n-$2 dof]"
                           .replace("$n-$2", "$n-$" + art.label("2", "hw_b2_fit.csv fit_method: n-2 dof")) +
                           ". Computed by exp\\_b2\\_clock.py (hw\\_b2\\_fit.csv, basis per\\_clock\\_mean); "
-                          "SOM rail (VCC\\_SOM), not accelerator-only and not board input power."])
+                          "SOM rail (VCC\\_SOM), not accelerator-only and not board input power." + sweep_note])
 
 
 def b2_fit_figure(fc: F.FCtx) -> Artifact:

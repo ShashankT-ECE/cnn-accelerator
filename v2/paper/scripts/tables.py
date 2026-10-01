@@ -769,8 +769,11 @@ def power_compare(c: Ctx) -> Artifact:
                    notes=["Each $\\Delta P$ is above the idle power measured with that system's own bitstream loaded "
                           "(mean of the idle phases bracketing the run phases); the two idle levels differ because the "
                           "loaded PL configuration differs, so compare absolute power and $\\Delta P$ together. The "
-                          "no-overlay reference is the idle SOM-rail power right after a boot, before any bitstream was "
-                          "loaded. $P_\\mathrm{run}$ / time and energy are per image of the measured loop (accelerator: "
+                          "no-overlay reference is the idle SOM-rail power measured "
+                          + art.label("4", "board journal: boot 2026-09-30 18:27:50 UTC (uptime -s); reference window start "
+                                      "18:32:14 UTC (hw_nooverlay_idle_phases.csv start_utc)")
+                          + "~min after boot, before any bitstream was loaded: the board had not settled and the window ended "
+                          "noisier than it began, so treat it as indicative. $P_\\mathrm{run}$ / time and energy are per image of the measured loop (accelerator: "
                           "host loop of the selected host path; DPU: input conversion + runner + argmax). Source: "
                           "hw\\_b1\\_power\\_ina260\\_summary*.csv, hw\\_dpu\\_power\\_ina260\\_summary*.csv, "
                           "hw\\_nooverlay\\_idle\\_phases.csv. Measured on the KV260."])
