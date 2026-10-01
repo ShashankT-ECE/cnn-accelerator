@@ -7,6 +7,7 @@ import hashlib
 import json
 import sys
 import textwrap
+from types import SimpleNamespace
 from pathlib import Path
 
 import pytest
@@ -564,3 +565,13 @@ def test_login_check_writes_log_and_reports(tmp_path):
     found = RS.login_check(rd, "2026-09-26T00:00:00+00:00", out.append, journal_text=journal)
     assert list(rd.glob("logs/ssh_logins_*.txt")) and any("ssh login check" in m for m in out)
     assert isinstance(found, list)
+
+
+def test_idle_reference_refused_when_the_pl_was_loaded_this_boot(tmp_path):
+    loaded = "[  392.58] fpga_manager fpga0: writing gos_300.bin to Xilinx ZynqMP FPGA Manager\n"
+    assert RS.fpga_loads_this_boot("boot noise\n") == 0 and RS.fpga_loads_this_boot(loaded * 3) == 3
+    out = []
+    a = SimpleNamespace(session_index=1, idle_ref_s=1.0, allow_dirty=True)
+    assert RS.run_idle_ref(a, tmp_path, {"paper_grade": True, "cpu_governor": "", "cpu_freq_khz": ""},
+                           out.append, kmsg_text=loaded) == []
+    assert any("REFUSED" in m and "1 bitstream load" in m for m in out)

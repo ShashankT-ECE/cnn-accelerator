@@ -1319,10 +1319,32 @@ def main(argv=None, open_backend=open_backend_default, verify_data=bc.verify_man
         lock_f.close()
 
 
-def run_idle_ref(a, rd: Path, envp: dict, say) -> list:
+def fpga_loads_this_boot(kmsg_text: str | None = None) -> int | None:
+    """Number of PL bitstream loads (`fpga_manager fpga0: writing ...`) in this boot's kernel log; None when
+    the log cannot be read. 0 on a freshly booted KV260 (no boot-default app is loaded), so any load means
+    the PL is configured (and pl_clk0 may be running) and idle power is NOT a no-overlay reference."""
+    if kmsg_text is None:
+        for cmd in (["dmesg"], ["journalctl", "-k", "-b", "--no-pager"]):
+            try:
+                kmsg_text = subprocess.run(cmd, capture_output=True, text=True, check=True).stdout
+                break
+            except (OSError, subprocess.CalledProcessError):
+                continue
+        else:
+            return None
+    return sum(1 for ln in kmsg_text.splitlines() if "fpga_manager fpga0: writing" in ln)
+
+
+def run_idle_ref(a, rd: Path, envp: dict, say, kmsg_text: str | None = None) -> list:
     """No-overlay idle reference (before any bitstream is loaded in this boot): power_log.sample_only
     with the same environment rules as a step (paper_grade from the environment pre-flight)."""
     import power_log as pl
+    loads = fpga_loads_this_boot(kmsg_text)
+    if loads != 0:
+        say(f"[session] idle reference REFUSED: {'kernel log unreadable' if loads is None else f'{loads} bitstream load(s) in this boot'} "
+            "- the PL is configured and its clock may be running, so this is not a no-overlay reference. "
+            "Reboot, wait for the board to settle (>= 15 min), then run the reference first (`--fresh --idle-ref-s 600`).")
+        return []
     try:
         sensor, plog = pl.discover("auto", allow_hw=True, allow_mock=False)
     except pl.SensorUnavailable as e:
@@ -1331,7 +1353,7 @@ def run_idle_ref(a, rd: Path, envp: dict, say) -> list:
     os.environ[bc.RUN_ENV_VAR] = json.dumps({
         "session_index": a.session_index, "paper_grade": envp["paper_grade"],
         "cpu_governor": envp["cpu_governor"], "cpu_freq_khz": envp["cpu_freq_khz"],
-        "note": "no-overlay idle reference (before any bitstream load)"}, default=str)
+        "note": "no-overlay idle reference (0 bitstream loads in this boot: fpga_manager kernel log)"}, default=str)
     try:
         ctx = pl.SensorOnlyContext(bc.SOURCE_HW, rd, getattr(a, "board_id", None), a.allow_dirty)
         say(f"[session] no-overlay idle reference: {a.idle_ref_s:g} s, {pl.LABEL}, {sensor.describe()}")
