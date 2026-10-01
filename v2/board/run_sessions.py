@@ -530,13 +530,15 @@ class Archiver:
 
 def archive_everything(results_dir: Path, label: str, keep=()) -> Archiver:
     """--fresh / first state: state file, hw_* results, logs/*, .staging/ -> archive
-    (except the paths in keep, e.g. the session log of this invocation)."""
+    (except the paths in keep, e.g. the session log of this invocation and the
+    idle-reference files measured before the archive step)."""
     ar = Archiver(results_dir, label)
     keep = {Path(k).resolve() for k in keep}
     ar.move(results_dir / STATE_NAME)
     for pat in RESULT_PATTERNS:
         for p in sorted(results_dir.glob(pat)):
-            ar.move(p)
+            if p.resolve() not in keep:
+                ar.move(p)
     for p in sorted((results_dir / "logs").rglob("*")) if (results_dir / "logs").is_dir() else []:
         if p.is_file() and p.resolve() not in keep:
             ar.move(p)

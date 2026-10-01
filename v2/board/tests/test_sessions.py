@@ -498,3 +498,17 @@ def test_fast_path_steps_blocked_until_bringup_passes(env):
     hook, counter = _req_hook(env, fast_rc=0)                # bring-up passes -> both run
     rc = RS.main(argv, steps_hook=hook, **kw)
     assert rc == 0 and runs(counter)[-3:] == ["fast", "main", "info"]
+
+
+def test_archive_everything_honours_keep_for_result_files(tmp_path):
+    rd = tmp_path / "dryrun_results"
+    (rd / "logs").mkdir(parents=True)
+    for n in ("hw_nooverlay_idle_samples.csv", "hw_nooverlay_idle_phases.csv", "hw_old.csv"):
+        (rd / n).write_text("x\n")
+    (rd / "logs" / "keep.log").write_text("log\n")
+    keep = [rd / "hw_nooverlay_idle_samples.csv", rd / "hw_nooverlay_idle_phases.csv",
+            rd / "logs" / "keep.log"]
+    ar = RS.archive_everything(rd, "fresh", keep=keep)
+    assert all(p.exists() for p in keep)                  # kept files stay in results/
+    assert not (rd / "hw_old.csv").exists()               # everything else is archived
+    assert (ar.root / "hw_old.csv").exists()
