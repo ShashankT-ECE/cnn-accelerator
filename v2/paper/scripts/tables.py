@@ -800,7 +800,7 @@ def power_compare(c: Ctx) -> Artifact:
     body.append(["$P_\\mathrm{idle}$, no overlay (fresh boot) (W)"]
                 + [f"\\multicolumn{{2}}{{c}}{{{art.cell(ref, 'power_mean_w', 'f3') if ref and ref.get('power_mean_w') else art.placeholder('no-overlay idle reference: hw_nooverlay_idle_phases.csv')}}}"])
     return c.table(art, "@{}lrr@{}", ["Quantity & LeNet-5 & CIFAR-10"], body,
-                   f"SOM-rail power ({INA_LABEL}) of the accelerator and the DPU: absolute power and $\\Delta P$ above "
+                   f"{INA_LABEL} of the accelerator and the DPU: absolute power and $\\Delta P$ above "
                    "each system's own-overlay idle.", "tab:powercmp",
                    notes=[_power_sess_note(c) + "The DPU values come from one session (mean $\\pm$ std over its repeats). "
                           "Each $\\Delta P$ is above the idle power measured with that system's own bitstream loaded "
@@ -880,6 +880,102 @@ def efficiency(c: Ctx) -> Artifact:
                           "Source: board\\_efficiency.csv (derived from committed board results)."])
 
 
+# --------------------------------------------------------------------------------------------
+def impl_compact(c: Ctx) -> Artifact:
+    """Paper Table I (single column): the performance-clock build only (full design and gos_core);
+    the post-implementation-only variants are a footnote. Same cells as tab_t1_impl."""
+    art = c.art("tab_impl_compact")
+    vs = impl_variants(art)
+    perf = [r for r in vs if is_performance(r)]
+    if not perf:
+        body = [["Implementation", art.placeholder("impl_gos.csv: no performance-clock row", "TBD (impl)"), "--"]]
+        return c.table(art, "@{}lrr@{}", ["Quantity & Full design & Core"], body,
+                       "Implementation results (post-implementation).", "tab:impl")
+    r = perf[0]
+    row = lambda lab, full, core, fmt="int": [lab, art.cell(r, full, fmt), art.cell(r, core, fmt) if core else "--"]  # noqa: E731
+    body = [row("CLB LUT", "clb_luts", "core_luts"), row("CLB FF", "clb_registers", "core_registers"),
+            row("DSP48E2", "dsps", "core_dsps"), row("RAMB36", "ramb36", "core_ramb36"),
+            r"\midrule",
+            ["WNS / WHS (ns)", f"\\multicolumn{{2}}{{r}}{{{art.cell(r, 'wns_ns', 'f3')} / {art.cell(r, 'whs_ns', 'f3')}}}"],
+            ["pl\\_clk0, post-impl.\\ (MHz)",
+             f"\\multicolumn{{2}}{{r}}{{{art.cell(r, 'pl_clk0_mhz_actual', 'f3')}}}"],
+            ["BUILD\\_ID / bitstream", f"\\multicolumn{{2}}{{r}}{{\\texttt{{{_lab(art, r, 'build_id')}}} / "
+                                       f"\\texttt{{{_lab(art, r, 'bit_sha256', 8)}}}}}"]]
+    # RAMB18 counts are given in the note (one cell per column would widen the table)
+    vv = {x["vivado_version"] for x in vs}
+    vtxt = " ".join(art.label(tex_escape(v), "impl_gos.csv:vivado_version") for v in sorted(vv))
+    only = [x for x in vs if is_postimpl_only(x)]
+    notes = [f"RAMB18: {art.cell(r, 'ramb18', 'int')} (full design), {art.cell(r, 'core_ramb18', 'int')} (core). "
+             "Core = gos\\_core; the rest is the AXI shell. Source: impl\\_gos.csv (post-implementation)."]
+    for x in only:
+        notes.append(f"The same RTL also meets timing at {art.cell(x, 'pl_clk0_mhz_requested', 'int')}~MHz "
+                     f"(WNS {art.cell(x, 'wns_ns', 'f3')}~ns, WHS {art.cell(x, 'whs_ns', 'f3')}~ns), "
+                     "post-implementation only: the board's PL clock source cannot be divided to that frequency, "
+                     "so it never ran on the KV260.")
+    return c.table(art, "@{}lrr@{}", ["Quantity & Full design & Core"], body,
+                   f"Implementation of the {art.cell(r, 'pl_clk0_mhz_requested', 'int')}~MHz build run on the KV260 "
+                   f"(post-implementation, Vivado {vtxt}, xck26-sfvc784-2LV-c).",
+                   "tab:impl", notes=notes)
+
+
+def compare(c: Ctx) -> Artifact:
+    """Paper Table II (single column): per net, the accelerator (fast host path), the DPU and the best
+    CPU baseline: end-to-end p50, SOM-rail energy per image, speedup vs the best CPU baseline. Every cell
+    is the same CSV cell (or the same ratio of cells) that tab_a5_cpu / tab_power_compare / tab_b1_power show."""
+    art = c.art("tab_compare")
+    cpu = art.rows("hw_cpu_baseline.csv", hw=True) or []
+    fast = latest(art.rows("hw_b3_breakdown_fast.csv", hw=True) or [], lambda r: (r["net"], r["phase"]))
+    dl = _dpu_lat(art)
+    ours = {e["net"]: e for e in power_summaries(art, "hw_b1_power_ina260")}
+    dpu = {e["net"]: e for e in power_summaries(art, "hw_dpu_power_ina260")}
+    best = _best_cpu(cpu) if cpu else {}
+    one = art.label("1.00", "definition: the best CPU baseline is the speedup reference") + "$\\times$"
+    body = []
+
+    def energy(ents, net, col):
+        e = ents.get(net)
+        return (V(fnum(e["mean"][col]), row_origin(e["mean"], col)).fmt(art, "f3")
+                if e and e["mean"].get(col) else art.placeholder(f"compare energy {net} {col}"))
+    for i, net in enumerate(NETS):
+        if i:
+            body.append(r"\midrule")
+        a = fast.get((net, "end_to_end"))
+        d = dl.get((net, "end_to_end"))
+        b = best.get(net)
+        cpu_e2e = at(b[2], "median_us") if b else None
+        sp = lambda x, what: (div(cpu_e2e, at(*x), what).fmt(art, "f2") + "$\\times$"  # noqa: E731
+                              if cpu_e2e and x[0] else art.placeholder(f"compare speedup {net} {what}"))
+        if b and ours.get(net):
+            wl = ours[net]["mean"].get("cpu_workload", "")
+            if not wl.startswith(f"{b[0]} x{b[1]} "):
+                art.check(f"compare {net}: B1 CPU workload {wl!r} is not the best CPU baseline {b[0]} x{b[1]}")
+        cpu_lab = (art.label(f"Best CPU ({CPU_KINDS.get(b[0], tex_escape(b[0]))}, {b[1]}~thr.)",
+                             f"hw_cpu_baseline.csv:{b[2]['_line']}:kind,threads") if b else "Best CPU")
+        body.append([pretty_net(net),
+                     "Ours (fast host path)",
+                     art.cell(a, "median_us", "f1") if a else art.placeholder(f"compare ours e2e {net}"),
+                     energy(ours, net, "accel_energy_per_image_mj"),
+                     sp((a, "median_us"), "best CPU e2e / accel e2e (fast)")])
+        body.append(["", "AMD DPU$^\\ast$",
+                     art.cell(d, "p50", "f1") if d else art.placeholder(f"compare DPU e2e {net}"),
+                     energy(dpu, net, "accel_energy_per_image_mj"),
+                     sp((d, "p50"), "best CPU e2e / DPU e2e p50")])
+        body.append(["", cpu_lab,
+                     art.cell(b[2], "median_us", "f1") if b else art.placeholder(f"compare CPU e2e {net}"),
+                     energy(ours, net, "cpu_energy_per_image_mj"), one])
+    hdr = [r"& & e2e p50 & Energy & Speedup \\", r"Net & System & (\textmu s) & (mJ/img) & vs CPU"]
+    return c.table(art, "@{}llrrr@{}", hdr, body,
+                   f"End-to-end latency, {INA_LABEL} energy per image and speedup over the best CPU baseline, "
+                   "measured on the KV260.", "tab:compare",
+                   notes=[("Ours and CPU: median over the " + _sessw(c) + " board sessions. " if _nsess(c) > 1 else "")
+                          + "$^\\ast$DPU (DPUCZDX8G, prebuilt pynq-dpu overlay, Vitis AI quantization of the same FP32 nets): "
+                          "one session. e2e = input write to dequantized logits on the host (CPU: also input "
+                          "preprocessing). Energy = $\\Delta P$ above the system's own idle $\\times$ time per image, "
+                          "host loop included; CPU energy from the B1 CPU phase (same workload). Sources: "
+                          "hw\\_b3\\_breakdown\\_fast.csv, hw\\_dpu\\_latency.csv, hw\\_cpu\\_baseline.csv, "
+                          "hw\\_b1\\_power\\_ina260\\_summary*.csv, hw\\_dpu\\_power\\_ina260\\_summary*.csv."])
+
+
 def _sess_note(c: Ctx, pct: bool = False) -> str:
     """Note sentence for tables whose board cells are session medians (empty for a single session)."""
     n = _nsess(c)
@@ -903,4 +999,5 @@ def _power_sess_note(c: Ctx) -> str:
 
 ALL = [t1_impl, a1_accuracy, a2_latency, a3_cycles, a4_util, a5_cpu, percentiles, efficiency, b1_power, power_compare,
        b2_clock, b3_breakdown,
-       repeatability, verification]
+       repeatability, verification,
+       impl_compact, compare]          # paper Tables I and II (single column)

@@ -536,6 +536,13 @@ def test_real_board_results_generate_without_failures(tmp_path):
         assert (out / f"{n}.tex").exists(), n
     pct = tex(out, "tab_percentiles")
     assert "spread" in pct and "DPU" in pct and pct.index("fast host path") < pct.index("safe host path")
+    pc = tex(out, "tab_power_compare")
+    assert "SOM-rail power (SOM-rail power" not in pc                  # caption label not doubled
+    cmp_ = tex(out, "tab_compare")                                     # paper Table II (single column)
+    assert "\\begin{table}[" in cmp_ and "AMD DPU" in cmp_ and "Best CPU" in cmp_
+    assert cmp_.count("Ours (fast host path)") == 2
+    imp = tex(out, "tab_impl_compact")                                 # paper Table I: 250 MHz only
+    assert "250~MHz build" in imp and "300~MHz" in imp and "Full design" in imp
     eff = tex(out, "tab_efficiency")
     assert "MAC lane" in eff
     assert "no DPU per-DSP figure" in eff or "TBD" in eff            # DPU per-DSP rows dropped, stated in the notes
