@@ -539,8 +539,8 @@ def test_real_board_results_generate_without_failures(tmp_path):
     pc = tex(out, "tab_power_compare")
     assert "SOM-rail power (SOM-rail power" not in pc                  # caption label not doubled
     cmp_ = tex(out, "tab_compare")                                     # paper Table II (single column)
-    assert "\\begin{table}[" in cmp_ and "AMD DPU" in cmp_ and "Best CPU" in cmp_
-    assert cmp_.count("Ours (fast host path)") == 2
+    assert "\\begin{table}[" in cmp_ and "AMD DPU" in cmp_ and "Best CPU baseline" in cmp_
+    assert cmp_.count("Ours$^\\dagger$") == 2 and "Fast host path" in cmp_
     imp = tex(out, "tab_impl_compact")                                 # paper Table I: 250 MHz only
     assert "250~MHz build" in imp and "300~MHz" in imp and "Full design" in imp
     eff = tex(out, "tab_efficiency")

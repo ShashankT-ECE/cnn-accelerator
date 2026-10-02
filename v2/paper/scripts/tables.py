@@ -949,10 +949,10 @@ def compare(c: Ctx) -> Artifact:
             wl = ours[net]["mean"].get("cpu_workload", "")
             if not wl.startswith(f"{b[0]} x{b[1]} "):
                 art.check(f"compare {net}: B1 CPU workload {wl!r} is not the best CPU baseline {b[0]} x{b[1]}")
-        cpu_lab = (art.label(f"Best CPU ({CPU_KINDS.get(b[0], tex_escape(b[0]))}, {b[1]}~thr.)",
+        cpu_lab = (art.label(f"CPU$^\\ddagger$",
                              f"hw_cpu_baseline.csv:{b[2]['_line']}:kind,threads") if b else "Best CPU")
         body.append([pretty_net(net),
-                     "Ours (fast host path)",
+                     "Ours$^\\dagger$",
                      art.cell(a, "median_us", "f1") if a else art.placeholder(f"compare ours e2e {net}"),
                      energy(ours, net, "accel_energy_per_image_mj"),
                      sp((a, "median_us"), "best CPU e2e / accel e2e (fast)")])
@@ -963,14 +963,14 @@ def compare(c: Ctx) -> Artifact:
         body.append(["", cpu_lab,
                      art.cell(b[2], "median_us", "f1") if b else art.placeholder(f"compare CPU e2e {net}"),
                      energy(ours, net, "cpu_energy_per_image_mj"), one])
-    hdr = [r"& & e2e p50 & Energy & Speedup \\", r"Net & System & (\textmu s) & (mJ/img) & vs CPU"]
+    hdr = [r"& & e2e p50 & Energy & Speedup \\", r"Net & System & (\textmu s) & (mJ) & vs.\ CPU"]
     return c.table(art, "@{}llrrr@{}", hdr, body,
                    f"End-to-end latency, {INA_LABEL} energy per image and speedup over the best CPU baseline, "
                    "measured on the KV260.", "tab:compare",
                    notes=[("Ours and CPU: median over the " + _sessw(c) + " board sessions. " if _nsess(c) > 1 else "")
-                          + "$^\\ast$DPU (DPUCZDX8G, prebuilt pynq-dpu overlay, Vitis AI quantization of the same FP32 nets): "
+                          + "$^\\dagger$Fast host path. $^\\ddagger$Best CPU baseline: " + (art.label(f"{CPU_KINDS.get(next(iter(best.values()))[0], '')}, {next(iter(best.values()))[1]}~threads", f"hw_cpu_baseline.csv:{next(iter(best.values()))[2]['_line']}:kind,threads") if best else "--") + ". $^\\ast$DPU (DPUCZDX8G, prebuilt pynq-dpu overlay, Vitis AI quantization of the same FP32 nets): "
                           "one session. e2e = input write to dequantized logits on the host (CPU: also input "
-                          "preprocessing). Energy = $\\Delta P$ above the system's own idle $\\times$ time per image, "
+                          "preprocessing). Energy per image = $\\Delta P$ above the system's own idle $\\times$ time per image, "
                           "host loop included; CPU energy from the B1 CPU phase (same workload). Sources: "
                           "hw\\_b3\\_breakdown\\_fast.csv, hw\\_dpu\\_latency.csv, hw\\_cpu\\_baseline.csv, "
                           "hw\\_b1\\_power\\_ina260\\_summary*.csv, hw\\_dpu\\_power\\_ina260\\_summary*.csv."])
