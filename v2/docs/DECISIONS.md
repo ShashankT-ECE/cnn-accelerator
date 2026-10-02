@@ -194,6 +194,13 @@ The 200 MHz worst path (+0.291 ns, build c88e71a0) was `u_csr/w_data_reg -> desc
 - **What the spread shows:** index 1 had noisier tails and some CPU-baseline outliers (e.g. FP32 numpy x4 LeNet-5 e2e 47,452 us in index 1 vs 2.9 ms / 2.2 ms), so brackets of CPU rows can be wide; they are kept, not trimmed.
 - `check_results.py`: `session_median.py` is a producer source of `board_efficiency.csv`; the three model-only analyses (`schedule_ablation`, `projection_16x16`, `utilization_model`) exclude the board-result analysis code from their `v2/analysis` scope.
 
+## D27 — OS-update incident during the B2 sweep (record of 2026-10-01, written 2026-10-02, user request)
+- **What happened (KV260, 2026-10-01):** the board's daily unattended upgrade ran 06:34:59–06:40:38 UTC (apt transactions 06:35–06:40, libssl/openssl among the packages) inside the first random-order B2 clock-sweep attempt (seed 1603037621, 06:03–07:07 UTC). It contaminated the 250 MHz repeats 2–3 and the first 100 MHz idle phase: SOM-rail power up to 0.2 W higher, phase sd 0.13–0.22 W. The environment pre-flight did not catch it because it only checks for a running package manager at step start.
+- **Run discarded:** that attempt was never committed. The sweep was re-run at scripts e91657a (seed 966258) with 0 login and 0 apt/PackageKit overlaps in the end-of-run checks and idle-phase sd ≤ 0.035 W; that re-run is `hw_b2_*.csv`, the B2 result of record (commit d260467).
+- **Overlap check added (commit e91657a):** `login_spikes.service_windows` / `analyse_windows` and the `run_sessions` end-of-run check flag every power phase that overlaps an apt-daily / apt-daily-upgrade / PackageKit / unattended-upgrades unit window, next to the ssh-login check of D24. Repeatability sessions 2 and 3 report 0 logins / 0 apt overlaps (commits 7a11e59, 7945db7).
+- **Timers masked (commit cdef77b):** on the board `apt-daily.timer`, `apt-daily-upgrade.timer` and `packagekit.service` are disabled and masked for the experiment period, and `unattended-upgrades` is stopped. The board gets no security updates until they are re-enabled after submission (commands in CLAUDE.md).
+- Sources: commits e91657a and d260467 (messages), `v2/board/README.md` (ssh / apt hygiene).
+
 ## TODO
 - ~~Final results freeze~~ **DONE 2026-09-28 (step 9):** every producer re-run clean @ 63261ad (code = 3527f97), results commit 8b8acce; the gos_core OOC row now reflects C_START = 3; bitstream rows kept @ fd880d4 (D18-2); `check_results.py` ALL CLEAN. Re-freeze if v2/rtl, v2/vivado, v2/model or v2/analysis change.
 - ~~Board sessions 1–3 on the KV260 (A1–A5, B1–B3 hardware rows).~~ **DONE** (index 1 + repeatability 2 and 3, D25).
