@@ -467,13 +467,14 @@ def test_repeatability_table_placeholder_then_data(res, tmp_path):
                      "git_dirty": "False", "net": net, "layer": "", "clock_mhz": "300.0",
                      "source": "hw", "paper_grade": "True", "metric_file": "hw_b3_breakdown.csv",
                      "metric": "median_us", "key": json.dumps({"net": net, "phase": "end_to_end"}),
-                     "n_sessions": "3", "mean": "123.456", "between_sd": "1.5"})
+                     "n_sessions": "3", "mean": "123.4", "between_sd": "1.5", "min": "122.0", "max": "125.0",
+                     "per_session": json.dumps({"1": 122.0, "2": 123.456, "3": 125.0})})
     write_csv(res / "hw_repeatability.csv", META + ["paper_grade", "metric_file", "metric", "key",
-                                                   "n_sessions", "mean", "between_sd"], rows)
+                                                   "n_sessions", "mean", "between_sd", "min", "max", "per_session"], rows)
     out2 = tmp_path / "out2"
     run(res, out2)
     t = tex(out2, "tab_repeatability")
-    assert "123.5\\,$\\pm$\\,1.5 (3)" in t
+    assert "123.5 [122.0, 125.0] (3)" in t                   # median of the per-session values, min, max
 
 
 def test_tables_extra_hook_guarded(res, tmp_path, monkeypatch):

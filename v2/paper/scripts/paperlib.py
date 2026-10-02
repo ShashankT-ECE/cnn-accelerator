@@ -19,12 +19,15 @@ import hashlib
 import json
 import re
 import subprocess
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Iterable
 
 V2 = Path(__file__).resolve().parents[2]
 REPO = V2.parent
+sys.path.insert(0, str(V2 / "analysis"))
+import session_median  # noqa: E402  (stdlib-only merge shared with analysis/board_efficiency.py)
 DEFAULT_RESULTS = V2 / "results"
 DEFAULT_OUT = V2 / "paper" / "generated"
 
@@ -84,9 +87,10 @@ def git_head() -> str:
 # Data store: loads CSVs once, applies the row rules, remembers what was rejected.
 # --------------------------------------------------------------------------------------------
 class Store:
-    def __init__(self, results_dir: Path = DEFAULT_RESULTS, dryrun: bool = False):
+    def __init__(self, results_dir: Path = DEFAULT_RESULTS, dryrun: bool = False, sessions: bool = True):
         self.results_dir = Path(results_dir)
         self.dryrun = dryrun
+        self.sessions = sessions and not dryrun       # median over the repeatability sessions when present
         self.hw_dir = self.results_dir / "dryrun" if dryrun else self.results_dir
         self._cache: dict[tuple[str, bool], list[dict] | None] = {}
         self.files: dict[str, dict] = {}          # path -> info (sha256, rows, rejected ...)
@@ -118,14 +122,39 @@ class Store:
             return f"source={src!r} in a non-board file"
         return ""
 
+    def session_paths(self, name: str, hw: bool) -> list[Path]:
+        """[results/<name>, results/rep2/<name>, results/rep3/<name>] for a replicated board file when every
+        session directory has it; else just the first path."""
+        p = self.path(name, hw)
+        if not (hw and self.sessions and session_median.is_replicated(name)):
+            return [p]
+        extra = [self.hw_dir / d / name for d in session_median.SESSION_DIRS]
+        return [p, *extra] if p.exists() and all(e.exists() for e in extra) else [p]
+
     def load(self, name: str, hw: bool = False) -> list[dict] | None:
-        """Clean rows of a CSV (None if the file does not exist)."""
+        """Clean rows of a CSV (None if the file does not exist). A replicated board file is returned as
+        the median over the sessions (session_median.merge_rows; rows carry _nsess / _spread / _srcs)."""
         key = (name, hw)
         if key in self._cache:
             return self._cache[key]
-        p = self.path(name, hw)
+        paths = self.session_paths(name, hw)
+        per = [self._load_path(q, name, hw) for q in paths]
+        if per[0] is None:
+            out = None
+        elif len(per) == 1:
+            out = per[0]
+        else:
+            for q, rows in zip(paths, per):
+                if self.files[str(q)]["rejected"]:
+                    raise ProvenanceError(f"{_rel(q)}: rows rejected ({self.files[str(q)]['rejected'][0]['reason']}); "
+                                          "a session cannot enter the median with rejected rows")
+            out = session_median.merge_rows(per, name)
+            self.files[str(paths[0])]["sessions"] = [_rel(q) for q in paths]
+        self._cache[key] = out
+        return out
+
+    def _load_path(self, p: Path, name: str, hw: bool) -> list[dict] | None:
         if not p.exists():
-            self._cache[key] = None
             return None
         with open(p, newline="") as f:
             rows = list(csv.DictReader(f))
@@ -135,7 +164,7 @@ class Store:
             r["_line"] = i + 2          # 1-based line in the file (header = line 1)
             why = self.reject_reason(name, r, hw)
             (rejected if why else clean).append((r, why))
-        info = {
+        self.files[str(p)] = {
             "path": _rel(p),
             "sha256": sha256_file(p),
             "rows_total": len(rows),
@@ -144,10 +173,7 @@ class Store:
             "matches_git_HEAD": _matches_head(p),
             "dryrun_dir": hw and self.dryrun,
         }
-        self.files[str(p)] = info
-        out = [r for r, _ in clean]
-        self._cache[key] = out
-        return out
+        return [r for r, _ in clean]
 
     def stale_reason(self, commit: str) -> str:
         """DECISIONS D16: '' if v2/rtl, v2/vivado, v2/model at `commit` equal HEAD."""
@@ -161,6 +187,15 @@ class Store:
                                      "--", *D16_SOURCE_PATHS]).returncode
                 self._stale[commit] = "" if rc == 0 else f"v2/rtl|vivado|model differ @ {commit[:8]}"
         return self._stale[commit]
+
+
+def row_origin(row: dict, col: str) -> str:
+    """file:line:column of a CSV cell; a session-median row says so (and lists the other sessions' files)."""
+    o = f"{_rel(Path(row['_file']))}:{row['_line']}:{col}"
+    n = row.get("_nsess", 1)
+    if n > 1:
+        o += f" [median over {n} sessions: " + ", ".join(f"{_rel(Path(x['_file']))}:{x['_line']}" for x in row["_srcs"]) + "]"
+    return o
 
 
 def _rel(p: Path) -> str:
@@ -209,25 +244,31 @@ class Artifact:
             return None
         sel = [r for r in rows if all(str(r.get(k, "")) == str(v) for k, v in eq.items())
                and (where is None or where(r))]
+        self.inputs.setdefault(path, {"file": _rel(Path(path)), "exists": True, "rows_used": 0,
+                                      "git_commits": [], "sources": [], "lines": []})
+        for r in sel:
+            for src in r.get("_srcs") or [r]:         # a session-median row stands for one row per session
+                self._note_input(src["_file"], src, hw_path=path)
+        return sel
+
+    def _note_input(self, path: str, r: dict, hw_path: str):
         rec = self.inputs.setdefault(path, {"file": _rel(Path(path)), "exists": True,
                                             "rows_used": 0, "git_commits": [], "sources": [],
                                             "lines": []})
-        for r in sel:
-            if r["_line"] not in rec["lines"]:
-                rec["lines"].append(r["_line"])
-                rec["rows_used"] += 1
-            # aggregate rows (aggregate_sessions.py) say "mixed": record the input commits instead
-            cs = r["input_git_commits"].split() if r.get("git_commit") == "mixed" and r.get("input_git_commits") \
-                else [r.get("git_commit", "")]
-            for c in cs:
-                if c not in rec["git_commits"]:
-                    rec["git_commits"].append(c)
-            s = r.get("source", "")
-            if s not in rec["sources"]:
-                rec["sources"].append(s)
-            if s:
-                self.sources.add(s)
-        return sel
+        if r["_line"] not in rec["lines"]:
+            rec["lines"].append(r["_line"])
+            rec["rows_used"] += 1
+        # aggregate rows (aggregate_sessions.py) say "mixed": record the input commits instead
+        cs = r["input_git_commits"].split() if r.get("git_commit") == "mixed" and r.get("input_git_commits") \
+            else [r.get("git_commit", "")]
+        for c in cs:
+            if c not in rec["git_commits"]:
+                rec["git_commits"].append(c)
+        s = r.get("source", "")
+        if s not in rec["sources"]:
+            rec["sources"].append(s)
+        if s:
+            self.sources.add(s)
 
     # ---- numbers ----------------------------------------------------------------------
     def num(self, value, fmt: str = "{}", origin: str = "", row: dict | None = None,
@@ -235,7 +276,7 @@ class Artifact:
         """Format a CSV-derived value and register the resulting text with its origin."""
         text = fmt_value(value, fmt)
         if row is not None:
-            origin = f"{_rel(Path(row['_file']))}:{row['_line']}:{col or ''} {origin}".strip()
+            origin = f"{row_origin(row, col or '')} {origin}".strip()
         self.numbers.append({"text": text, "origin": origin})
         return text
 

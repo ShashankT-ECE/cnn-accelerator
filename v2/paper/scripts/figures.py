@@ -349,7 +349,8 @@ def fig_b3(c: FCtx) -> Artifact:
     ax.set_yticks(ys)
     ax.set_yticklabels([f"{NET_TITLE[n]} {hp}" for n, hp in keys])
     ax.set_ylim(len(keys) - 0.5, -0.5)
-    ax.set_xlabel("time per image (µs, median)")
+    ax.set_xlabel("time per image (µs, median over sessions)" if any(r.get("_nsess", 1) > 1 for r in b.values())
+                  else "time per image (µs, median)")
     ax.xaxis.grid(True, color="0.88", lw=0.4, zorder=0)
     if have:
         handles = [Patch(edgecolor="black", lw=0.5, label=p.replace("_", " "), **B3_STYLE[p]) for p in B3_STACK]

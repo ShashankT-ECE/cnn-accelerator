@@ -6,7 +6,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from paperlib import Artifact, _rel, fnum, inum
+from paperlib import Artifact, _rel, fnum, inum, row_origin
 
 
 @dataclass(frozen=True)
@@ -22,7 +22,7 @@ def at(row: dict, col: str, conv=fnum) -> V:
     v = row.get(col, "")
     if v in ("", None):
         raise ValueError(f"empty {col} at {row['_file']}:{row['_line']}")
-    return V(conv(v), f"{_rel(Path(row['_file']))}:{row['_line']}:{col}")
+    return V(conv(v), row_origin(row, col))
 
 
 def err_pct(x: V, ref: V) -> V:
@@ -234,15 +234,25 @@ INA_LABEL = "SOM-rail power (INA260)"      # power_log.LABEL; checked against th
                                            # power source of the board sessions
 
 
+def spread_v(row: dict, col: str, which: str, scale: float = 1.0) -> V:
+    """min / max of a column over the sessions of a session-median row (value from the CSV cell text)."""
+    sp = row["_spread"][col]
+    return V(fnum(sp[which + "_txt"]) * scale, f"{row_origin(row, col)} {which} over sessions"
+             + (f"*{scale:g}" if scale != 1 else ""))
+
+
 def ci(art: Artifact, row: dict, med: str, lo: str, hi: str, fmt: str, scale: float = 1.0) -> str:
-    """'median [lo, hi]' (95 % CI) text from one CSV row; just the median if the CI columns are
-    absent or empty (e.g. rows written before the CI columns existed)."""
+    """'median [lo, hi]' text from one CSV row. For a session-median row (several board sessions) the
+    bracket is [min, max] of the per-session values of `med`; for a single-session row it is the
+    row's 95 % CI (columns lo / hi); just the median if those are absent or empty."""
     def one(col):
-        return V(fnum(row[col]) * scale, f"{_rel(Path(row['_file']))}:{row['_line']}:{col}"
-                 + (f"*{scale:g}" if scale != 1 else "")).fmt(art, fmt)
+        return V(fnum(row[col]) * scale, row_origin(row, col) + (f"*{scale:g}" if scale != 1 else "")).fmt(art, fmt)
     if not row.get(med):
         return "--"
     txt = one(med)
+    if row.get("_nsess", 1) > 1 and med in row.get("_spread", {}):
+        return txt + " [" + spread_v(row, med, "min", scale).fmt(art, fmt) + ", " \
+            + spread_v(row, med, "max", scale).fmt(art, fmt) + "]"
     if row.get(lo) not in (None, "") and row.get(hi) not in (None, ""):
         txt += " [" + one(lo) + ", " + one(hi) + "]"
     return txt
@@ -273,7 +283,7 @@ def power_summaries(art: Artifact, prefix: str) -> list[dict]:
             for r in (m, *std):
                 if r.get("measurement") and r["measurement"] != INA_LABEL:
                     art.check(f"{name} line {r['_line']}: measurement label {r['measurement']!r} != {INA_LABEL!r}")
-            if rep:                                   # mean row consistent with the repeats?
+            if rep and m.get("_nsess", 1) == 1:         # mean row consistent with the repeats? (per session)
                 for k in ("accel_dp_w", "accel_energy_per_image_mj", "cpu_dp_w", "cpu_energy_per_image_mj"):
                     vals = [fnum(r[k]) for r in rep if r.get(k)]
                     if vals and m.get(k) and abs(sum(vals) / len(vals) - fnum(m[k])) > 1e-5 * max(1, abs(fnum(m[k]))):
@@ -289,14 +299,19 @@ def power_summaries(art: Artifact, prefix: str) -> list[dict]:
 
 
 def pm(art: Artifact, e: dict, col: str, fmt: str, scale: float = 1.0) -> str:
-    """'mean ± std' text for a summary column (std row if present)."""
+    """Power-summary cell. Session-median entry (several board sessions): 'median (CV x %)', the CV of the
+    per-session values of the repeat-mean. Single session: 'mean +- std' over repeats (std row if present)."""
     m = e["mean"]
     if not m.get(col):
         return "--"
-    txt = V(fnum(m[col]) * scale, f"{_rel(Path(m['_file']))}:{m['_line']}:{col}" + (f"*{scale:g}" if scale != 1 else "")
-            ).fmt(art, fmt)
+    txt = V(fnum(m[col]) * scale, row_origin(m, col) + (f"*{scale:g}" if scale != 1 else "")).fmt(art, fmt)
+    if m.get("_nsess", 1) > 1:
+        sp = m.get("_spread", {}).get(col)
+        if sp and sp["cv"] is not None:
+            txt += r"\,(CV\," + V(sp["cv"], f"{row_origin(m, col)} CV over sessions").fmt(art, "f1") + r"\,\%)"
+        return txt
     s = e["std"]
     if s is not None and s.get(col):
-        txt += r"\,$\pm$\," + V(fnum(s[col]) * scale, f"{_rel(Path(s['_file']))}:{s['_line']}:{col}"
-                                + (f"*{scale:g}" if scale != 1 else "")).fmt(art, fmt)
+        txt += r"\,$\pm$\," + V(fnum(s[col]) * scale, row_origin(s, col) + (f"*{scale:g}" if scale != 1 else "")
+                                  ).fmt(art, fmt)
     return txt

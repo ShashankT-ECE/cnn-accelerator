@@ -41,6 +41,7 @@ import csv
 from pathlib import Path
 
 import _setup
+import session_median
 from _setup import fmt
 
 from common import base_meta, write_results_csv
@@ -59,6 +60,10 @@ FIELDS = ["system", "time_basis", "ops_per_image", "time_us", "images_per_s", "g
 
 
 def rows_of(res: Path, name: str) -> list[dict]:
+    """Rows of a results CSV; a board file that exists in every repeatability session (results/, rep2/,
+    rep3/) is returned as the median over the sessions (session_median.py, DECISIONS D26)."""
+    if len(session_median.session_files(res, name)) > 1:
+        return session_median.load_median(res, name)
     p = res / name
     with p.open(newline="") as f:
         return list(csv.DictReader(f))
@@ -95,9 +100,9 @@ def compute(res: Path) -> list[dict]:
             ("ours_pl", "PL counter TOTAL_CYC / pl_clk0 read-back", float(a2[net]["hw_us"]), OUR_LANES,
              dsps, "hw_a2_a3_cycles.csv hw_us"),
             ("ours_e2e_fast", "fast host path end-to-end p50 (primary)", float(b3[("fast", net)]["p50_us"]),
-             OUR_LANES, dsps, "hw_b3_breakdown_fast.csv end_to_end p50_us"),
+             OUR_LANES, dsps, "hw_b3_breakdown_fast.csv end_to_end p50_us (median over sessions)"),
             ("ours_e2e_safe", "safe host path end-to-end p50 (footnote)", float(b3[("safe", net)]["p50_us"]),
-             OUR_LANES, dsps, "hw_b3_breakdown.csv end_to_end p50_us"),
+             OUR_LANES, dsps, "hw_b3_breakdown.csv end_to_end p50_us (median over sessions)"),
             ("dpu_runner", "VART runner execute_async + wait p50", float(dl[(net, "dpu_runner")]["p50"]),
              dpu_lanes, None, "hw_dpu_latency.csv dpu_runner p50"),
             ("dpu_e2e", "DPU pre + runner + post p50", float(dl[(net, "end_to_end")]["p50"]),
@@ -111,9 +116,9 @@ def compute(res: Path) -> list[dict]:
                           lambda r: (r["kind"], r["threads"]))[(kind, th)]
             tag = f"{kind} x{th} (lowest e2e median)"
             systems += [("cpu_compute", f"best CPU baseline compute median, {tag}", float(comp["median_us"]),
-                         None, None, "hw_cpu_baseline.csv compute median_us"),
+                         None, None, "hw_cpu_baseline.csv compute median_us (median over sessions)"),
                         ("cpu_e2e", f"best CPU baseline e2e median, {tag}", float(best["median_us"]),
-                         None, None, "hw_cpu_baseline.csv e2e median_us")]
+                         None, None, "hw_cpu_baseline.csv e2e median_us (median over sessions)")]
         our_mhz = float(a2[net]["f_used_mhz"])
         for sysname, basis, t_us, lanes, nd, inp in systems:
             gops = ops / (t_us * 1e3)            # ops / ns = Gop/s

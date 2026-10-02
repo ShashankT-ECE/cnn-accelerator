@@ -1,12 +1,13 @@
 """Table generators. Each returns an Artifact after writing generated/<name>.tex."""
 from __future__ import annotations
 
+import statistics
 from pathlib import Path
 
 from paperdata import (INA_LABEL, V, a3_net, at, ci, clock_marks, clock_notes, div, impl_variants, is_performance,
                        is_postimpl_only, latest, lines_of, pm, power_summaries)
 from paperlib import (NETS, PH_BOARD, Artifact, Store, _rel, fnum, inum, latex_table, pretty_net,
-                      tex_escape, write_text)
+                      row_origin, tex_escape, write_text)
 
 META_COLS = {"timestamp", "git_commit", "git_dirty", "vivado_version", "bitstream_sha256", "board_id",
              "net", "layer", "clock_mhz", "source", "duration_s", "num_inferences", "_file", "_line"}
@@ -48,6 +49,27 @@ class Ctx:
     @property
     def board_label(self) -> str:
         return "KV260 (DRY RUN)" if self.dryrun else "KV260"
+
+
+_NUMW = {2: "two", 3: "three", 4: "four", 5: "five"}
+
+
+def _nsess(c: Ctx) -> int:
+    """Number of board sessions behind the replicated board rows (1 = first session only)."""
+    return len(c.store.session_paths("hw_b3_breakdown.csv", True))
+
+
+def _sessw(c: Ctx) -> str:
+    n = _nsess(c)
+    return _NUMW.get(n, str(n))
+
+
+def _bracket(c: Ctx) -> str:
+    """Header text of a 'median [..]' cell: [min, max] over the sessions, else the 95 % CI of one session."""
+    return "median [min, max]" if _nsess(c) > 1 else "median [95\\% CI]"
+
+
+SINGLE = "first session only"        # board rows that exist for one session only (no replicates)
 
 
 def _lab(art: Artifact, r: dict, col: str, n: int | None = None) -> str:
@@ -176,11 +198,11 @@ def a2_latency(c: Ctx) -> Artifact:
           for n in NETS}
     line(f"PL latency (\\textmu s) at the read-back clock, {c.board_label}", lambda n: art.cell(hw[n], "hw_us", "f2")
          if hw[n] and hw[n].get("hw_us") else art.placeholder(f"A2 {n}: hw_us"))
-    line(f"$f_\\mathrm{{meas}}$ cross-check (MHz), {c.board_label}", lambda n: art.cell(hw[n], "f_meas_mhz", "f3")
+    line(f"$f_\\mathrm{{meas}}$ cross-check (MHz), {c.board_label} ({SINGLE})", lambda n: art.cell(hw[n], "f_meas_mhz", "f3")
          if hw[n] and hw[n].get("f_meas_mhz") else art.placeholder(f"A2 {n}: f_meas_mhz (exp_fclk_cal)"))
     line(f"Clock read back (MHz), {c.board_label}", lambda n: art.cell(hw[n], "clock_mhz", "f3")
          if hw[n] and hw[n].get("clock_mhz") else art.placeholder(f"A2 {n}: clock_mhz"))
-    line(f"Wall-clock/image (\\textmu s), median [95\\% CI], {c.board_label}",
+    line(f"Wall-clock/image (\\textmu s), median [95\\% CI], {c.board_label} ({SINGLE})",
          lambda n: ci(art, hw[n], "wall_us_median", "wall_us_ci_lo", "wall_us_ci_hi", "f1")
          if hw[n] and hw[n].get("wall_us_median") else art.placeholder(f"A2 {n}: wall_us_median"))
     return c.table(art, "@{}lrr@{}", ["& LeNet-5 & CIFAR-10"], rows,
@@ -381,7 +403,7 @@ def a5_cpu(c: Ctx) -> Artifact:
             fp.append(ci(art, r, "median_us", "median_ci_lo_us", "median_ci_hi_us", "f1") if r
                       else art.placeholder(f"A5 FPGA {net} {ph}"))
     dl = _dpu_lat(art)
-    dp = ["DPU (Vitis AI, vai\\_q INT8), p50", "--"]
+    dp = [f"DPU (Vitis AI, vai\\_q INT8), p50 ({SINGLE})", "--"]
     for net in NETS:
         for met in ("dpu_runner", "end_to_end"):
             r = dl.get((net, met))
@@ -395,12 +417,12 @@ def a5_cpu(c: Ctx) -> Artifact:
            r"\cmidrule(lr){3-4}\cmidrule(l){5-6}",
            r"Implementation & thr. & comp. & e2e & comp. & e2e"]
     return c.table(art, "@{}lrrrrr@{}", hdr, body,
-                   "A5 same-board baselines: median [95\\% CI] time per image on the KV260 Cortex-A53, "
-                   "the accelerator (fast host path) and the DPU.",
+                   "A5 same-board baselines: "
+                   + (f"median over {_sessw(c)} board sessions [min, max]" if _nsess(c) > 1 else "median [95\\% CI]")
+                   + " time per image on the KV260 Cortex-A53, the accelerator (fast host path) and the DPU.",
                    "tab:cpu",
-                   notes=["CPU: hw\\_cpu\\_baseline.csv (source cpu\\_board; median over runs, warm-up "
-                          "discarded, distribution-free order-statistic 95\\% CI; workers pinned; p50/p95/p99 "
-                          "in Table~\\ref{tab:pct}). Accelerator: hw\\_b3\\_breakdown.csv, comp.\\ = PL "
+                   notes=[_sess_note(c) + "CPU: hw\\_cpu\\_baseline.csv (source cpu\\_board; median over runs, warm-up "
+                          "discarded; workers pinned; p50/p95/p99 in Table~\\ref{tab:pct}). Accelerator: hw\\_b3\\_breakdown.csv, comp.\\ = PL "
                           "counter / the pl\\_clk0 PLL read-back (pl\\_compute), e2e = input write + start + "
                           "poll + logit read + PS dequant (end\\_to\\_end, safe host path; the fast host path "
                           "is given in the speedup rows). CPU e2e additionally includes the input "
@@ -409,7 +431,7 @@ def a5_cpu(c: Ctx) -> Artifact:
                           + ("Safe host path (per-word MMIO; footnote): e2e speedup vs best CPU " + safe_note + ". "
                              if safe_note else "")
                           + "The DPU rows are the AMD DPU (DPUCZDX8G, prebuilt pynq-dpu overlay) running a vai\\_q "
-                          "quantization of the same FP32 nets (hw\\_dpu\\_latency.csv; comp. = VART runner "
+                          "quantization of the same FP32 nets (hw\\_dpu\\_latency.csv, one session only; comp. = VART runner "
                           "time, e2e = input conversion + runner + argmax); DPU/accelerator ratios above "
                           "unity mean the accelerator is faster. "
                           "\\emph{Best CPU baseline} = the CPU configuration with the lowest e2e median per "
@@ -473,8 +495,9 @@ def b1_power(c: Ctx) -> Artifact:
     hdr = ["Quantity & " + " & ".join(pretty_net(n) for n in nets)]
     return c.table(art, "@{}l" + "r" * len(nets) + "@{}", hdr, body,
                    f"B1 power and energy per image: {tex_escape(lab) if lab == INA_LABEL else lab}, "
-                   "mean $\\pm$ std over repeats.", "tab:power",
-                   notes=["Measured on the KV260 by the on-board INA260 on the SOM rail (VCC\\_SOM, the "
+                   + (f"median over {_sessw(c)} board sessions (coefficient of variation CV across sessions)."
+                      if _nsess(c) > 1 else "mean $\\pm$ std over repeats."), "tab:power",
+                   notes=[_power_sess_note(c) + "Measured on the KV260 by the on-board INA260 on the SOM rail (VCC\\_SOM, the "
                           "SOM input): not accelerator-only power and not board input power; PL I/O (VCCO) rails "
                           "and carrier peripherals are outside it. $P_\\mathrm{idle}$ = mean of the two "
                           "idle phases bracketing each run phase; $\\Delta P = P_\\mathrm{run}-P_\\mathrm{idle}$. "
@@ -574,18 +597,18 @@ def b3_breakdown(c: Ctx) -> Artifact:
     hdr = [r"& \multicolumn{4}{c}{LeNet-5 (\textmu s)} & \multicolumn{4}{c}{CIFAR-10 (\textmu s)} \\",
            r"\cmidrule(lr){2-5}\cmidrule(l){6-9}",
            r"& \multicolumn{2}{c}{safe} & \multicolumn{2}{c}{fast} & \multicolumn{2}{c}{safe} & \multicolumn{2}{c}{fast} \\",
-           r"Phase & median [95\% CI] & p95 & median [95\% CI] & p95 & median [95\% CI] & p95 & median [95\% CI] & p95"]
+           "Phase & " + " & ".join([f"{_bracket(c)} & p95"] * 4)]
     return c.table(art, "@{}l" + "r" * 8 + "@{}", hdr, body,
                    "B3 end-to-end breakdown per image (host side), safe vs fast host path.",
                    "tab:breakdown", wide=True,
-                   notes=["Measured on the KV260 (Python host). safe: per-word MMIO (hw\\_b3\\_breakdown.csv); "
+                   notes=[_sess_note(c) + "Measured on the KV260 (Python host). safe: per-word MMIO (hw\\_b3\\_breakdown.csv); "
                           "fast: PL windows mapped once, input written with one vectorized numpy copy, LOGIT "
                           "read with one vectorized read, tight STATUS poll (hw\\_b3\\_breakdown\\_fast.csv; used "
                           "only after the bring-up fast-path check passed). end\\_to\\_end = input\\_write + "
                           "status\\_clear + start\\_done + logit\\_read + ps\\_dequant; start\\_done = start\\_write "
                           "+ poll; pl\\_compute = PL cycle counter / $f_\\mathrm{meas}$. Safe and fast "
                           "conditions interleaved in randomized blocks in one run (warm-up and block warm-up "
-                          "discarded); median with the distribution-free order-statistic 95\\% CI."])
+                          "discarded)."])
 
 
 # --------------------------------------------------------------------------------------------
@@ -634,7 +657,7 @@ REPEAT_METRICS = [   # (metric file glob, metric, key filter, label, fmt)
 
 def repeatability(c: Ctx) -> Artifact:
     """3-session repeatability (aggregate_sessions.py -> hw_repeatability.csv): per metric and net
-    mean of the per-session values +- between-session SD and the number of sessions. Groups are per
+    median [min, max] of the per-session values and the number of sessions. Groups are per
     bitstream + clock (never mixed); the latest-timestamp group per metric/net is shown."""
     import json as _json
     art = c.art("tab_repeatability")
@@ -656,14 +679,15 @@ def repeatability(c: Ctx) -> Artifact:
             if r is None:
                 cells.append(art.placeholder(f"repeatability {metric} {net}: hw_repeatability.csv"))
                 continue
-            txt = art.cell(r, "mean", fmt)
-            if r.get("between_sd"):
-                txt += r"\,$\pm$\," + art.cell(r, "between_sd", fmt)
+            per = sorted(fnum(v) for v in _json.loads(r["per_session"]).values())
+            txt = V(statistics.median(per), f"{row_origin(r, 'per_session')} median of the per-session values").fmt(art, fmt)
+            if r.get("min") and r.get("max") and fnum(r["n_sessions"]) > 1:
+                txt += " [" + art.cell(r, "min", fmt) + ", " + art.cell(r, "max", fmt) + "]"
             cells.append(txt + " (" + art.cell(r, "n_sessions", "int") + ")")
         body.append(cells)
     return c.table(art, "@{}lrr@{}", ["Metric & LeNet-5 & CIFAR-10"], body,
-                   "Repeatability over independent board sessions: mean $\\pm$ between-session SD "
-                   "(number of sessions).", "tab:repeat",
+                   "Repeatability over independent board sessions: median [min, max] of the per-session "
+                   "values (number of sessions).", "tab:repeat",
                    notes=["Source: hw\\_repeatability.csv (aggregate\\_sessions.py): per session the "
                           "session's own statistic (latency median, power mean over repeats), combined "
                           "across session\\_index values; rows from different bitstreams or clocks are "
@@ -727,7 +751,7 @@ def percentiles(c: Ctx) -> Artifact:
     return c.table(art, "@{}l" + "r" * 8 + "@{}", hdr, body,
                    "Per-image time percentiles p50 / p95 / p99 and spread (max $-$ min) of every measured condition.",
                    "tab:pct",
-                   notes=["p50 = median; spread = slowest minus fastest timed image. The fast host path is the primary "
+                   notes=[_sess_note(c, pct=True) + "p50 = median; spread = slowest minus fastest timed image. The fast host path is the primary "
                           "accelerator number, the safe host path is listed below the rule. Sources: "
                           "hw\\_b3\\_breakdown*.csv (kept images per condition: "
                           + (art.cell(rs0, "images", "int") if rs0 and rs0.get("images") else "--")
@@ -766,7 +790,8 @@ def power_compare(c: Ctx) -> Artifact:
     return c.table(art, "@{}lrr@{}", ["Quantity & LeNet-5 & CIFAR-10"], body,
                    f"SOM-rail power ({INA_LABEL}) of the accelerator and the DPU: absolute power and $\\Delta P$ above "
                    "each system's own-overlay idle.", "tab:powercmp",
-                   notes=["Each $\\Delta P$ is above the idle power measured with that system's own bitstream loaded "
+                   notes=[_power_sess_note(c) + "The DPU values come from one session (mean $\\pm$ std over its repeats). "
+                          "Each $\\Delta P$ is above the idle power measured with that system's own bitstream loaded "
                           "(mean of the idle phases bracketing the run phases); the two idle levels differ because the "
                           "loaded PL configuration differs, so compare absolute power and $\\Delta P$ together. The "
                           "no-overlay reference is the idle SOM-rail power measured "
@@ -841,6 +866,26 @@ def efficiency(c: Ctx) -> Artifact:
                           "DSP: accelerator only (impl\\_gos.csv, post-implementation); there is no DPU per-DSP figure "
                           "because the overlay's hwh and xclbin carry no resource counts. A MAC lane is not a DSP. "
                           "Source: board\\_efficiency.csv (derived from committed board results)."])
+
+
+def _sess_note(c: Ctx, pct: bool = False) -> str:
+    """Note sentence for tables whose board cells are session medians (empty for a single session)."""
+    n = _nsess(c)
+    if n < 2:
+        return ""
+    what = "each percentile and the spread" if pct else "each cell"
+    return (f"Board cells of the accelerator and CPU rows: {what} is the median over the {_sessw(c)} independent board "
+            "sessions of that session's own statistic"
+            + ("" if pct else "; the bracket is the minimum and maximum over the sessions")
+            + ". The DPU, A1, A2 wall-clock, A4, B2, soak, layer-spread and shape rows were measured in one session only. ")
+
+
+def _power_sess_note(c: Ctx) -> str:
+    n = _nsess(c)
+    if n < 2:
+        return ""
+    return (f"Accelerator cells: median over the {_sessw(c)} board sessions of each session's repeat-mean; "
+            "CV = standard deviation / mean of those per-session values. ")
 
 
 ALL = [t1_impl, a1_accuracy, a2_latency, a3_cycles, a4_util, a5_cpu, percentiles, efficiency, b1_power, power_compare,
