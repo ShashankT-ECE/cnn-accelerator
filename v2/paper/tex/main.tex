@@ -1,0 +1,44 @@
+% ROCS 2026 short paper (4 pages + references), IEEEtran conference, 10 pt.
+% Plan, budgets and writing rules: v2/paper/PAPER_PLAN.md.
+% Tables/figures: \input / \includegraphics from ../generated/ (make_all.py output, gitignored);
+% run `.venv/bin/python v2/paper/scripts/make_all.py` before building.
+% Numbers in the prose carry a "% src:" comment naming the results CSV (or generated table) they come from.
+\documentclass[conference,10pt]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{url}
+\usepackage{xspace}
+
+\graphicspath{{../generated/}}
+\newcommand{\ceil}[1]{\left\lceil #1 \right\rceil}
+\newcommand{\cpipe}{C_{\mathrm{PIPE}}}
+\newcommand{\cstart}{C_{\mathrm{START}}}
+\newcommand{\kvtsx}{KV260\xspace}
+
+\begin{document}
+
+% TODO title: pick one of the three working titles in PAPER_PLAN.md.
+\title{Predictable by Construction: A Cycle-Exact, Bit-Exact INT8 CNN Accelerator on the Kria KV260}
+
+% TODO authors
+\author{\IEEEauthorblockN{TODO Author}
+\IEEEauthorblockA{TODO Affiliation\\ TODO email}}
+
+\maketitle
+
+\input{sections/intro}
+\input{sections/related}
+\input{sections/architecture}
+\input{sections/cycle_model}
+\input{sections/verification}
+\input{sections/setup}
+\input{sections/results}
+\input{sections/conclusion}
+
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
+
+\end{document}

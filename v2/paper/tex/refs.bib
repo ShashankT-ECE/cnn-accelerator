@@ -1,0 +1,125 @@
+% References for the ROCS 2026 short paper (IEEEtran.bst).
+% Every DOI below was resolved through the Crossref API on 2026-10-02 and the title,
+% authors, venue, year and pages were copied from the Crossref record.
+% Writing rule 6 (PAPER_PLAN.md): cite only what a team member has read. See
+% v2/paper/RELATED_NOTES.md for the per-entry "read by the team" status -- NONE are
+% marked read yet.
+
+% ---- Dataflow background and quantization ------------------------------------------
+@article{sze2017efficient,
+  author  = {Vivienne Sze and Yu-Hsin Chen and Tien-Ju Yang and Joel S. Emer},
+  title   = {Efficient Processing of Deep Neural Networks: A Tutorial and Survey},
+  journal = {Proceedings of the IEEE},
+  volume  = {105},
+  number  = {12},
+  pages   = {2295--2329},
+  year    = {2017},
+  doi     = {10.1109/JPROC.2017.2761740}
+}
+
+@inproceedings{jacob2018quantization,
+  author    = {Benoit Jacob and Skirmantas Kligys and Bo Chen and Menglong Zhu and Matthew Tang and Andrew Howard and Hartwig Adam and Dmitry Kalenichenko},
+  title     = {Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference},
+  booktitle = {Proc. IEEE/CVF Conf. Computer Vision and Pattern Recognition (CVPR)},
+  pages     = {2704--2713},
+  year      = {2018},
+  doi       = {10.1109/CVPR.2018.00286}
+}
+
+% ---- (a) FPGA CNN accelerators -----------------------------------------------------
+@inproceedings{zhang2015optimizing,
+  author    = {Chen Zhang and Peng Li and Guangyu Sun and Yijin Guan and Bingjun Xiao and Jason Cong},
+  title     = {Optimizing {FPGA}-based Accelerator Design for Deep Convolutional Neural Networks},
+  booktitle = {Proc. ACM/SIGDA Int. Symp. Field-Programmable Gate Arrays (FPGA)},
+  pages     = {161--170},
+  year      = {2015},
+  doi       = {10.1145/2684746.2689060}
+}
+
+@inproceedings{umuroglu2017finn,
+  author    = {Yaman Umuroglu and Nicholas J. Fraser and Giulio Gambardella and Michaela Blott and Philip Leong and Magnus Jahre and Kees Vissers},
+  title     = {{FINN}: A Framework for Fast, Scalable Binarized Neural Network Inference},
+  booktitle = {Proc. ACM/SIGDA Int. Symp. Field-Programmable Gate Arrays (FPGA)},
+  pages     = {65--74},
+  year      = {2017},
+  doi       = {10.1145/3020078.3021744}
+}
+
+@article{guo2018angeleye,
+  author  = {Kaiyuan Guo and Lingzhi Sui and Jiantao Qiu and Jincheng Yu and Junbin Wang and Song Yao and Song Han and Yu Wang and Huazhong Yang},
+  title   = {{Angel-Eye}: A Complete Design Flow for Mapping {CNN} Onto Embedded {FPGA}},
+  journal = {IEEE Trans. Computer-Aided Design of Integrated Circuits and Systems},
+  volume  = {37},
+  number  = {1},
+  pages   = {35--47},
+  year    = {2018},
+  doi     = {10.1109/TCAD.2017.2705069}
+}
+
+@article{ma2018optimizing,
+  author  = {Yufei Ma and Yu Cao and Sarma Vrudhula and Jae-sun Seo},
+  title   = {Optimizing the Convolution Operation to Accelerate Deep Neural Networks on {FPGA}},
+  journal = {IEEE Trans. Very Large Scale Integration (VLSI) Systems},
+  volume  = {26},
+  number  = {7},
+  pages   = {1354--1367},
+  year    = {2018},
+  doi     = {10.1109/TVLSI.2018.2815603}
+}
+
+% ---- (b) Analytical / simulation performance models --------------------------------
+@inproceedings{parashar2019timeloop,
+  author    = {Angshuman Parashar and Priyanka Raina and Yakun Sophia Shao and Yu-Hsin Chen and Victor A. Ying and Anurag Mukkara and Rangharajan Venkatesan and Brucek Khailany and Stephen W. Keckler and Joel Emer},
+  title     = {Timeloop: A Systematic Approach to {DNN} Accelerator Evaluation},
+  booktitle = {Proc. IEEE Int. Symp. Performance Analysis of Systems and Software (ISPASS)},
+  pages     = {304--315},
+  year      = {2019},
+  doi       = {10.1109/ISPASS.2019.00042}
+}
+
+@inproceedings{kwon2019maestro,
+  author    = {Hyoukjun Kwon and Prasanth Chatarasi and Michael Pellauer and Angshuman Parashar and Vivek Sarkar and Tushar Krishna},
+  title     = {Understanding Reuse, Performance, and Hardware Cost of {DNN} Dataflow: A Data-Centric Approach},
+  booktitle = {Proc. 52nd IEEE/ACM Int. Symp. Microarchitecture (MICRO)},
+  pages     = {754--768},
+  year      = {2019},
+  doi       = {10.1145/3352460.3358252}
+}
+
+@inproceedings{samajdar2020scalesim,
+  author    = {Ananda Samajdar and Jan Moritz Joseph and Yuhao Zhu and Paul Whatmough and Matthew Mattina and Tushar Krishna},
+  title     = {A Systematic Methodology for Characterizing Scalability of {DNN} Accelerators using {SCALE-Sim}},
+  booktitle = {Proc. IEEE Int. Symp. Performance Analysis of Systems and Software (ISPASS)},
+  pages     = {58--68},
+  year      = {2020},
+  doi       = {10.1109/ISPASS48437.2020.00016}
+}
+
+@inproceedings{genc2021gemmini,
+  author    = {Hasan Genc and Seah Kim and Alon Amid and Ameer Haj-Ali and Vighnesh Iyer and Pranav Prakash and Jerry Zhao and Daniel Grubb and Harrison Liew and Howard Mao and Albert Ou and Colin Schmidt and Samuel Steffl and John Wright and Ion Stoica and Jonathan Ragan-Kelley and Krste Asanovic and Borivoje Nikolic and Yakun Sophia Shao},
+  title     = {Gemmini: Enabling Systematic Deep-Learning Architecture Evaluation via Full-Stack Integration},
+  booktitle = {Proc. 58th ACM/IEEE Design Automation Conf. (DAC)},
+  pages     = {769--774},
+  year      = {2021},
+  doi       = {10.1109/DAC18074.2021.9586216}
+}
+
+% ---- (c) AMD DPU on Zynq UltraScale+ / Kria ----------------------------------------
+@article{costa2026kv260,
+  author  = {Claudino Costa and Jos{\'e} Henrique Brito},
+  title   = {Throughput Impact of Software Multithreading for Deep-Learning Inference on the {AMD} {Kria} {KV260}},
+  journal = {Journal of Real-Time Image Processing},
+  volume  = {23},
+  number  = {2},
+  pages   = {89},
+  year    = {2026},
+  doi     = {10.1007/s11554-026-01889-x}
+}
+
+% NO DOI (vendor documentation). Document version not verified -- check the PG338
+% revision that matches the DPUCZDX8G in the pynq-dpu 2.5 overlay before submission.
+@manual{amd_pg338,
+  title        = {{DPUCZDX8G} for {Zynq} {UltraScale+} {MPSoCs} Product Guide ({PG338})},
+  organization = {Advanced Micro Devices, Inc.},
+  note         = {AMD Technical Information Portal, https://docs.amd.com/r/en-US/pg338-dpu}
+}

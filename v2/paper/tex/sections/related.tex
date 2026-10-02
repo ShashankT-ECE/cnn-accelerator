@@ -1,0 +1,30 @@
+% Section II -- Related work. Budget: 0.5 col (cut to 0.3 col if over, PAPER_PLAN.md).
+% Writing rule 6: every cited paper must be read by a team member before submission
+% (status in v2/paper/RELATED_NOTES.md -- none ticked yet).
+\section{Related Work}\label{sec:related}
+\textbf{FPGA CNN accelerators.} Output-, weight- and row-stationary dataflows
+trade data reuse against utilization~\cite{sze2017efficient}. On FPGAs,
+roofline-guided loop tiling~\cite{zhang2015optimizing} and quantitative
+loop-optimization analysis~\cite{ma2018optimizing} choose a design from a
+model and confirm it by implementation. FINN~\cite{umuroglu2017finn} builds
+per-layer streaming pipelines for binarized networks on the same small
+benchmarks we use. Angel-Eye~\cite{guo2018angeleye} maps CNNs onto embedded
+Zynq devices through a compiler and an instruction-driven engine. Our
+numeric contract follows integer-only quantization with a fixed-point
+multiplier and shift~\cite{jacob2018quantization}.
+
+\textbf{Performance models.} Timeloop~\cite{parashar2019timeloop} and
+MAESTRO~\cite{kwon2019maestro} project performance and energy across large
+design spaces, and SCALE-Sim~\cite{samajdar2020scalesim} simulates systolic
+arrays cycle by cycle. They are built for breadth across designs. Gemmini~\cite{genc2021gemmini} shows that
+system effects outside the accelerator change measured results, which is
+also what separates our compute and end-to-end latencies.
+
+\textbf{Vendor IP.} The AMD DPU~\cite{amd_pg338} is the standard way to run
+CNNs on Zynq UltraScale+ and Kria devices; recent work characterizes its
+multithreaded throughput on the KV260~\cite{costa2026kv260}. We use it as a
+same-board baseline.
+
+Few of these works report an analytical model, RTL simulation and board
+measurement that agree exactly, layer by layer; that agreement is the focus
+of this paper.

@@ -1,0 +1,43 @@
+% Section VI -- Experimental setup. Budget: 0.5 col + Table I (PAPER_PLAN.md).
+% Sources: DECISIONS D19-D21, D26; EXPERIMENTS.md (protocol); tab_t1_impl, tab_b1_power, tab_a5_cpu notes.
+\section{Experimental Setup}\label{sec:setup}
+
+\begingroup
+\input{../generated/tab_t1_impl}
+\endgroup
+
+\textbf{Platform.} We use a KV260 (K26 SOM) with Kria Ubuntu 22.04 and
+Kria-PYNQ; the design is built with Vivado 2023.1 (Table~\ref{tab:impl}). The
+PL clock is set from the PS PLL after every overlay load and verified by
+read-back; every $\mu$s value uses that read-back clock (249.9975\,MHz,
+reported as 250\,MHz). The design also meets timing at 300\,MHz after
+implementation, but the board's PL clock source cannot be divided to 300\,MHz,
+so all board results use the 250\,MHz build.
+% src: DECISIONS D19, D20, D21 (IOPLL 999.99 MHz / 4 = 249.9975 MHz); tab_t1_impl notes
+
+\textbf{Protocol.} The CPU governor is fixed, measurement processes are
+pinned, and a pre-flight check (no package manager running, clock read-back)
+gates every session. Warm-up images are discarded; latency conditions keep
+at least 100 repeats (1,000 images for the end-to-end breakdown), run
+interleaved in randomized blocks, and are reported as medians. The whole
+campaign ran in three sessions on different days; board cells are the median
+over the sessions, with the range in brackets.
+% src: EXPERIMENTS.md "Measurement rigor", B3, "3-session repeatability"; DECISIONS D26
+End-to-end time covers input write, start, status poll, logit read and the
+host's dequantization in Python, on a fast host path that maps the PL
+windows once; compute time is the hardware cycle counter over the clock.
+% src: EXPERIMENTS.md B3 (fast host path)
+
+\textbf{Power.} We measure SOM-rail power (INA260) on the SOM input rail
+(VCC\_SOM), logged at 10\,Hz. Each net runs accelerator, control and CPU
+phases of 60\,s, each bracketed by idle phases, repeated three times. Energy
+per image is $\Delta P$ above the bracketing idle times the time per image,
+so it includes the host CPU that drives the accelerator; the control phase
+runs the same host loop without starting the accelerator, polling the
+status for the same time. % src: tab_b1_power (sample rate 10.0 Hz, repeats 3, notes); EXPERIMENTS.md B1 "Control" definition
+
+\textbf{Baselines.} On the Cortex-A53 we run ONNX Runtime FP32 and INT8 and
+plain numpy FP32 and INT8, with 1 and 4 threads. The AMD DPU (DPUCZDX8G)
+runs the prebuilt pynq-dpu 2.5 overlay with a Vitis AI quantization of the
+same FP32 networks.
+% src: tab_a5_cpu rows and notes; tab_efficiency notes (DPU overlay)

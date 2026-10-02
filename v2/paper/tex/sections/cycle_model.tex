@@ -1,0 +1,46 @@
+% Section IV -- Cycle model. Budget: 0.6 columns (PAPER_PLAN.md).
+% Sources: v2/model/gos_cycle_model.py, DECISIONS D10-8 / D13, cycle_model.csv,
+% utilization_model.csv, schedule_ablation.csv (all model), tab_a3_cycles / tab_a4_util.
+\section{Cycle Model}\label{sec:model}
+
+Because the array accepts one reduction index per cycle and never stalls, a
+layer's cost follows from its loop nest alone. Tiles iterate over output-channel
+groups, output rows and 8-wide output column groups, giving
+\begin{equation}
+T = \ceil{OC/8} \cdot OH \cdot \ceil{OW/8}, \qquad K = IC \cdot KH \cdot KW .
+\end{equation}
+Each tile streams $K$ cycles, and the drain of one tile hides under the next
+tile's accumulation. A layer therefore takes
+\begin{align}
+\mathit{LAYER\_CYC} &= T K + \cpipe, \label{eq:model}\\
+\mathit{TOTAL\_CYC} &= \cstart + \textstyle\sum_{\text{layers}} \mathit{LAYER\_CYC},\nonumber
+\end{align}
+where $\cpipe = 29$ is the fill and flush latency of the token pipeline (sum of
+the stage latencies from descriptor load to the last write) and $\cstart = 3$
+is the pipelined descriptor check. % src: DECISIONS D10-8 (C_PIPE = 29 breakdown), D13 (C_START = 3)
+Both constants were derived from the RTL's stage latencies and committed
+before any simulation of the core; a unit test ties every term to the RTL
+parameters. RTL simulation then matched without correction.
+% src: DECISIONS D10-8 (commit 1eb0873), D13 (commit 04470fc)
+For the two networks, (\ref{eq:model}) gives 16,436 and 104,247 cycles per
+image (model), or 65.7 and 417.0\,$\mu$s at 250\,MHz;
+Sec.~\ref{sec:results} compares these with RTL simulation and the board.
+% src: cycle_model.csv / tab_a3_cycles.tex Total row; tab_a2_latency.tex 250 MHz row (65.74 / 416.99 us); PAPER_PLAN final numbers 65.7 / 417.0 us
+
+\textbf{Utilization.} The array holds a valid input on 99.10\,\% (LeNet-5) and
+99.89\,\% (CIFAR-10) of all cycles; only the $\cpipe$ fill is idle (model, equal
+in RTL simulation). % src: tab_a4_util.tex Total "Array busy fraction" Model/RTL
+Useful MACs per available PE-cycle are lower: 39.6\,\% and 67.3\,\% (model).
+% src: utilization_model.csv total rows util_total 0.395968 / 0.673497
+Partial 8-wide tiles cause the loss. Layers with a $1{\times}1$ output fill
+only one array row (at most 12.5\,\%), and 10-class final layers use 10 of 16
+lanes in two channel groups of one row (7.81\,\%). % src: tab_a4_util.tex lane util (conv5/conv3 12.50, fc2/fc 7.81)
+This is the known limit of an output-stationary mapping on small feature maps;
+we accept it in exchange for exact predictability.
+
+\textbf{Schedule ablation (model).} Our earlier generalized output-stationary
+schedule pays a fill and a drain per accumulation pass plus a clear and a
+result drain per group. The same layers would take 1.83$\times$ (LeNet-5) and
+2.16$\times$ (CIFAR-10) the cycles of (\ref{eq:model}); both schedules
+perform the same $\sum TK$ array steps, so the whole difference is control
+overhead. % src: schedule_ablation.csv total rows speedup_v1_over_v2 1.8261 / 2.1639 (v1_total 30,013 / 225,584)
