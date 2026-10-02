@@ -1,0 +1,57 @@
+{
+ "provenance": {
+  "git_commit": "e91657aa272f8db8aafc7641da56afae9433579b",
+  "git_dirty": false,
+  "board_id": "ZynqMP KV260 revB machine-id:a435d1c5",
+  "commit_source": "/home/ubuntu/gos/DEPLOY_INFO.json"
+ },
+ "env": {
+  "numpy": "1.26.4",
+  "python": "3.10.12",
+  "platform": "Linux-5.15.0-1079-xilinx-zynqmp-aarch64-with-glibc2.35",
+  "machine": "aarch64",
+  "hostname": "kria",
+  "cpu_model": "ARM Cortex-A53 (CPU implementer=0x41, CPU architecture=8, CPU part=0xd03; 4 cpus)",
+  "nproc": 4,
+  "numpy_show_config": "Build Dependencies:\n  blas:\n    detection method: pkgconfig\n    found: true\n    include directory: /usr/local/include\n    lib directory: /usr/local/lib\n    name: openblas64\n    openblas configuration: USE_64BITINT=1 DYNAMIC_ARCH=1 DYNAMIC_OLDER= NO_CBLAS=\n      NO_LAPACK= NO_LAPACKE= NO_AFFINITY=1 USE_OPENMP= NEOVERSEN1 MAX_THREADS=80\n    pc file directory: /usr/local/lib/pkgconfig\n    version: 0.3.23.dev\n  lapack:\n    detection method: internal\n    found: true\n    include directory: unknown\n    lib directory: unknown\n    name: dep281473538264272\n    openblas configuration: unknown\n    pc file directory: unknown\n    version: 1.26.4\nCompilers:\n  c:\n    args: -fno-strict-aliasing\n    commands: cc\n    linker: ld.bfd\n    linker args: -Wl,--strip-debug, -fno-strict-aliasing\n    name: gcc\n    version: 10.2.1\n  c++:\n    commands: c++\n    linker: ld.bfd\n    linker args: -Wl,--strip-debug\n    name: gcc\n    version: 10.2.1\n  cython:\n    commands: cython\n    linker: cython\n    name: cython\n    version: 3.0.8\nMachine Information:\n  build:\n    cpu: aarch64\n    endian: little\n    family: aarch64\n    system: linux\n  host:\n    cpu: aarch64\n    endian: little\n    family: aarch64\n    system: linux\nPython Information:\n  path: /opt/python/cp310-cp310/bin/python\n  version: '3.10'\nSIMD Extensions:\n  baseline:\n  - NEON\n  - NEON_FP16\n  - NEON_VFPV4\n  - ASIMD\n  not found:\n  - ASIMDHP\n  - ASIMDFHM\n\n",
+  "threadpoolctl": "unavailable",
+  "blas": "openblas64 0.3.23.dev",
+  "onnxruntime": "1.19.2"
+ },
+ "args": {
+  "data_dir": "/home/ubuntu/gos/data",
+  "out_dir": "/home/ubuntu/gos/results/rep3/.staging/s2.CPU",
+  "tag": "board",
+  "nets": [
+   "lenet5",
+   "cifar10"
+  ],
+  "kinds": [
+   "cpu_int8_ref",
+   "cpu_fp32_numpy",
+   "cpu_ort_fp32",
+   "cpu_ort_int8"
+  ],
+  "threads": [
+   1,
+   4
+  ],
+  "runs": 100,
+  "warmup": 10,
+  "quick": false,
+  "acc_batch": 100,
+  "no_accuracy": false,
+  "allow_dirty": false,
+  "board_id": null,
+  "pin_1t": "3",
+  "pin_nt": "0-3",
+  "pin": "",
+  "worker": false,
+  "net": null,
+  "kind": null,
+  "timing": false,
+  "accuracy": false,
+  "acc_n": 10000
+ },
+ "total_s": 592.5
+}
