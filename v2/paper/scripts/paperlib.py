@@ -216,9 +216,12 @@ class Artifact:
             if r["_line"] not in rec["lines"]:
                 rec["lines"].append(r["_line"])
                 rec["rows_used"] += 1
-            c = r.get("git_commit", "")
-            if c not in rec["git_commits"]:
-                rec["git_commits"].append(c)
+            # aggregate rows (aggregate_sessions.py) say "mixed": record the input commits instead
+            cs = r["input_git_commits"].split() if r.get("git_commit") == "mixed" and r.get("input_git_commits") \
+                else [r.get("git_commit", "")]
+            for c in cs:
+                if c not in rec["git_commits"]:
+                    rec["git_commits"].append(c)
             s = r.get("source", "")
             if s not in rec["sources"]:
                 rec["sources"].append(s)

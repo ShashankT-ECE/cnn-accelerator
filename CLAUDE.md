@@ -187,14 +187,15 @@ All V2 work lives in `v2/` on branch `v2-dev`. For any file under `v2/`,
 directory. Legacy files (rtl/, sim/, python/, data/, docs/, scripts/,
 software/) are read-only references for V2 work.
 
-## Where the project stands (updated 2026-09-30, after board Session 1 at 250 MHz)
+## Where the project stands (updated 2026-10-02, PAPER FREEZE: board campaign complete, tag `v2-paper-freeze`)
 
 Update this section whenever a step finishes. It is a pointer summary. The
-records of truth are `v2/docs/DECISIONS.md` (decisions D1–D18, open
+records of truth are `v2/docs/DECISIONS.md` (decisions D1–D25, open
 conflicts, TODO) and the script-generated `v2/results/*.csv`. Every number
 below is copied from those sources and labelled model / RTL sim /
-post-impl / measured on KV260. **The only KV260 measurements so far are the Session 1
-bring-up checks (below); no paper rows have been copied back.**
+post-impl / measured on KV260. **Board data (index 1 + repeatability 2 and 3,
+all gos_250 at 249.9975 MHz read-back, paper-grade) is in `v2/results/` and the paper tables; the
+sections below that describe Session 1 only are history.**
 
 ### What the project is
 
@@ -330,20 +331,17 @@ sudo apt update && sudo apt upgrade      # catch up, then reboot once
 Other hygiene rules (v2/board/README.md): one ssh ControlMaster connection (`~/.ssh/config` Host kv260), poll >= 60 s,
 no new login during a power phase; the session-end checks flag logins and apt/PackageKit windows overlapping a phase.
 
-### Pending (in order)
+### Board campaign complete (2026-10-02, D25) — no new experiments
 
-1. **KV260 board sessions 2 and 3** (Session 1 done at 250 MHz, state on the board). Open before
-   Session 3: the B2 sweep grid (only 100/111/125/143/167/200/250 MHz reachable; `exp_b2_clock.py`
-   still uses pynq's closest-frequency setter). Open user decision: reprogram a PS PLL to run gos_300.
-   Deploy recipe: Laptop: commit-clean
-   tree → `make_board_data.py` → `v2/board/deploy.sh <ip>` (ships gos_300 + gos_250) and
-   `v2/dpu/deploy_dpu.sh <ip>`. Board (`cd ~/gos`, tmux, stop packagekit/unattended-upgrades):
-   `power_log.py --list-sensors` / `--sample-only` first, then `./session.sh 1`
-   (smoke at 300, auto-fallback 250), `2`, `3`; repeat with `--session-index 2|3` for
-   repeatability; `dpu_session.py` for the DPU baseline.
-2. Copy results back (`rsync ... v2/results/`), `check_results.py`, separate results commit,
-   `aggregate_sessions.py`, `v2/paper/scripts/make_all.py`.
-3. Paper text (ROCS 2026 short paper, 4 pages + refs, IEEE 2-col, deadline 2026-10-09 AoE).
-4. Open: confirm INA260 update rate, VCC_SOM per-rail coverage (carrier schematic U14),
-   DPU input fix_point at bring-up; optional RTL-sim per-layer spread from `~/gos-10k`
-   shard logs (`exp_layer_spread.py --rtl-sim`, dry-run output only); C1/C2 optional.
+- Repeatability index 3 (`results/rep3/`, scripts e91657a, same scope as index 2) copied back with sha256
+  verified; `hw_repeatability.csv` (245 groups, sessions 1–3) via `aggregate_sessions.py`; `check_results.py` ALL CLEAN
+  (aggregate rows with `git_commit = mixed` are judged by `input_git_commits`, D25).
+- **No-overlay idle reference replaced:** 3.207 W (600 s, 15.6 min after a fresh boot, 0 bitstream loads, quarter means
+  3.206–3.208 W). The 4-min / 3.21 W value is superseded.
+- Index 3 vs 1/2 (measured): B3 e2e safe/fast medians agree within 0.3–0.9 % (index 2 vs 3 within 0.2 %); B1 P_idle
+  3.39 (idx 1) vs 3.44 / 3.43 W (idx 2 / 3); ΔP accel 0.251/0.254/0.241 W (LeNet-5), 0.263/0.262/0.264 W (CIFAR-10).
+  Index 1 had worse tails and a few CPU-baseline outliers (p95 up to 20–50 % higher, INT8 numpy x4 CIFAR 67 vs 54 ms).
+- Next: paper text (ROCS 2026 short paper, deadline 2026-10-09 AoE), then the post-submission board hygiene above.
+- Still open (not measurable now): INA260 update rate, VCC_SOM per-rail coverage (carrier schematic U14), DPU
+  resource figures (D23); C1/C2 optional.
+

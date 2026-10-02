@@ -91,8 +91,15 @@ for p in sorted((V2 / "results").glob("*.csv")):
     rows = list(csv.DictReader(p.open()))
     bad = []
     for i, r in enumerate(rows):
-        why = "git_dirty" if r.get("git_dirty") != "False" else sources_differ(
-            r.get("git_commit", ""), sources_for(p.name))
+        if r.get("git_dirty") != "False":
+            why = "git_dirty"
+        elif r.get("git_commit") == "mixed" and r.get("input_git_commits"):
+            # aggregate row (aggregate_sessions.py) built from sessions run at different script commits:
+            # every input commit must itself have the current sources
+            why = next((w for c in r["input_git_commits"].split()
+                        if (w := sources_differ(c, sources_for(p.name)))), "")
+        else:
+            why = sources_differ(r.get("git_commit", ""), sources_for(p.name))
         if why:
             bad.append((i, r, why))
     commits = sorted({r.get("git_commit", "")[:7] for r in rows})
