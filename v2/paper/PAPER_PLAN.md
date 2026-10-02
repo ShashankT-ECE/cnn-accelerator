@@ -6,6 +6,14 @@ Sep 30, 2026 · @shashank
 > downloaded 2026-10-02) to Markdown. The text is unchanged except for layout.
 > This file is the source of truth for structure, thesis, page budgets, writing
 > rules and final numbers.
+>
+> **Corrections (2026-10-02, checked against the results CSVs):** requantization is
+> "verified bit-exact on every non-saturating input" (139.6M values exhaustive, 486.6M
+> in total with the saturation boundaries and samples; `requant_equivalence.csv`), not
+> "proven over all ~475M reachable inputs" (475M was the CIFAR-10 r1 count); 2 of 354
+> channels needed a 1-LSB adjustment of m (near-ties), not 3 (DECISIONS D1 outcome);
+> best-CPU energy CIFAR-10 0.895 mJ (`tab_b1_power`), not 0.893; 16.5k LUTs (16,538);
+> the limits audit is 49 boundary cases (`limits_rtl.csv`). The text below is updated.
 
 ## Submission facts
 
@@ -57,7 +65,8 @@ the determinism claim applies to accelerator compute only.
 **Contributions** (these become the bullet list at the end of the introduction):
 
 1. An 8×8 output-stationary INT8 accelerator on the KV260 with a requantization
-   contract proven bit-exact over all ~475M reachable inputs.
+   contract verified bit-exact on every non-saturating input (139.6M values exhaustive,
+   486.6M in total).
 2. An analytical cycle model, with constants fixed before the RTL was simulated, that
    predicts every layer's cycles exactly: on 20,000 test images, 286 random layer jobs, and
    the board.
@@ -75,8 +84,8 @@ measured or verified.
 > leaving the gap to real hardware unquantified. We present an INT8 CNN accelerator
 > for the AMD Kria KV260 whose performance is exactly predictable. An 8×8 output-
 > stationary array of DSP48E2 slices runs LeNet-5 and a CIFAR-10 network entirely on
-> chip at 250 MHz, using 80 DSPs and 16.6k LUTs. Its requantization is proven bit-exact
-> against the floating-point reference over all ~475M reachable inputs. An analytical
+> chip at 250 MHz, using 80 DSPs and 16.5k LUTs. Its requantization is verified bit-exact
+> against the floating-point reference on every non-saturating input. An analytical
 > cycle model, fixed before RTL simulation, predicts per-layer cycle counts with zero
 > error across 20,000 test images and 286 random layer configurations in RTL
 > simulation, and [on the KV260 board]. Measured on the board, inference takes [X] µs
@@ -169,8 +178,9 @@ exactly. Do not cite anything we haven't read.
 
 ### V. Verification methodology (Now)
 
-1. Requantization proof over ~475M reachable inputs; 3 channels needed a 1-LSB
-   adjustment due to double rounding in the reference.
+1. Requantization verified bit-exact on every non-saturating input (139.6M values
+   exhaustive, 486.6M in total); 2 of 354 channels needed a 1-LSB adjustment of m
+   (near-ties of the rounded multiplier).
 2. Golden model matches the legacy reference on all 10k images of both networks.
 3. Full-dataset RTL simulation: 20,000 images bit-exact and cycle-exact, Verilator cross-
    checked against xsim.
@@ -179,7 +189,7 @@ exactly. Do not cite anything we haven't read.
 5. Robustness: 100 back-to-back AXI jobs including a refused job and a mid-job soft reset;
    post-synthesis netlist simulation.
 6. What verification found: random shapes revealed an unchecked kernel-width limit,
-   now host-enforced. A follow-up audit boundary-tested 15 descriptor fields (49 cases)
+   now host-enforced. A follow-up audit boundary-tested the descriptor fields in 49 cases
    in two simulators and added host checks wherever the hardware checker has a gap.
    One or two sentences; it shows the method works.
 7. Provenance: every number is script-generated from a clean commit with bitstream
@@ -235,6 +245,14 @@ repo's paper pipeline (v2/paper/); only Fig. 1 and Fig. 2 are drawn by hand.
 
 Optional if space allows: the clock-sweep plot, as a small inset or one sentence.
 
+**Revision 2026-10-02 (fit to 4 pages):** Fig. 2 is dropped (its content is two sentences
+at the start of Section V), so the data figures are numbered Fig. 2 (per-layer cycles,
+`fig_a3_cycles`) and Fig. 3 (random shapes, `fig_shapes_cycles`). Fig. 1 is TikZ
+(`tex/sections/fig_arch.tex`). Table I = `tab_impl_compact` (250 MHz build only, 300 MHz
+as a note). Table II = `tab_compare` (ours / DPU / best CPU per net: e2e p50, SOM-rail
+energy per image, speedup vs the best CPU baseline). GOPS/W is not reported. Section IV
+defines one utilization metric (PE utilization = useful MACs / (64 × TOTAL_CYC)).
+
 ## Final numbers (frozen Oct 2)
 
 Experiments are frozen at tag v2-paper-freeze. All board numbers are measured on the
@@ -251,7 +269,7 @@ KV260 at 250 MHz; power is SOM-rail (INA260). Final paper values come from the p
 | Speedup vs best CPU, end-to-end | 3.1× | 2.1× |
 | DPU end-to-end (median) | 346 µs | 353 µs |
 | Accelerator vs DPU, end-to-end | 1.5× faster | 1.6× slower |
-| Energy per image: ours / DPU / best CPU | 0.065 / 0.124 / 0.454 mJ | 0.161 / 0.166 / 0.893 mJ |
+| Energy per image: ours / DPU / best CPU | 0.065 / 0.124 / 0.454 mJ | 0.161 / 0.166 / 0.895 mJ |
 | Throughput (compute) | 15,210 img/s, 12.7 GOPS | 2,398 img/s, 21.6 GOPS |
 
 | Robustness and repeatability | Value |
@@ -268,7 +286,8 @@ KV260 at 250 MHz; power is SOM-rail (INA260). Final paper values come from the p
 | Idle power: no overlay / ours / DPU | 3.21 / 3.44 / 4.36 W |
 | Power vs clock | 1.10 mW/MHz, R² 0.996 over 7 clocks (two clean sweeps differed by 8–22%) |
 
-Other verified facts: peak compute 32 GOPS; requantization proven over ~475M inputs;
+Other verified facts: peak compute 32 GOPS; requantization verified bit-exact on every
+non-saturating input (139.6M exhaustive, 486.6M total);
 all bitstreams built from RTL commit fd880d4.
 
 ## Writing rules

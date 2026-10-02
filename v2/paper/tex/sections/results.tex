@@ -1,94 +1,73 @@
-% Section VII -- Results. Budget: 2.4 col incl. Fig. 3, Fig. 4, Table II (PAPER_PLAN.md).
-% Every number: generated tables in ../generated/ (pipeline, session medians per D26) or PAPER_PLAN final numbers.
+% Section VII -- Results (target 450 words) + Fig. 3, Fig. 4, Table II (tab_compare).
+% Every number: generated tables in ../generated/ (pipeline; session medians per D26).
 \section{Results}\label{sec:results}
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\columnwidth]{fig_a3_cycles.pdf}
-\caption{Per-layer cycles: model, RTL simulation and measured on the KV260
-for both networks. All three agree exactly on every layer.}
+\includegraphics[width=0.82\columnwidth]{fig_a3_cycles.pdf}
+\caption{Per-layer cycles: model, RTL simulation and measured on the
+KV260. All three agree exactly on every layer.}
 \label{fig:cycles}
 \end{figure}
 
 \textbf{Three-way agreement.} Every layer's cycle count is identical in the
-model, in RTL simulation and on the KV260 (Fig.~\ref{fig:cycles}): 16,436 and
-104,247 cycles per LeNet-5 and CIFAR-10 image. On the board, each layer took
-a single cycle count over all 10,000 test images of each network (measured
-on the KV260, one session), as in RTL simulation.
-% src: tab_a3_cycles (model = RTL = KV260 per layer, 0.00 % error); tab_layer_spread (10,000 images, 1 distinct value, spread 0)
-The 300 random-shape jobs give the same result on the board as in RTL
-simulation: all 286 legal jobs are bit- and cycle-exact and all 14 illegal
-jobs are refused (Fig.~\ref{fig:shapes}). Cycle counts are also identical at
-all 7 clocks of the clock sweep. % src: tab_shapes (KV260 row); PAPER_PLAN final numbers ("Cycles across 7 clocks: identical at every clock", hw_b2_cycles.csv)
+model, in RTL simulation and on the KV260 (Fig.~\ref{fig:cycles}). On the
+board each layer took a single cycle count over all 10,000 test images of
+each network, as in RTL simulation, and the stall counter read 0 on every
+recorded board job. % src: tab_a3_cycles; tab_layer_spread (1 distinct value); hw_a2_a3_cycles.csv hw_stall_max 0, hw_shapes.csv hw_stall 0 (300 jobs), hw_soak.csv stall_nonzero 0
+On the board, all 286 legal random-shape jobs are bit- and cycle-exact and
+all 14 illegal ones are refused (Fig.~\ref{fig:shapes}). Cycle counts are
+also identical at all 7 clocks of a 100--250\,MHz sweep.
+% src: tab_shapes (KV260 row); hw_b2_cycles.csv (PAPER_PLAN: "Identical at every clock")
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\columnwidth]{fig_shapes_cycles.pdf}
-\caption{Random-shape jobs: cycles predicted by the model vs.\ measured in
-RTL simulation and on the KV260 (every point lies on $y = x$).}
+\includegraphics[width=0.82\columnwidth]{fig_shapes_cycles.pdf}
+\caption{Random-shape jobs: predicted vs.\ measured cycles in RTL
+simulation and on the KV260; every point lies on $y = x$.}
 \label{fig:shapes}
 \end{figure}
 
-\textbf{Correctness.} The board's logits differ from the golden model on
-0 of 10,000 images per network, so its accuracy equals the INT8 reference:
-98.79\,\% (LeNet-5) and 78.52\,\% (CIFAR-10), against 98.78\,\% and
-78.56\,\% in FP32 (model). A 30-minute soak ran 3.65M inferences with no
-logit, cycle or status error and one cycle count per network, at a die
-temperature of at most 37.7\,$^\circ$C (measured on the KV260).
-% src: tab_a1_accuracy; tab_soak (3,651,181 jobs, 0 mismatches, 1 distinct TOTAL_CYC, 37.7 C)
+\textbf{Correctness.} The board's logits differ from the golden model on 0
+of 10,000 images per network, so its accuracy equals the INT8 reference:
+98.79\,\% and 78.52\,\%. A 30-minute soak ran 3.65M inferences with no
+error and one cycle count per network. % src: tab_a1_accuracy; tab_soak
 
-\begingroup
-\renewenvironment{table}[1][t]{\begin{table*}[#1]}{\end{table*}}
-\input{../generated/tab_a5_cpu}
-\endgroup
+\input{../generated/tab_compare}
 
-\textbf{Latency and throughput.} Accelerator compute takes 65.7\,$\mu$s and
-417.0\,$\mu$s per image (measured on the KV260), with no spread across
-images or sessions (Table~\ref{tab:cpu}); this is 15,210 and 2,398 images/s,
-or 12.7 and 21.6 GOPS, 39.6\,\% and 67.3\,\% of the array's 32 GOPS peak,
-matching the utilization of Sec.~\ref{sec:model}.
-% src: tab_a5_cpu (65.7 [65.7, 65.7]; 417.0 [417.0, 417.0]); tab_efficiency (15,210 / 2,398 img/s; 12.67 / 21.55 GOPS; 39.6 / 67.3 % of 32.0 peak)
-End to end, the Python host adds most of the time: the median is
-224.5\,$\mu$s and 578.5\,$\mu$s, with p99 at 239.1\,$\mu$s and 593.2\,$\mu$s.
-Determinism therefore holds for accelerator compute; the end-to-end spread
-comes from the host software.
-% src: tab_percentiles (fast host path p50 / p99)
+\textbf{Latency.} Compute takes 65.7 and 417.0\,$\mu$s per image, with no
+spread across images or sessions: 15,210 and 2,398 images/s, 39.6\,\% and
+67.3\,\% of the 32 GOPS peak, which equals the PE utilization of
+Sec.~\ref{sec:model}. % src: tab_a5_cpu (65.7 [65.7, 65.7]; 417.0 [417.0, 417.0]); tab_efficiency (img/s; pct of peak 39.6 / 67.3; peak 32.0)
+The Python host adds most of the end-to-end time: median 224.5 and
+578.5\,$\mu$s, p99 239.1 and 593.2\,$\mu$s. Determinism therefore holds for
+accelerator compute; the end-to-end spread comes from the host.
+% src: tab_compare; tab_percentiles (fast host path p99)
 
-\textbf{Comparison.} The best CPU baseline is ONNX Runtime INT8 with
-4 threads for both networks: 696.9\,$\mu$s and 1,222.9\,$\mu$s end to end, so
-the accelerator is 3.10$\times$ and 2.11$\times$ faster (Table~\ref{tab:cpu}).
-The CPU's end-to-end time also includes input preprocessing, which ours does
-not; on compute alone the ratio is 9.41$\times$ and 2.58$\times$.
-% src: tab_a5_cpu (ORT INT8 x4 e2e 696.9 / 1,222.9; speedups e2e 3.10x / 2.11x, comp 9.41x / 2.58x; note on preprocessing)
-The DPU takes 345.6\,$\mu$s and 352.8\,$\mu$s end to end (one session): the
-accelerator is 1.5$\times$ faster on LeNet-5, and the DPU is 1.6$\times$
-faster on CIFAR-10, where its 2,048 MAC lanes at 300\,MHz outweigh its
-fixed overheads (our array has 64 lanes at 250\,MHz).
-% src: tab_a5_cpu (DPU e2e p50 345.6 / 352.8; DPU/accel e2e 1.54x / 0.61x); tab_efficiency (MAC lanes 64 / 2,048; lane clock 250 / 300); PAPER_PLAN ("1.6x slower")
-% UNSURE: "outweigh its fixed overheads" is an interpretation, not a measured decomposition.
+\textbf{Comparison.} Against the best CPU baseline, ONNX Runtime INT8 with
+4 threads, the accelerator is 3.10$\times$ and 2.11$\times$ faster end to end
+(Table~\ref{tab:compare}). The CPU's end-to-end time also includes input
+preprocessing; on compute alone the ratio is 9.41$\times$ and 2.58$\times$.
+% src: tab_compare; tab_a5_cpu (comp. speedup 9.41x / 2.58x; preprocessing note)
+The accelerator is 1.5$\times$ faster than the DPU on LeNet-5, while the DPU
+is 1.6$\times$ faster on CIFAR-10. The DPU's own runner time is 195.0 and
+182.4\,$\mu$s, so on CIFAR-10 its compute is shorter than ours as well; it
+runs a different INT8 quantization of the same networks.
+% src: tab_a5_cpu DPU/accel e2e 1.54x / 0.61x (PAPER_PLAN 1.5x faster / 1.6x slower); DPU runner p50 195.0 / 182.4 (tab_a5_cpu, tab_percentiles)
 
-\input{../generated/tab_power_compare}
+\textbf{Power and energy.} SOM-rail power (INA260) idles at 3.207\,W with
+no overlay, 3.44\,W with our design loaded and 4.36\,W with the DPU's.
+Per image, the accelerator uses about half the DPU's energy on LeNet-5
+(0.065 vs.\ 0.124\,mJ), a comparable amount on CIFAR-10 (0.161 vs.\
+0.166\,mJ), and 5.5--7$\times$ less than the CPU.
+% src: tab_power_compare (3.207; 3.442 / 3.433; 4.362 / 4.361); tab_compare (energies; CPU 0.454 / 0.895 -> 6.98x / 5.56x)
+Most of our $\Delta P$ is the host loop: running the same loop without
+starting the accelerator already adds 0.222 and 0.211\,W of the 0.251 and
+0.263\,W. % src: tab_b1_power (dP control 0.222 / 0.211; dP accel 0.251 / 0.263)
 
-\textbf{Power and energy.} Table~\ref{tab:powercmp} reports SOM-rail power
-(INA260). With no overlay the SOM idles at 3.207\,W; loading our design
-raises idle to 3.44\,W, the DPU overlay to 4.36\,W. Running adds
-0.251\,W and 0.263\,W for the accelerator, against 0.355\,W and 0.455\,W for
-the DPU. Per image, the accelerator uses 0.065\,mJ and 0.161\,mJ, the DPU
-0.124\,mJ and 0.166\,mJ, and the best CPU baseline 0.454\,mJ and 0.895\,mJ:
-about half the DPU's energy on LeNet-5, the same on CIFAR-10, and 5.5--7$\times$
-less than the CPU.
-% src: tab_power_compare (3.207; 3.442 / 3.433; 4.362 / 4.361; dP 0.251 / 0.263 vs 0.355 / 0.455; E 0.065 / 0.161 vs 0.124 / 0.166); tab_b1_power (CPU 0.454 / 0.895 mJ); PAPER_PLAN ("5.5-7x less energy")
-Most of the accelerator's $\Delta P$ is the host loop: the control phase,
-which runs the same loop without accelerator compute, already draws
-0.222\,W and 0.211\,W, leaving 0.029\,W and 0.051\,W for the PL work.
-% src: tab_b1_power (dP control 0.222 / 0.211; dP accel - control 0.029 / 0.051)
-
-\textbf{Repeatability and clock sweep.} Across the three sessions the
-end-to-end medians stay within [223.3, 225.4]\,$\mu$s and [576.9,
-580.5]\,$\mu$s, and the energy per image varies by a CV of 3.0\,\% (LeNet-5)
-and 0.4\,\% (CIFAR-10). % src: tab_repeatability (B3 e2e fast ranges); tab_b1_power (E_sys CV 3.0 / 0.4 %)
-Over 7 clocks from 100 to 250\,MHz, latency scales as $1/f$ with constant
-cycles, and SOM-rail power fits $P = 3.424\,\mathrm{W} + 1.095\,\mathrm{mW/MHz}
-\cdot f$ ($R^2 = 0.9964$); a second sweep gave a slope 8\,\% different, so
-we treat the split between static and dynamic power as approximate.
-% src: tab_b2_fit (P_accel absolute: 3.424, 1.095, R2 0.9964, n 7; k differs 8 % from the ascending sweep); EXPERIMENTS.md B2 (100-250 MHz)
+\textbf{Repeatability and clock.} Across sessions the end-to-end medians stay
+within [223.3, 225.4] and [576.9, 580.5]\,$\mu$s, and energy per image varies
+by a CV of 3.0\,\% and 0.4\,\%. Latency scales as $1/f$ with constant cycles,
+and power fits $P = 3.424\,\mathrm{W} + 1.095\,\mathrm{mW/MHz} \cdot f$
+($R^2 = 0.9964$); a second sweep gave a slope 8\,\% different.
+% src: tab_repeatability (B3 e2e fast [223.3, 225.4], [576.9, 580.5]); tab_b1_power (E_sys CV 3.0 / 0.4); tab_b2_fit

@@ -1,19 +1,15 @@
-% Section VIII -- Conclusion and limitations. Budget: 0.4 col (PAPER_PLAN.md).
+% Section VIII -- Conclusion and limitations (target 120 words).
 \section{Conclusion and Limitations}\label{sec:conclusion}
-A small INT8 accelerator can be predictable by construction. On the KV260 our
-$8{\times}8$ output-stationary design matches its analytical cycle model
-exactly on every layer, in RTL simulation and on the board, over 20,000 test
-images and 286 random layer jobs; its logits are bit-exact; and its compute
-latency of 65.7\,$\mu$s (LeNet-5) and 417.0\,$\mu$s (CIFAR-10) did not vary by
-a single cycle. It is 2.1--3.1$\times$ faster end to end than the best CPU
-baseline on the same board, beats the AMD DPU on LeNet-5, and loses to it on
-CIFAR-10.
+A small INT8 accelerator can be predictable by construction: on the KV260
+our design matches its cycle model on every layer, in RTL simulation and on
+the board, with bit-exact logits and compute latency that never varied by a
+cycle. It beats the best CPU baseline and the DPU on LeNet-5, and loses to
+the DPU on CIFAR-10.
 
-The work has clear limits. The networks are small, and only VALID
-convolutions with stride~1 and kernel width up to 9 are supported. A single
-$8{\times}8$ array does useful work in only 39.6\,\% of its PE-cycles on LeNet-5. SOM-rail
-power includes the CPU that drives the accelerator, so it is not
-accelerator-only power. End-to-end latency depends on a Python host. Future
-work adds padding and stride, a larger array (a 16$\times$16 array is only
-projected by the model so far) and larger networks.
+The limits are clear. The networks are small; only VALID, stride-1
+convolutions with kernel width up to 9 are supported; PE utilization is
+39.6\,\% on LeNet-5; SOM-rail power includes the host CPU; and end-to-end
+latency depends on a Python host. Future work adds padding and stride, a
+larger array (a 16$\times$16 array is so far only projected by the model)
+and larger networks.
 % src: utilization_model.csv (LeNet-5 util_total 0.395968); projection_16x16.csv (projected, model only)

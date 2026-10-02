@@ -1,63 +1,44 @@
-% Section V -- Verification methodology. Budget: 1.0 column including Fig. 2 (PAPER_PLAN.md).
-% Fig. 2 is the first thing to cut if over length.
-% Sources: requant_equivalence.csv, golden_crosscheck.csv, final_layer_check.csv, rtl_full10k.csv,
-% shapes_rtl.csv, rtl_checker.csv, unit_tb.csv, rtl_netlist.csv, limits_rtl.csv, verification_stats.csv
-% (via tab_verification.tex), DECISIONS D1/OC-1/OC-3/D16.
+% Section V -- Verification methodology (target 300 words). Fig. 2 dropped; its content is the
+% first paragraph. Sources: requant_equivalence.csv, golden_crosscheck.csv, rtl_full10k.csv,
+% shapes_rtl.csv, rtl_checker.csv, unit_tb.csv, rtl_netlist.csv, limits_rtl.csv,
+% verification_stats.csv, DECISIONS D1/OC-1/OC-3/D16.
 \section{Verification Methodology}\label{sec:verif}
+The claim is exactness, so every step is checked for equality, not
+tolerance. Each stage is compared with the one before it, from the
+floating-point reference through the integer requantization, golden and
+cycle models, and RTL simulation to the KV260, and every result is written
+to a CSV that the paper's tables are generated from.
 
-The claim is exactness, so every step from reference to board is checked for
-equality, not tolerance (Fig.~\ref{fig:verif}).
+\textbf{Requantization.} For every channel we compared the integer pipeline
+with the float64 reference on every non-saturating accumulator value
+(139.6M values), plus the saturation boundaries and seeded samples beyond
+them: 486.6M values, 0 mismatches (model).
+% src: requant_equivalence.csv B=32: values_checked_exact 139,644,640; + values_checked_saturated 347,001,388; mismatches 0
+Rounding $M \cdot 2^s$ to the nearest integer was not enough: near-ties
+flipped in 2 of 354 channels, which use an $m$ one LSB away.
+% src: requant_equivalence.csv delta_from_rne -1 (lenet5 conv5 ch82, cifar10 conv3 ch57); 354 channels
 
-% TODO Fig. 2 (hand-drawn verification/provenance flow). First item to cut (PAPER_PLAN.md).
-\begin{figure}[t]
-\centering
-\fbox{\parbox[c][0.9in][c]{0.92\columnwidth}{\centering Fig.~2 placeholder: float reference $\rightarrow$ requant check $\rightarrow$ golden model / cycle model $\rightarrow$ RTL sim (xsim, Verilator; unit, fuzz, network, shapes, checker, netlist) $\rightarrow$ KV260 (logits, LAYER\_CYC, MAC\_ACTIVE) $\rightarrow$ results CSVs (commit, BUILD\_ID, SHA-256) $\rightarrow$ paper tables.}}
-\caption{Verification and provenance flow. Each arrow is an equality check on logits or cycle counts.}
-\label{fig:verif}
-\end{figure}
+\textbf{Full-dataset simulation.} The golden model matches the legacy INT8
+reference on every intermediate tensor of all 10,000 test images per
+network (model). The RTL, simulated on all 20,000 images, is bit-exact and
+cycle-exact on every image (RTL simulation, Verilator, cross-validated
+against Vivado xsim before each run).
+% src: golden_crosscheck.csv; rtl_full10k.csv (10000/10000 bit- and cycle-exact per net); run_full10k.sh xval
 
-\textbf{Requantization.} For every output channel of both networks we compared
-the integer pipeline with the float64 reference on every non-saturating
-accumulator value, plus the saturation boundaries and $10^6$ seeded samples in
-the saturated range: 486.6M values in total, of which 139.6M cover the
-non-saturating range exhaustively, with 0 mismatches (model).
-% src: requant_equivalence.csv B=32 rows: values_checked_exact sum 139,644,640; values_checked_saturated sum 347,001,388; mismatches 0 (354 channels)
-The check found that rounding $M \cdot 2^s$ to the nearest integer is not
-enough: near-ties within about $10^{-14}$ of a half-integer flipped in
-2 of 354 channels, which now use $m$ one LSB away from that value. In one other channel the
-float64 reference itself departs from exact rational rounding, and the
-hardware reproduces the reference, which is our golden.
-% src: requant_equivalence.csv delta_from_rne = -1 for lenet5 conv5 ch82 and cifar10 conv3 ch57; ref_float_vs_exact_diffs = 2 for lenet5 fc1 ch54; DECISIONS OC-1
-
-\textbf{Golden and full-dataset simulation.} A new golden model matches the
-legacy INT8 reference bit for bit on every intermediate tensor of all 10,000
-test images of both networks (model). % src: golden_crosscheck.csv via tab_verification.tex (6/6 and 5/5 tensors bit-identical, 10,000 images)
-We then simulated the RTL on all 20,000 test images: every logit is
-bit-exact and every image takes exactly the modeled cycle count (RTL
-simulation, Verilator; each run is first cross-validated against Vivado
-xsim on 10 images per network). % src: rtl_full10k.csv (10000/10000 logits_bitexact and cycles_exact per net, verilator 5.028); run_full10k.sh xval step
-
-\textbf{Random shapes and refusals.} A seeded generator produced 300
-multi-layer jobs in 13 categories (tails in $x$ and output channels, pooling,
-$1{\times}1$ outputs, deep chains). All 286 legal jobs are bit- and
-cycle-exact, and the checker refuses all 14 illegal ones with the expected
-error code (RTL simulation). % src: shapes_rtl.csv (300 rows, 13 categories, 286 expect_refuse=0, 14 =1); tab_shapes.tex
-Further suites cover 11 unit testbenches, 100 random single-layer shapes
-and 255 checker cases (RTL simulation). % src: tab_verification.tex (unit TBs 11; core fuzz suite 100; core checker suite 255)
-A back-to-back test runs 100 consecutive AXI jobs, including one refused
-job and a soft reset in mid-job; the post-synthesis netlist passes a reduced
-version of it and two full-network jobs, all cycle-exact.
-% src: unit_tb.csv tb_gos_top_backtoback passed (10,032 checks); job count = TB default NJOBS = 100 (tb_gos_top_backtoback.sv:58) -- NOT in a CSV; rtl_netlist.csv via tab_verification.tex (2 + 3 jobs, cycle-exact, 1 soft reset)
+\textbf{Random shapes and robustness.} A seeded generator produced 300
+multi-layer jobs in 13 categories; all 286 legal jobs are bit- and
+cycle-exact and all 14 illegal ones are refused (RTL simulation). Further
+suites cover 11 unit testbenches, 100 random single-layer shapes, 255
+checker cases, back-to-back jobs with a refused job and a mid-job soft
+reset, and post-synthesis netlist simulation.
+% src: shapes_rtl.csv / tab_shapes; tab_verification (11 unit TBs, fuzz 100, checker 255, netlist 2 + 3 jobs); unit_tb.csv tb_gos_top_backtoback (job count not in a CSV -> no number)
 
 \textbf{What verification found.} Random shapes exposed a limit the checker
-does not enforce: kernel widths of 10 or more give wrong outputs at
-model-exact cycle counts. We made $KW \le 9$ a host-side contract and
-boundary-tested the descriptor fields in 49 cases on two simulators, adding
-a host check wherever the hardware checker has a gap.
-% src: DECISIONS OC-3; limits_rtl.csv (49 rows, verilator 5.028 + xsim 2023.1); LIMITS.md
+does not enforce: kernel widths of 10 or more give wrong outputs. We made
+$KW \le 9$ a host-side contract, boundary-tested the descriptor fields in
+49 cases on two simulators, and added host checks wherever the hardware
+checker has a gap. % src: DECISIONS OC-3; limits_rtl.csv (49 rows, Verilator + xsim)
 
-\textbf{Provenance.} Every reported number is written by a script to a CSV
-together with its git commit; rows from a dirty tree are rejected. Board rows
-also carry the bitstream SHA-256 and the BUILD\_ID read from the hardware,
-logs are archived with hashes, and the paper's tables are generated from
-these CSVs only. % src: DECISIONS D16; v2/paper/README.md (paperlib provenance rules)
+\textbf{Provenance.} Every number carries its git commit; rows from a dirty
+tree are rejected, and board rows also carry the bitstream hash and the
+hardware BUILD\_ID. % src: DECISIONS D16; paper/README.md

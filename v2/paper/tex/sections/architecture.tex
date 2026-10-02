@@ -1,83 +1,50 @@
-% Section III -- Architecture. Budget: 1.3 columns including Fig. 1 (PAPER_PLAN.md).
+% Section III -- Architecture (target 380 words) + Fig. 1 (TikZ).
 % Spec of record: v2/docs/ARCH_SPEC.md (frozen), v2/docs/FORMATS.md, DECISIONS D1/D2/D8/D13.
 \section{Architecture}\label{sec:arch}
+\input{sections/fig_arch}
 
-The accelerator runs whole networks from on-chip memory under a fixed numeric
-contract. Fig.~\ref{fig:arch} shows the organization; every structure below is
-sized for exactly one access per cycle, so no stage ever waits on another.
+\textbf{Numeric contract.} Activations and weights are signed INT8 with
+zero-point 0, a per-tensor activation scale and per-output-channel weight
+scales; products accumulate in INT32. Each output channel stores
+$(q_b, m, s)$: $v = \mathit{acc} + q_b$ is multiplied by the unsigned 32-bit
+$m$, shifted right by $s$ with round-half-to-even, then passed through ReLU
+and clipped to INT8. % src: ARCH_SPEC.md "Hardware requant"; B = 32 (DECISIONS D1 outcome)
+The final layer exports raw INT32 logits, and the host applies the
+reference's float32 dequantization and argmax.
 
-% TODO Fig. 1 (hand-drawn: PS, AXI, CSR, buffers, 8x8 array, requant, pool). Placeholder keeps the budget honest.
-\begin{figure}[t]
-\centering
-\fbox{\parbox[c][1.6in][c]{0.92\columnwidth}{\centering Fig.~1 placeholder: PS (Cortex-A53) $\rightarrow$ AXI-Lite CSR / AXI BRAM ports; ACT0/ACT1 (8 banks) $\rightarrow$ rotator $\rightarrow$ $8{\times}8$ DSP48E2 array $\rightarrow$ shadow drain $\rightarrow$ 8 requant lanes $\rightarrow$ 2$\times$2 max-pool $\rightarrow$ ACT; WGT and QPARAM BRAMs; descriptor sequencer and config checker.}}
-\caption{Accelerator organization. All weights and activations are resident in BRAM; the PS only writes the input, starts a job and reads logits and counters.}
-\label{fig:arch}
-\end{figure}
-
-\subsection{Numeric contract}
-Activations and weights are signed INT8 with zero-point 0, a per-tensor
-activation scale and per-output-channel weight scales; products accumulate in
-INT32. Each output channel stores $(q_b, m, s)$: $v = \mathit{acc} + q_b$ is
-multiplied by the unsigned integer $m$ ($B = 32$ bits) and shifted right by
-$s$ with round-half-to-even, then ReLU and clipping to $[-128, 127]$ are
-applied. % src: ARCH_SPEC.md "Hardware requant"; B = 32 from DECISIONS D1 outcome
-$m$ and $s$ are chosen offline so that this integer pipeline reproduces the
-floating-point reference on every input (Sec.~\ref{sec:verif}). The final
-layer skips requantization and exports raw INT32 logits; the host applies the
-reference's float32 dequantization and argmax, because an argmax on the raw
-integers would change the prediction on 55 (LeNet-5) and 1,276 (CIFAR-10) of
-the 10,000 test images (model). % src: final_layer_check.csv raw_argmax_differs
-
-\subsection{Datapath}
-The core is an $8{\times}8$ output-stationary outer-product array of DSP48E2
-slices, each computing $\mathit{acc} \leftarrow \mathit{first}\ ?\ a w : \mathit{acc} + a w$,
-so no clear cycle is needed. Rows hold 8 consecutive output $x$ positions of
-one output row and columns hold 8 output channels. Every cycle the array
-consumes one reduction index $k = (ic, k_y, k_x)$: 8 activations and 8 weights
-are broadcast from registers, without skew. When a tile ends, the 64
-accumulators move to shadow registers that drain one output channel (8 pixels)
-per cycle while the next tile already accumulates. Eight requantization lanes
-take one channel's $(q_b, m, s)$ per drain cycle, and a fused $2{\times}2$
-max-pool stage (bypassable) writes pooled bytes with byte enables.
+\textbf{Datapath.} The core is an $8{\times}8$ output-stationary array of
+DSP48E2 slices (Fig.~\ref{fig:arch}). Rows hold 8 consecutive output pixels
+of one row and columns hold 8 output channels. Every cycle the array
+consumes one reduction index $k = (ic, k_y, k_x)$: 8 activations and 8
+weights are broadcast without skew, and the first product of a tile
+overwrites the accumulator, so no clear cycle is needed. At the end of a
+tile the 64 accumulators move to shadow registers, which drain one output
+channel per cycle while the next tile accumulates. Eight requantization
+lanes and a fused, bypassable $2{\times}2$ max-pool follow.
 % src: ARCH_SPEC.md Datapath
 
-\subsection{Memory}
-Nothing leaves the chip during inference. Two ping-pong activation buffers,
-each 8 byte-wide banks of 4096 words, hold a layer's input and output; a pixel
-at column $x$ lives in bank $x \bmod 8$. For a kernel offset $k_x$, bank $b$
-supplies output row $(b - k_x) \bmod 8$, reading one word further on when
-$b < k_x$, and a byte rotator by $k_x$ restores row order, so all 8 operands
-arrive in one cycle without conflicts. All weights stay resident in a
-64-bit-wide weight memory (one word = 8 output channels at one $k$; 7,813
-words for LeNet-5, 10,028 for CIFAR-10), next to a 256-entry quantization
-table. % src: ARCH_SPEC.md Memory (WGT words), QPARAM 256 entries
-After implementation the design uses 50~RAMB36 and 1~RAMB18
-(Table~\ref{tab:impl}). % src: tab_t1_impl.tex (impl_gos.csv, post-implementation)
+\textbf{Memory.} Nothing leaves the chip during inference. Two ping-pong
+activation buffers of 8 byte-wide banks hold a layer's input and output; a
+pixel at column $x$ lives in bank $x \bmod 8$. For kernel offset $k_x$,
+bank $b$ supplies output row $(b - k_x) \bmod 8$ and a byte rotator restores
+the order, so all 8 operands arrive in one cycle without conflicts. All
+weights stay resident in a 64-bit-wide weight memory.
+% src: ARCH_SPEC.md Memory
 
-\subsection{Control and interface}
-Addresses come from counters and incremental adds only; there is no runtime
-multiplier, even at configuration time, because the host precomputes derived
-fields in a 16-word descriptor per layer. Data and control travel together as
-tokens (valid, first/last, tile and channel ids, lane masks, pool phase)
-through BRAM read, rotator, array, drain, requantization, pooling and write,
-so no stage infers timing by counting cycles. A sequencer runs up to 8 layers
-per start and swaps the activation buffers between layers. A three-stage
-pipelined checker refuses illegal descriptors (e.g., pooling with odd output
-size, $K < 8$, buffer overflow) with an error code before any work starts.
-% src: ARCH_SPEC.md Controller; DECISIONS D8-1 (16-word descriptor), D13 (3-stage checker)
-The PS sees an AXI-Lite register file with 64-bit total-cycle, MAC-active and
-stall counters, a cycle counter per layer, 16 INT32 logit registers and a
-BUILD\_ID, and four AXI BRAM ports; the design loads as a PYNQ overlay.
-% src: ARCH_SPEC.md CSR, Integration
-Of the 16,538 LUTs of the 250\,MHz build, the core itself uses 3,338; the rest
-is the AXI shell (post-implementation, Table~\ref{tab:impl}).
-% src: tab_t1_impl.tex 250 MHz column: CLB LUT full design 16,538; gos_core only 3,338
+\textbf{Control and interface.} Addresses come from counters and additions
+only; the host precomputes derived fields in a 16-word descriptor per layer.
+Data and control travel together as tokens through the pipeline, so no
+stage infers timing by counting cycles. A sequencer runs up to 8 layers per
+start, and a pipelined checker refuses illegal descriptors with an error
+code before any work starts. % src: ARCH_SPEC.md Controller; DECISIONS D8-1, D13
+The PS sees an AXI-Lite register file with 64-bit total-cycle, MAC-active
+and stall counters, per-layer cycle counters, 16 logit registers and a
+BUILD\_ID; the design loads as a PYNQ overlay. % src: ARCH_SPEC.md CSR
+Of its 16,538 LUTs, the core uses 3,338; the rest is the AXI shell
+(Table~\ref{tab:impl}). % src: tab_impl_compact (CLB LUT 16,538 / 3,338)
 
-\subsection{Supported layers}
-The datapath supports VALID convolutions with stride~1, optional ReLU and
-$2{\times}2$ max-pooling; fully connected layers run as $1{\times}1$
-convolutions on a $1{\times}1$ map. The workloads are LeNet-5 and a CIFAR-10
-network with three $5{\times}5$ convolutions and one FC layer. Kernel width is
-limited to 9 by the activation rotator; the host enforces this limit, which
-RTL simulation confirmed at the boundary (Sec.~\ref{sec:verif}).
-% src: ARCH_SPEC.md Workloads; DECISIONS OC-3 resolution (MAX_KW = 9), limits_rtl.csv
+\textbf{Supported layers.} VALID convolutions with stride~1, optional ReLU
+and $2{\times}2$ max-pooling; fully connected layers run as $1{\times}1$
+convolutions on a $1{\times}1$ map. Kernel width is limited to 9 by the
+rotator, a limit the host enforces (Sec.~\ref{sec:verif}).
+% src: ARCH_SPEC.md Workloads; DECISIONS OC-3 (MAX_KW = 9)
