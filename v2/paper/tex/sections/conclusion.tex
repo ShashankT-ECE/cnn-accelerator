@@ -3,8 +3,10 @@
 A small INT8 accelerator can be predictable by construction: on the KV260
 our design matches its cycle model on every layer, in RTL simulation and on
 the board, with bit-exact logits and compute latency that never varied by a
-cycle. It beats the best CPU baseline and the DPU on LeNet-5, and loses to
-the DPU on CIFAR-10.
+cycle. It beats the best CPU baseline on both networks and the DPU on
+LeNet-5, loses to the DPU on CIFAR-10, and per image uses about half the
+DPU's energy on LeNet-5, a comparable amount on CIFAR-10 and 5.5--7$\times$
+less than the CPU.
 
 The limits are clear. The networks are small; only VALID, stride-1
 convolutions with kernel width up to 9 are supported; PE utilization is

@@ -18,8 +18,8 @@ Rounding $M \cdot 2^s$ to the nearest integer was not enough: near-ties
 flipped in 2 of 354 channels, which use an $m$ one LSB away.
 % src: requant_equivalence.csv delta_from_rne -1 (lenet5 conv5 ch82, cifar10 conv3 ch57); 354 channels
 
-\textbf{Full-dataset simulation.} The golden model matches the legacy INT8
-reference on every intermediate tensor of all 10,000 test images per
+\textbf{Full-dataset simulation.} The golden model matches an independent INT8
+reference implementation on every intermediate tensor of all 10,000 test images per
 network (model). The RTL, simulated on all 20,000 images, is bit-exact and
 cycle-exact on every image (RTL simulation, Verilator, cross-validated
 against Vivado xsim before each run).

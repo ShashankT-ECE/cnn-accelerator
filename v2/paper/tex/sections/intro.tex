@@ -3,27 +3,31 @@
 FPGA accelerator papers often report performance from models or simulation,
 leaving the gap to real hardware unquantified. We present an INT8 CNN
 accelerator for the AMD Kria KV260 whose performance is exactly predictable.
-An $8{\times}8$ output-stationary array of DSP48E2 slices runs LeNet-5 and a
-CIFAR-10 network entirely on chip at 250\,MHz, using 80 DSPs and 16.5k LUTs.
-Its requantization is verified bit-exact against the floating-point
-reference on every non-saturating input. An analytical cycle model, fixed
-before RTL simulation, predicts every layer's cycle count with zero error on
-20,000 test images and 286 random layer jobs, in RTL simulation and on the
-board. Measured on the KV260, compute takes 65.7\,$\mu$s (LeNet-5) and
+An $8{\times}8$ output-stationary array runs LeNet-5 and a CIFAR-10 network
+entirely on chip at 250\,MHz; the core uses 3,338 LUTs and 80 DSPs, and the
+rest of the design is the AXI shell. An analytical cycle model, fixed before
+RTL simulation, predicts every layer's cycle count with zero error on 20,000
+test images and 286 random multi-layer jobs, in RTL simulation and on the
+board, and the requantization is verified bit-exact on every non-saturating
+input. Measured on the KV260, compute takes 65.7\,$\mu$s (LeNet-5) and
 417.0\,$\mu$s (CIFAR-10) with one cycle count over 3.65M inferences. End to
 end, the accelerator is 2.1--3.1$\times$ faster than the best on-board CPU
-baseline and 1.5$\times$ faster than the AMD DPU on LeNet-5, but 1.6$\times$
-slower on CIFAR-10.
+baseline and, although the AMD DPU is 1.6$\times$ faster on CIFAR-10,
+1.5$\times$ faster than the DPU on LeNet-5. Per image it uses about half the
+DPU's SOM-rail energy on LeNet-5, a comparable amount on CIFAR-10, and
+5.5--7$\times$ less than the CPU; only 29.0 and 51.4\,mW of the added power
+is attributable to the accelerator itself.
 \end{abstract}
-% src: tab_impl_compact (80 DSP, 16,538 LUT); requant_equivalence.csv; tab_layer_spread, tab_shapes (board);
+% src: tab_impl_compact (core 3,338 LUT, 80 DSP); requant_equivalence.csv; tab_layer_spread, tab_shapes (board);
 % tab_soak (3,651,181 jobs, 1 distinct TOTAL_CYC); tab_a5_cpu (65.7 / 417.0 us); tab_compare (3.10x / 2.11x;
-% DPU 345.6 / 352.8 vs ours 224.5 / 578.5 us -> tab_a5_cpu ratios 1.54x / 0.61x)
+% DPU 345.6 / 352.8 vs ours 224.5 / 578.5 us -> tab_a5_cpu ratios 1.54x / 0.61x);
+% energy: tab_compare (0.065 vs 0.124; 0.161 vs 0.166; CPU 0.454 / 0.895); PAPER_PLAN (5.5-7x)
 
 \section{Introduction}\label{sec:intro}
 FPGA CNN accelerators are usually evaluated with an analytical model or a
 simulator, and the design that reaches the board is then characterized by a
-few throughput figures. We are not aware of work that reports, layer by
-layer, how far such a model is from the hardware. That gap matters:
+few throughput figures; the gap between the model and the hardware, layer
+by layer, is left unquantified. That gap matters:
 embedded and real-time systems need latency they can budget for, and a
 performance model is only useful for design-space exploration if it can be
 trusted without building every design.

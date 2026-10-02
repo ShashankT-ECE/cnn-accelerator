@@ -5,16 +5,15 @@
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.82\columnwidth]{fig_a3_cycles.pdf}
-\caption{Per-layer cycles: model, RTL simulation and measured on the
-KV260. All three agree exactly on every layer.}
+\caption{Per-layer cycles: model, RTL simulation (xsim) and measured on
+the KV260. All three agree exactly on every layer.}
 \label{fig:cycles}
 \end{figure}
 
 \textbf{Three-way agreement.} Every layer's cycle count is identical in the
-model, in RTL simulation and on the KV260 (Fig.~\ref{fig:cycles}). On the
-board each layer took a single cycle count over all 10,000 test images of
-each network, as in RTL simulation, and the stall counter read 0 on every
-recorded board job. % src: tab_a3_cycles; tab_layer_spread (1 distinct value); hw_a2_a3_cycles.csv hw_stall_max 0, hw_shapes.csv hw_stall 0 (300 jobs), hw_soak.csv stall_nonzero 0
+model, in RTL simulation (xsim) and on the KV260 (Fig.~\ref{fig:cycles}).
+On the board each layer took a single cycle count over all 10,000 test
+images of each network, as in the full-dataset RTL simulation. % src: tab_a3_cycles; tab_layer_spread (1 distinct value); hw_a2_a3_cycles.csv hw_stall_max 0, hw_shapes.csv hw_stall 0 (300 jobs), hw_soak.csv stall_nonzero 0
 On the board, all 286 legal random-shape jobs are bit- and cycle-exact and
 all 14 illegal ones are refused (Fig.~\ref{fig:shapes}). Cycle counts are
 also identical at all 7 clocks of a 100--250\,MHz sweep.
@@ -24,7 +23,7 @@ also identical at all 7 clocks of a 100--250\,MHz sweep.
 \centering
 \includegraphics[width=0.82\columnwidth]{fig_shapes_cycles.pdf}
 \caption{Random-shape jobs: predicted vs.\ measured cycles in RTL
-simulation and on the KV260; every point lies on $y = x$.}
+simulation (Verilator) and on the KV260; every point lies on $y = x$.}
 \label{fig:shapes}
 \end{figure}
 
@@ -63,7 +62,8 @@ Per image, the accelerator uses about half the DPU's energy on LeNet-5
 % src: tab_power_compare (3.207; 3.442 / 3.433; 4.362 / 4.361); tab_compare (energies; CPU 0.454 / 0.895 -> 6.98x / 5.56x)
 Most of our $\Delta P$ is the host loop: running the same loop without
 starting the accelerator already adds 0.222 and 0.211\,W of the 0.251 and
-0.263\,W. % src: tab_b1_power (dP control 0.222 / 0.211; dP accel 0.251 / 0.263)
+0.263\,W, so the $\Delta P$ attributable to the PL work is 29.0 and
+51.4\,mW (Table~\ref{tab:compare}). % src: tab_b1_power (dP control 0.222 / 0.211; dP accel 0.251 / 0.263); tab_compare note (accel_dp_net_w median 29.0 / 51.4 mW)
 
 \textbf{Repeatability and clock.} Across sessions the end-to-end medians stay
 within [223.3, 225.4] and [576.9, 580.5]\,$\mu$s, and energy per image varies

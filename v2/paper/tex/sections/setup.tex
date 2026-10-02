@@ -3,7 +3,7 @@
 \section{Experimental Setup}\label{sec:setup}
 \input{../generated/tab_impl_compact}
 
-\textbf{Platform.} A KV260 (K26 SOM) runs Kria Ubuntu 22.04 and Kria-PYNQ;
+\textbf{Platform.} A KV260 (K26 SOM) runs Kria Ubuntu 22.04 and Kria-PYNQ (PYNQ 3.0.1);
 the design is built with Vivado 2023.1 (Table~\ref{tab:impl}). After every
 overlay load the PL clock is set from the PS PLL and verified by read-back;
 every $\mu$s value uses that read-back clock (249.9975\,MHz).
@@ -18,14 +18,14 @@ days, and board values are the median over the sessions.
 End-to-end time runs from the input write to the dequantized logits in the
 Python host; compute time is the hardware cycle counter over the clock.
 
-\textbf{Power.} We report SOM-rail power (INA260) on the SOM input rail,
+\textbf{Power.} We report SOM-rail power from the on-board INA260 on the SOM input rail,
 sampled at 10\,Hz; in a 20\,s idle check its power reading changed 6.7 times
 per second. Each net runs
 60\,s phases bracketed by idle phases, three times. Energy per image is
 $\Delta P$ above idle times the time per image, so it includes the host
 CPU that drives the accelerator. % src: tab_b1_power (sample rate 10.0 Hz, repeats 3); EXPERIMENTS.md B1; 6.7/s = 134 changes of power_w over 20.0 s / 201 samples in results/board_20260930_gos300_at_200mhz/hw_b1_power_ina260_samples_sensorcheck.csv (Session 0 sensor check, 10.049 Hz achieved; not paper-grade; computed, lower bound on the update rate)
 
-\textbf{Baselines.} On the Cortex-A53 we run ONNX Runtime and numpy, FP32
-and INT8, with 1 and 4 threads. The AMD DPU runs the prebuilt pynq-dpu 2.5
-overlay with a Vitis AI quantization of the same networks.
-% src: tab_a5_cpu rows; tab_efficiency notes
+\textbf{Baselines.} On the Cortex-A53 we run ONNX Runtime 1.19.2 and numpy,
+FP32 and INT8, with 1 and 4 threads. The AMD DPU runs the prebuilt pynq-dpu
+2.5.0 overlay with a Vitis AI 2.5 quantization of the same networks.
+% src: tab_a5_cpu rows; tab_b1_power (ORT 1.19.2); hw_dpu_session_info.json (pynq_dpu_version 2.5.0); dpu/README.md (Vitis AI 2.5.0); DECISIONS D22 (pynq 3.0.1)
