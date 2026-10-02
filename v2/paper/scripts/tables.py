@@ -963,6 +963,16 @@ def compare(c: Ctx) -> Artifact:
         body.append(["", cpu_lab,
                      art.cell(b[2], "median_us", "f1") if b else art.placeholder(f"compare CPU e2e {net}"),
                      energy(ours, net, "cpu_energy_per_image_mj"), one])
+    # accelerator-attributable dP: accelerator phase minus control phase (same host loop, accelerator not started)
+    net_dp = []
+    for net in NETS:
+        e = ours.get(net)
+        if e and e["mean"].get("accel_dp_net_w"):
+            net_dp.append(f"{pretty_net(net)} "
+                          + V(fnum(e["mean"]["accel_dp_net_w"]) * 1000.0,
+                              row_origin(e["mean"], "accel_dp_net_w") + "*1000").fmt(art, "f1") + "~mW")
+    pl_note = ("$\\Delta P$ attributable to the PL work (accelerator phase minus the control phase, which runs the "
+               "same host loop without starting the accelerator): " + ", ".join(net_dp) + ". ") if net_dp else ""
     hdr = [r"& & e2e p50 & Energy & Speedup \\", r"Net & System & (\textmu s) & (mJ) & vs.\ CPU"]
     return c.table(art, "@{}llrrr@{}", hdr, body,
                    f"End-to-end latency, {INA_LABEL} energy per image and speedup over the best CPU baseline, "
@@ -971,7 +981,7 @@ def compare(c: Ctx) -> Artifact:
                           + "$^\\dagger$Fast host path. $^\\ddagger$Best CPU baseline: " + (art.label(f"{CPU_KINDS.get(next(iter(best.values()))[0], '')}, {next(iter(best.values()))[1]}~threads", f"hw_cpu_baseline.csv:{next(iter(best.values()))[2]['_line']}:kind,threads") if best else "--") + ". $^\\ast$DPU (DPUCZDX8G, prebuilt pynq-dpu overlay, Vitis AI quantization of the same FP32 nets): "
                           "one session. e2e = input write to dequantized logits on the host (CPU: also input "
                           "preprocessing). Energy per image = $\\Delta P$ above the system's own idle $\\times$ time per image, "
-                          "host loop included; CPU energy from the B1 CPU phase (same workload). Sources: "
+                          "host loop included; CPU energy from the B1 CPU phase (same workload). " + pl_note + "Sources: "
                           "hw\\_b3\\_breakdown\\_fast.csv, hw\\_dpu\\_latency.csv, hw\\_cpu\\_baseline.csv, "
                           "hw\\_b1\\_power\\_ina260\\_summary*.csv, hw\\_dpu\\_power\\_ina260\\_summary*.csv."])
 
