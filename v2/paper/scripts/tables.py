@@ -12,6 +12,8 @@ from paperlib import (NETS, PH_BOARD, Artifact, Store, _rel, fnum, inum, latex_t
 META_COLS = {"timestamp", "git_commit", "git_dirty", "vivado_version", "bitstream_sha256", "board_id",
              "net", "layer", "clock_mhz", "source", "duration_s", "num_inferences", "_file", "_line"}
 
+NUMPY_KINDS = {"cpu_int8_ref", "cpu_fp32_numpy"}
+NUMPY_MARK = "$^\\dagger$"
 CPU_KINDS = {"cpu_int8_ref": "INT8 numpy (ref.)", "cpu_fp32_numpy": "FP32 numpy",
              "cpu_ort_fp32": "ORT FP32", "cpu_ort_int8": "ORT INT8"}
 B3_PHASES = ["input_write", "status_clear", "start_done", "start_write", "poll", "logit_read", "ps_dequant",
@@ -377,11 +379,15 @@ def a5_cpu(c: Ctx) -> Artifact:
     b3 = art.rows("hw_b3_breakdown.csv", hw=True) or []
     b3l = latest(b3, lambda r: (r["net"], r["phase"]))
     body = []
-    kinds = sorted({r["kind"] for r in cpu}, key=lambda k: list(CPU_KINDS).index(k) if k in CPU_KINDS else 99)
+    # ORT rows are the primary CPU baselines; the plain numpy rows are unoptimized reference code (footnote)
+    ORT_FIRST = ["cpu_ort_int8", "cpu_ort_fp32", "cpu_fp32_numpy", "cpu_int8_ref"]
+    kinds = sorted({r["kind"] for r in cpu}, key=lambda k: ORT_FIRST.index(k) if k in ORT_FIRST else 99)
     if cpu:
         cl = latest([r for r in cpu if r.get("mode") in ("compute", "e2e") and r.get("status", "ok") == "ok"],
                     lambda r: (r["net"], r["kind"], r["threads"], r["mode"]))
         for k in kinds:
+            if k in NUMPY_KINDS and k == next(x for x in kinds if x in NUMPY_KINDS):
+                body.append(r"\midrule")
             for th in sorted({r["threads"] for r in cpu if r["kind"] == k}, key=lambda t: inum(t)):
                 cells = []
                 for net in NETS:
@@ -390,7 +396,8 @@ def a5_cpu(c: Ctx) -> Artifact:
                         cells.append(ci(art, r, "median_us", "median_ci_lo_us", "median_ci_hi_us", "f1")
                                      if r else "--")
                 trow = next(r for r in cpu if r["kind"] == k and r["threads"] == th)
-                body.append([CPU_KINDS.get(k, tex_escape(k)), art.cell(trow, "threads", "int")] + cells)
+                mark = NUMPY_MARK if k in NUMPY_KINDS else ""
+                body.append([CPU_KINDS.get(k, tex_escape(k)) + mark, art.cell(trow, "threads", "int")] + cells)
     else:
         for k, lab in CPU_KINDS.items():
             body.append(f"{lab} & -- & \\multicolumn{{4}}{{c}}"
@@ -438,7 +445,12 @@ def a5_cpu(c: Ctx) -> Artifact:
                           "net over all kinds and thread counts of the table; every speedup is computed "
                           "against it only (a value below unity means the CPU is faster). ORT INT8 is "
                           "onnxruntime's own static quantization, not the project INT8 numerics "
-                          "(accuracy row)."])
+                          "(accuracy row). "
+                          + NUMPY_MARK + "Plain numpy implementations (the INT8 one is the bit-exact reference), not "
+                          "optimized CPU runtimes; they are listed for completeness and are not the basis of any "
+                          "speedup. Their brackets are the minimum and maximum over the "
+                          "sessions as for every row, and are wide for several of them (a four-thread numpy run "
+                          "in one session was far slower than in the others), so read them as indicative only."])
 
 
 # --------------------------------------------------------------------------------------------

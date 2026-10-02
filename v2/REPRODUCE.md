@@ -10,6 +10,12 @@ Each number carries a label: **model**, **RTL sim** (`source=rtl_sim`), **post-s
 measured on the KV260 (`source=hw`, `cpu_board`). The `source` column of each row gives its label.
 `dryrun_model` and `cpu_laptop` rows under `v2/results/dryrun/` are never paper data.
 
+**Release tag: `v2-paper-final`** (commit 0c4c3aa on `v2-dev`) is the version of record for the paper's
+results and numbers: `git checkout v2-paper-final` and follow this file. Every board number in the paper
+tables is the median over the three board sessions (`results/`, `rep2/`, `rep3/`; DECISIONS D26). The earlier
+tag `v2-paper-freeze` (D25) predates that rule and is kept unmoved. Later commits on `v2-dev` change
+presentation only (e.g. the order of the rows in the CPU table), not any result row.
+
 ## 0. Rules that apply to every step
 
 - **Clean tree.** Commit code, run the result scripts, then commit the CSVs in a separate

@@ -187,7 +187,7 @@ All V2 work lives in `v2/` on branch `v2-dev`. For any file under `v2/`,
 directory. Legacy files (rtl/, sim/, python/, data/, docs/, scripts/,
 software/) are read-only references for V2 work.
 
-## Where the project stands (updated 2026-10-02, PAPER FREEZE: board campaign complete, tag `v2-paper-freeze`)
+## Where the project stands (updated 2026-10-02, PAPER FINAL: board campaign complete, tag `v2-paper-final` = 0c4c3aa; earlier `v2-paper-freeze` kept unmoved)
 
 Update this section whenever a step finishes. It is a pointer summary. The
 records of truth are `v2/docs/DECISIONS.md` (decisions D1–D25, open
@@ -343,7 +343,7 @@ no new login during a power phase; the session-end checks flag logins and apt/Pa
   Index 1 had worse tails and a few CPU-baseline outliers (p95 up to 20–50 % higher, INT8 numpy x4 CIFAR 67 vs 54 ms).
 - **Paper numbers = median over the three sessions (D26):** B1/B3/CPU-baseline/efficiency cells are session medians with
   min–max (latency) or CV (power) as the spread; DPU, A1, A2 wall-clock, A4, B2, soak, layer spread and shapes are one
-  session only and labelled so. The `v2-paper-freeze` tag (D25) predates this change; move it only after the user agrees.
+  session only and labelled so. Version of record: tag `v2-paper-final` (0c4c3aa, see `v2/REPRODUCE.md`); `v2-paper-freeze` (D25) predates the median rule and is not moved. No further changes until paper writing needs them.
 - Next: paper text (ROCS 2026 short paper, deadline 2026-10-09 AoE), then the post-submission board hygiene above.
 - Still open (not measurable now): INA260 update rate, VCC_SOM per-rail coverage (carrier schematic U14), DPU
   resource figures (D23); C1/C2 optional.
