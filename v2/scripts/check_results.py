@@ -46,8 +46,13 @@ DPU_MODEL_SOURCES = ("v2/dpu", ":(exclude)v2/dpu/*.md", ":(exclude)v2/dpu/dpu_se
                      ":(exclude)v2/dpu/deploy_dpu.sh", ":(exclude)v2/dpu/tests")
 # CSVs whose producer lives outside SOURCE_PATHS: those sources are compared too (only for these CSVs,
 # so older rows of other CSVs are not made stale by a folder that did not exist when they were produced).
-EXTRA_SOURCES = {"schedule_ablation.csv": ("v2/analysis",), "projection_16x16.csv": ("v2/analysis",),
-                 "utilization_model.csv": ("v2/analysis",), "rtl_full10k.csv": ("v2/fullsim",),
+# The three model-only analyses in v2/analysis do not read board results: the board-result analysis code
+# (board_efficiency.py, dpu_overlay_params.py, session_median.py) and the tests are excluded (D26).
+ANALYSIS_MODEL_SOURCES = ("v2/analysis", ":(exclude)v2/analysis/board_efficiency.py",
+                          ":(exclude)v2/analysis/dpu_overlay_params.py", ":(exclude)v2/analysis/session_median.py",
+                          ":(exclude)v2/analysis/tests", ":(exclude)v2/analysis/README.md")
+EXTRA_SOURCES = {"schedule_ablation.csv": ANALYSIS_MODEL_SOURCES, "projection_16x16.csv": ANALYSIS_MODEL_SOURCES,
+                 "utilization_model.csv": ANALYSIS_MODEL_SOURCES, "rtl_full10k.csv": ("v2/fullsim",),
                  "dpu_model_accuracy.csv": DPU_MODEL_SOURCES, "shapes_rtl.csv": ("v2/shapes",),
                  "limits_rtl.csv": ("v2/shapes",)}
 

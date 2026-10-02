@@ -341,6 +341,9 @@ no new login during a power phase; the session-end checks flag logins and apt/Pa
 - Index 3 vs 1/2 (measured): B3 e2e safe/fast medians agree within 0.3–0.9 % (index 2 vs 3 within 0.2 %); B1 P_idle
   3.39 (idx 1) vs 3.44 / 3.43 W (idx 2 / 3); ΔP accel 0.251/0.254/0.241 W (LeNet-5), 0.263/0.262/0.264 W (CIFAR-10).
   Index 1 had worse tails and a few CPU-baseline outliers (p95 up to 20–50 % higher, INT8 numpy x4 CIFAR 67 vs 54 ms).
+- **Paper numbers = median over the three sessions (D26):** B1/B3/CPU-baseline/efficiency cells are session medians with
+  min–max (latency) or CV (power) as the spread; DPU, A1, A2 wall-clock, A4, B2, soak, layer spread and shapes are one
+  session only and labelled so. The `v2-paper-freeze` tag (D25) predates this change; move it only after the user agrees.
 - Next: paper text (ROCS 2026 short paper, deadline 2026-10-09 AoE), then the post-submission board hygiene above.
 - Still open (not measurable now): INA260 update rate, VCC_SOM per-rail coverage (carrier schematic U14), DPU
   resource figures (D23); C1/C2 optional.

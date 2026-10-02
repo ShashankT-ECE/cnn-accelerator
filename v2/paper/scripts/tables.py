@@ -873,10 +873,11 @@ def _sess_note(c: Ctx, pct: bool = False) -> str:
     n = _nsess(c)
     if n < 2:
         return ""
-    what = "each percentile and the spread" if pct else "each cell"
+    what = "each percentile" if pct else "each cell"
     return (f"Board cells of the accelerator and CPU rows: {what} is the median over the {_sessw(c)} independent board "
             "sessions of that session's own statistic"
-            + ("" if pct else "; the bracket is the minimum and maximum over the sessions")
+            + (" (the spread is the median over the sessions of the slowest image minus the median of the fastest)"
+               if pct else "; the bracket is the minimum and maximum over the sessions")
             + ". The DPU, A1, A2 wall-clock, A4, B2, soak, layer-spread and shape rows were measured in one session only. ")
 
 
