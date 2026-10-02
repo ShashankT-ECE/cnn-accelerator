@@ -19,10 +19,11 @@ End-to-end time runs from the input write to the dequantized logits in the
 Python host; compute time is the hardware cycle counter over the clock.
 
 \textbf{Power.} We report SOM-rail power (INA260) on the SOM input rail,
-sampled at 10\,Hz (the sensor updates at about 6--7\,Hz). Each net runs
+sampled at 10\,Hz; in a 20\,s idle check its power reading changed 6.7 times
+per second. Each net runs
 60\,s phases bracketed by idle phases, three times. Energy per image is
 $\Delta P$ above idle times the time per image, so it includes the host
-CPU that drives the accelerator. % src: tab_b1_power (sample rate 10.0 Hz, repeats 3); EXPERIMENTS.md B1; INA260 6-7 changes/s: board bring-up note (CLAUDE.md), not a CSV
+CPU that drives the accelerator. % src: tab_b1_power (sample rate 10.0 Hz, repeats 3); EXPERIMENTS.md B1; 6.7/s = 134 changes of power_w over 20.0 s / 201 samples in results/board_20260930_gos300_at_200mhz/hw_b1_power_ina260_samples_sensorcheck.csv (Session 0 sensor check, 10.049 Hz achieved; not paper-grade; computed, lower bound on the update rate)
 
 \textbf{Baselines.} On the Cortex-A53 we run ONNX Runtime and numpy, FP32
 and INT8, with 1 and 4 threads. The AMD DPU runs the prebuilt pynq-dpu 2.5

@@ -7,7 +7,7 @@
   mem/.style={blk, fill=black!8},
   ctl/.style={blk, dashed}]
   % PS
-  \node[blk, minimum width=7.9cm] (ps) at (-0.3,2.0)
+  \node[blk, minimum width=7.9cm] (ps) at (-0.3,2.75)
       {PS: Cortex-A53, Python host \quad|\quad AXI-Lite CSR + AXI BRAM ports};
   % datapath (one row, left to right)
   \node[mem] (act)  at (-3.55,0.75) {ACT0/1\\8 banks};
@@ -19,7 +19,7 @@
   % memories and control (second row)
   \node[mem] (wgt) at (-0.8,-0.45) {weights (WGT)};
   \node[mem] (qp)  at (1.85,-0.45) {QPARAM};
-  \node[ctl] (seq) at (-2.75,-0.45) {sequencer,\\checker};
+  \node[ctl] (seq) at (-1.05,1.75) {control: sequencer, checker};
   % data flow
   \draw[->] (act) -- (rot);
   \draw[->] (rot) -- (arr);
@@ -29,10 +29,10 @@
   \draw[->] (wgt) -- (arr);
   \draw[->] (qp) -- (rq);
   \draw[->] (pool.south) -- (3.05,-1.1) -- (-4.45,-1.1) node[pos=0.45, below] {write back (next layer's input)} -- (-4.45,0.75) -- (act.west);
-  \draw[dashed,->] (seq) -- (wgt);
+  \draw[dashed,->] (seq.south -| arr.north) -- (arr.north);
   % host interface
-  \draw[->] (act.north |- ps.south) -- (act.north) node[midway, right] {input};
-  \draw[<->] (arr.north |- ps.south) -- (arr.north) node[midway, right] {start, cycle counters};
+  \draw[->] (act.north |- ps.south) -- (act.north) node[pos=0.5, left] {input};
+  \draw[<->] (seq.north |- ps.south) -- (seq.north) node[midway, right] {start, cycle counters};
   \draw[->] (rq.north) -- (rq.north |- ps.south) node[midway, right] {logits};
 \end{tikzpicture}}
 \caption{Accelerator organization. Weights and activations stay in BRAM; the host writes the input,

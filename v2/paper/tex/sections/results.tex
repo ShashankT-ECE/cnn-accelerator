@@ -71,3 +71,19 @@ by a CV of 3.0\,\% and 0.4\,\%. Latency scales as $1/f$ with constant cycles,
 and power fits $P = 3.424\,\mathrm{W} + 1.095\,\mathrm{mW/MHz} \cdot f$
 ($R^2 = 0.9964$); a second sweep gave a slope 8\,\% different.
 % src: tab_repeatability (B3 e2e fast [223.3, 225.4], [576.9, 580.5]); tab_b1_power (E_sys CV 3.0 / 0.4); tab_b2_fit
+
+\textbf{Lessons learned.} Cycle-exact results cannot reveal a wrong clock:
+the first board session ran the 300\,MHz build at 199.998\,MHz, because
+PYNQ does not program the design's PS PLLs, and every check passed. The
+driver now sets the PL clock after each overlay load and fails unless the
+read-back matches, which showed that the board's PLLs cannot produce
+300\,MHz. A power sampler running as a Python thread was starved by the
+interpreter lock (1--14 samples in 20--30\,s instead of 10\,Hz); a separate
+process restored about 10\,Hz. Session-end overlap checks flagged power
+phases disturbed by SSH logins (up to +15\,mW on a phase mean) and by an
+unattended OS update inside one clock sweep, which was re-run. Random-shape
+testing exposed the unchecked kernel-width limit (Sec.~\ref{sec:verif}).
+% src: DECISIONS D19 (199.998 MHz read-back, PYNQ does not program the PS PLLs, set + verify +-0.1 MHz, 300 MHz unreachable);
+% D23 "Power sampler = a separate process" (1-14 samples in 20-30 s; ~10 Hz after the fix); D24 (login spikes +12 / +15 mW);
+% OS update: commits e91657a / d260467 and v2/board/README.md (unattended upgrade 06:34:59-06:40:38 UTC inside the first
+% random-order B2 attempt, not committed; sweep re-run at e91657a) -- NOT in DECISIONS.md or a CSV; OC-3 (KW limit)
