@@ -23,6 +23,12 @@ V3 = Path(__file__).resolve().parents[1]
 COMMON = ("v3/model/common.py",)
 # CSV name -> source paths its producer reads (code + committed inputs). Extend with each new producer.
 PRODUCER_SOURCES: dict[str, tuple] = {
+    # WS5 feasibility (v3/feas)
+    "feas_packing.csv": ("v3/feas/packing_model.py",),
+    "feas_tb.csv": ("v3/feas/rtl", "v3/feas/tb", "v3/feas/run_feas_tb.sh", "v3/feas/tb_collect.py"),
+    "feas_ooc.csv": ("v3/feas/rtl", "v3/feas/ooc_synth.tcl", "v3/feas/run_feas_ooc.sh", "v3/feas/ooc_collect.py",
+                     "v3/scripts/vivado_guard.sh"),
+    "device_resources.csv": ("v3/feas/device_query.tcl", "v3/feas/run_feas_ooc.sh", "v3/feas/ooc_collect.py"),
 }
 # CSVs that are not produced from repo code (e.g. training logs written on an external GPU are
 # checked by their own sha256 manifest instead); listed with the reason.
