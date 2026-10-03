@@ -22,6 +22,13 @@ from pathlib import Path
 V3 = Path(__file__).resolve().parents[1]
 COMMON = ("v3/model/common.py",)
 # CSV name -> source paths its producer reads (code + committed inputs). Extend with each new producer.
+DSE = ("v3/analysis/dse.py", "v3/model/cycle_model.py", "v3/model/mem_model.py", "v3/model/nets.py",
+       "v3/results/device_resources.csv")
+PKG = ("v3/board/make_baseline_package.py", "v3/board/export_onnx.py", "v3/board/laptop_common.py",
+       "v3/board/baseline_common.py", "v3/dpu/export_data.py", "v3/dpu/vai_quantize.py", "v3/dpu/inspect_xmodel.py",
+       "v3/dpu/overlay_arch.py", "v3/dpu/run_docker.sh", "v3/model/nets.py")
+BOARD = PKG + ("v3/board/baseline_session.py", "v3/board/power_log.py", "v3/board/stats.py", "v3/board/board_env.py",
+               "v3/board/login_spikes.py", "v3/board/session.sh")
 PRODUCER_SOURCES: dict[str, tuple] = {
     # WS5 feasibility (v3/feas)
     "feas_packing.csv": ("v3/feas/packing_model.py",),
@@ -29,10 +36,22 @@ PRODUCER_SOURCES: dict[str, tuple] = {
     "feas_ooc.csv": ("v3/feas/rtl", "v3/feas/ooc_synth.tcl", "v3/feas/run_feas_ooc.sh", "v3/feas/ooc_collect.py",
                      "v3/scripts/vivado_guard.sh"),
     "device_resources.csv": ("v3/feas/device_query.tcl", "v3/feas/run_feas_ooc.sh", "v3/feas/ooc_collect.py"),
+    # WS4 DSE (model / estimate); reads device_resources.csv
+    "dse.csv": DSE,
+    "dse_layers.csv": DSE,
+    # WS3 baselines
+    "baseline_model_accuracy.csv": PKG,
+    "hw_baseline_accuracy.csv": BOARD,
+    "hw_baseline_latency.csv": BOARD,
+    "hw_baseline_repeatability.csv": BOARD + ("v3/board/aggregate_sessions.py",),
+    **{f"hw_baseline_power_ina260_{k}_{n}.csv": BOARD
+       for k in ("samples", "phases", "summary") for n in ("resnet20_b", "mobilenet_s")},
 }
 # CSVs that are not produced from repo code (e.g. training logs written on an external GPU are
 # checked by their own sha256 manifest instead); listed with the reason.
 EXEMPT: dict[str, str] = {
+    "literature.csv": "literature values transcribed from the cited papers (DOI + table/page + verified flag "
+                      "per row, v3/docs/LITERATURE.md); not produced from repo code",
 }
 
 

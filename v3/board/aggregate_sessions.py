@@ -1,0 +1,143 @@
+#!/usr/bin/env python3
+"""3-session repeatability of the V3 baselines: combine session_index 1..3 (V2 D26 median rule).
+Adapted from v2/board/aggregate_sessions.py @ 28dd2ad: same grouping and refusal rules, V3 file names,
+and the D26 statistic (median over the sessions of each session's own statistic) added as `median`.
+
+    python3 aggregate_sessions.py [--root results/] [--indices 1 2 3]
+    .venv/bin/python v3/board/aggregate_sessions.py --root v3/results/dryrun/baseline     # dry-run rows
+
+Layout (baseline_session.py K): K = 1 -> <root>/, K >= 2 -> <root>/rep<K>/.
+Per metric and key (net, config, metric, ...) the per-session value is the one statistic that session
+reports (accuracy, the latency p50/p95/p99/median of its 10k images, the power mean over its repeats);
+across sessions: median (D26: the headline), min, max (latency spread), mean, between-session SD (ddof=1)
+and CV % (power spread), range.
+RULES (as V2): rows from different bitstreams (bitstream_sha256) or clocks (clock_mhz, 0.1 MHz) are never
+combined; a row's session_index must equal its directory's index (else REFUSED); board and dry-run rows
+are never mixed; git_dirty = any input dirty; paper_grade = every input paper-grade and clean.
+Writes <root>/hw_baseline_repeatability.csv.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import statistics
+import sys
+from pathlib import Path
+
+import baseline_common as bc
+import stats
+
+METRICS = [
+    ("hw_baseline_accuracy.csv", None, ("net", "config"), ("accuracy_pct", "agree_ref_pct")),
+    ("hw_baseline_latency.csv", None, ("net", "config", "metric"), ("p50", "p95", "p99", "median")),
+    ("hw_baseline_power_ina260_summary_*.csv", lambda r: r.get("row_kind") == "mean", ("net", "config"),
+     ("p_idle_w", "p_run_w", "dp_w", "time_per_image_s", "energy_per_image_mj")),
+]
+FIELDS = ["metric_file", "metric", "key", "n_sessions", "session_indices", "per_session", "median", "mean",
+          "between_sd", "min", "max", "range", "cv_pct", "input_git_commits", "input_paper_grade", "note"]
+OUT_NAME = "hw_baseline_repeatability.csv"
+
+
+def session_dirs(root: Path, indices) -> dict[int, Path]:
+    return {k: (root if k == 1 else root / f"rep{k}") for k in indices}
+
+
+def collect(root: Path, indices=(1, 2, 3)) -> tuple[dict, list[str]]:
+    groups: dict = {}
+    problems = []
+    for k, d in session_dirs(root, indices).items():
+        if not d.is_dir():
+            problems.append(f"session {k}: {d} missing")
+            continue
+        for pat, filt, keys, mets in METRICS:
+            for p in sorted(d.glob(pat)):
+                for r in bc.read_csv(p):
+                    if filt and not filt(r):
+                        continue
+                    si = str(r.get("session_index", "")).strip()
+                    if si not in ("", str(k)):
+                        raise SystemExit(f"REFUSED: {p} row session_index {si} in the directory of session {k}")
+                    key = json.dumps({c: r.get(c, "") for c in keys}, sort_keys=True)
+                    try:
+                        clk = f"{float(r.get('clock_mhz') or 'nan'):.1f}"
+                    except ValueError:
+                        clk = ""
+                    clk = "" if clk == "nan" else clk
+                    sha = r.get("bitstream_sha256", "")
+                    for m in mets:
+                        try:
+                            fv = float(r.get(m, ""))
+                        except ValueError:
+                            continue
+                        g = groups.setdefault((pat, m, key, sha, clk), {})
+                        prev = g.get(k)
+                        if prev is None or r.get("timestamp", "") >= prev[1].get("timestamp", ""):
+                            g[k] = (fv, r)
+    return groups, problems
+
+
+def aggregate(root: Path, indices=(1, 2, 3)) -> tuple[list[dict], str, list[str]]:
+    groups, problems = collect(root, indices)
+    srcs = {r.get("source") for g in groups.values() for _, r in g.values()}
+    if bc.SOURCE_HW in srcs and srcs - {bc.SOURCE_HW}:
+        raise SystemExit(f"REFUSED: mixed sources {sorted(srcs)} (board and dry-run rows)")
+    out_source = bc.SOURCE_HW if (bc.SOURCE_HW in srcs or not srcs) else bc.SOURCE_DRYRUN
+    per_metric: dict = {}
+    for (pat, m, key, sha, clk) in groups:
+        per_metric.setdefault((pat, m, key), set()).add((sha, clk))
+    rows = []
+    for (pat, m, key, sha, clk), g in sorted(groups.items()):
+        ks = sorted(g)
+        vals = [g[k][0] for k in ks]
+        b = stats.between_sessions(vals)
+        rs = [g[k][1] for k in ks]
+        commits = sorted({r.get("git_commit", "") for r in rs})
+        dirty = any(str(r.get("git_dirty", "")) != "False" for r in rs)
+        pg = all(str(r.get("paper_grade", "")) == "True" for r in rs)
+        notes = []
+        if len(per_metric[(pat, m, key)]) > 1:
+            notes.append("other bitstream/clock groups exist for this metric (never combined)")
+        if len(commits) > 1:
+            notes.append("sessions from different scripts commits")
+        if len(ks) < len(indices):
+            notes.append(f"only sessions {ks}")
+        r0 = rs[-1]
+        rows.append({"timestamp": bc.utc_now(), "git_commit": commits[0] if len(commits) == 1 else "mixed",
+                     "git_dirty": dirty, "vivado_version": "", "bitstream_sha256": sha,
+                     "board_id": r0.get("board_id", ""), "net": json.loads(key).get("net", ""), "layer": "all",
+                     "clock_mhz": clk, "source": out_source, "duration_s": "", "num_inferences": "",
+                     "session_index": ",".join(str(k) for k in ks), "paper_grade": pg and not dirty,
+                     "checkpoint_sha256": r0.get("checkpoint_sha256", ""),
+                     "checkpoint_kind": r0.get("checkpoint_kind", ""),
+                     "package_manifest_sha256": r0.get("package_manifest_sha256", ""),
+                     "metric_file": pat, "metric": m, "key": key, "n_sessions": b["n"],
+                     "session_indices": ",".join(str(k) for k in ks),
+                     "per_session": json.dumps({str(k): g[k][0] for k in ks}),
+                     "median": stats.fmt(statistics.median(vals), 6), "mean": stats.fmt(b["mean"], 6),
+                     "between_sd": stats.fmt(b.get("sd"), 6), "min": stats.fmt(b["min"], 6),
+                     "max": stats.fmt(b["max"], 6), "range": stats.fmt(b["range"], 6),
+                     "cv_pct": stats.fmt(b.get("cv_pct"), 4),
+                     "input_git_commits": " ".join(c[:12] for c in commits), "input_paper_grade": pg,
+                     "note": "; ".join(notes)})
+    return rows, out_source, problems
+
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap.add_argument("--root", default=None, help="default results/ (board); a dryrun dir for dry runs")
+    ap.add_argument("--indices", nargs="+", type=int, default=[1, 2, 3])
+    a = ap.parse_args(argv)
+    root = Path(a.root).resolve() if a.root else bc.RESULTS_ROOT
+    rows, source, problems = aggregate(root, a.indices)
+    for p in problems:
+        print(f"NOTE: {p}")
+    if not rows:
+        print("no per-session rows found; nothing written")
+        return 1
+    bc.write_csv(root / OUT_NAME, rows, FIELDS, source)
+    print(f"{len(rows)} metric groups from sessions {a.indices} ({source})")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

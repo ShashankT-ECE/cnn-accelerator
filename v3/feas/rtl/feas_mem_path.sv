@@ -132,7 +132,10 @@ module feas_mem_path #(
     // act_re latency 6: baddr (1) -> q0 (2) -> bq1 (3) -> rot_mid (4) -> rot_out (5) -> a_rep (6)
 
     // ================================================================ (3) residual read + requant
-    logic [W*8-1:0] rmem_q0, rmem_q1;
+    // rmem_q1 is kept in fabric: without keep, synthesis absorbs it into the skip-multiply DSPs (AREG),
+    // which leaves the memory without a read register and maps it to LUTRAM (first OOC run, b827ae0).
+    logic [W*8-1:0] rmem_q0;
+    (* keep = "true" *) logic [W*8-1:0] rmem_q1;
     (* ram_style = "block" *) logic [W*8-1:0] rmem [DEPTH];
     always_ff @(posedge clk) begin
         if (res_we) rmem[res_waddr] <= res_wdata;
