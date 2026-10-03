@@ -187,6 +187,15 @@ All V2 work lives in `v2/` on branch `v2-dev`. For any file under `v2/`,
 directory. Legacy files (rtl/, sim/, python/, data/, docs/, scripts/,
 software/) are read-only references for V2 work.
 
+## V3 work (major project)
+
+All V3 work lives in `v3/` on branch `v3-dev`, worked in the worktree `~/gos-v3`
+(the main checkout stays on `v2-dev`). For any file under `v3/`, `v3/CLAUDE.md`
+takes precedence over this file. `v3/` is an approved top-level directory; `v2/`,
+its tags and the legacy directories are read-only references for V3.
+Status (2026-10-03): Phase 0 (decisions only, no design RTL) in progress; records
+in `v3/docs/DECISIONS.md`.
+
 ## Where the project stands (updated 2026-10-02, PAPER FINAL: board campaign complete, tag `v2-paper-final` = 0c4c3aa; earlier `v2-paper-freeze` kept unmoved)
 
 Update this section whenever a step finishes. It is a pointer summary. The

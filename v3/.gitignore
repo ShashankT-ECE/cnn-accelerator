@@ -1,0 +1,12 @@
+build/
+results/dryrun/
+results/raw/
+*.jou
+*.log
+*.pb
+xsim.dir/
+.Xil/
+vivado/out/
+dpu/build/
+board/data/
+train/out/
