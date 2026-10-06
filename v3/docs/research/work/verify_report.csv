@@ -1,0 +1,133 @@
+key,doi,url,method,status,found_title,found_year,title_sim,first_author_ok
+aromolo2026timepredictable,10.1109/RTAS68450.2026.00033,https://retis.santannapisa.it/~a.biondi/papers/RTAS26.pdf,crossref,ok,Time-Predictable Acceleration of Deep Neural Networks on FPGA SoCs with Multi-Core DPUs,2026,1.0,True
+elbtity2024flextpu,,https://arxiv.org/abs/2407.08700,arxiv,ok,Flex-TPU: A Flexible TPU with Runtime Reconfigurable Dataflow Architecture,2024,1.0,True
+ji2025derca,10.1109/rtss66672.2025.00039,https://github.com/arc-research-lab/DERCA,crossref,ok,DERCA: DetERministic Cycle-Level Accelerator on Reconfigurable Platforms in DNN-Enabled Real-Time Safety-Critical Systems,2025,1.0,True
+liu2022s2ta,10.1109/hpca53966.2022.00049,https://arxiv.org/abs/2107.07983,crossref,ok,S2TA: Exploiting Structured Sparsity for Energy-Efficient Mobile CNN Acceleration,2022,1.0,True
+restuccia2021timepredictable,10.1109/RTSS52674.2021.00047,https://retis.santannapisa.it/~a.biondi/papers/RTSS21.pdf,crossref,ok,Time-Predictable Acceleration of Deep Neural Networks on FPGA SoC Platforms,2021,1.0,True
+tong2024feather,10.1109/isca59077.2024.00024,https://arxiv.org/abs/2405.13170,crossref,ok,FEATHER: A Reconfigurable Accelerator with Data Reordering Support for Low-Cost On-Chip Dataflow Switching,2024,1.0,True
+tsoi2025sparsepixels,,https://arxiv.org/abs/2512.06208,arxiv,ok,SparsePixels: Efficient Convolution for Sparse Data on FPGAs,2025,1.0,True
+ye2020hybriddnn,10.1109/dac18072.2020.9218684,https://arxiv.org/abs/2004.03804,crossref,ok,HybridDNN: A Framework for High-Performance Hybrid DNN Accelerator Design and Implementation,2020,1.0,True
+zhao2021dualopu,10.1109/fccm51124.2021.00051,https://arxiv.org/abs/2110.01103,crossref,ok,Heterogeneous Dual-Core Overlay Processor for Light-Weight CNNs,2021,1.0,True
+abts2020think,10.1109/ISCA45697.2020.00023,https://dl.acm.org/doi/10.1109/ISCA45697.2020.00023,crossref,ok,Think Fast: A Tensor Streaming Processor (TSP) for Accelerating Deep Learning Workloads,2020,1.0,True
+abts2022software,10.1145/3470496.3527405,https://cdn.sanity.io/files/chol0sk5/production/81d0c45ed70a10f1804bbd82f2d0076af1186ff0.pdf,crossref,ok,A software-defined tensor streaming multiprocessor for large-scale machine learning,2022,1.0,True
+ahmad2026sparsebycommand,,https://arxiv.org/abs/2607.22038,arxiv,ok,Sparse by Command: Task-Conditional Compute Skipping for Multi-Task Inference Accelerators,2026,1.0,True
+aimar2019nullhop,10.1109/tnnls.2018.2852335,https://arxiv.org/abs/1706.01406,crossref,ok,NullHop: A Flexible Convolutional Neural Network Accelerator Based on Sparse Representations of Feature Maps,2019,1.0,True
+basalama2023flexcnn,10.1145/3570928,https://par.nsf.gov/servlets/purl/10399755,crossref,ok,FlexCNN: An End-to-end Framework for Composing CNN Accelerators on FPGA,2023,1.0,True
+bebawy2025superscalar,10.1109/TCAD.2025.3528355,https://ieeexplore.ieee.org/document/10836726/,crossref,ok,Superscalar Time-Triggered Versatile-Tensor Accelerator,2025,1.0,True
+bosio2025nn2fpga,10.1109/TCAD.2024.3507570,https://ieeexplore.ieee.org/document/10769518/,crossref,ok,NN2FPGA: Optimizing CNN Inference on FPGAs With Binary Integer Programming,2025,1.0,True
+cao2019bankbalanced,10.1145/3289602.3293898,https://www.microsoft.com/en-us/research/uploads/prod/2019/05/FPGA2019_final.pdf,crossref,ok,Efficient and Effective Sparse LSTM on FPGA with Bank-Balanced Sparsity,2019,1.0,True
+chen2026filco,,https://arxiv.org/abs/2604.07523,arxiv,ok,FILCO: Flexible Composing Architecture with Real-Time Reconfigurability for DNN Acceleration,2026,1.0,True
+cho2021risa,10.1145/3476984,,crossref,ok,RiSA: A Reinforced Systolic Array for Depthwise Convolutions and Embedded Tensor Reshaping,2021,1.0,True
+delmaslascorz2019bittactical,10.1145/3297858.3304041,https://arxiv.org/abs/1803.03688,crossref,ok,Bit-Tactical,2019,0.208,True
+duarte2018fast,10.1088/1748-0221/13/07/P07027,https://arxiv.org/abs/1804.06913,crossref,ok,Fast inference of deep neural networks in FPGAs for particle physics,2018,1.0,True
+ezekiel2023optimization,10.1109/DSD60849.2023.00030,https://ieeexplore.ieee.org/document/10456805/,crossref,ok,Optimization of the Versatile Tensor Accelerator (VTA) Load Module in a Time-Triggered Memory Access,2023,1.0,True
+faure2025standalone,,https://arxiv.org/abs/2509.19790,arxiv,ok,Open-source Stand-Alone Versatile Tensor Accelerator,2025,1.0,False
+genc2021gemmini,10.1109/dac18074.2021.9586216,https://arxiv.org/abs/1911.09925,crossref,ok,Gemmini: Enabling Systematic Deep-Learning Architecture Evaluation via Full-Stack Integration,2021,1.0,True
+ghodrati2020planaria,10.1109/micro50266.2020.00062,https://cseweb.ucsd.edu/~hadi/doc/paper/2020-micro-planaria.pdf,crossref,ok,Planaria: Dynamic Architecture Fission for Spatial Multi-Tenant Acceleration of Deep Neural Networks,2020,1.0,True
+hall2020hpipe,10.1145/3373087.3375380,https://arxiv.org/abs/2007.10451,crossref,ok,HPIPE: Heterogeneous Layer-Pipelined and Sparse-Aware CNN Inference for FPGAs,2020,1.0,True
+ham2024onnxim,,https://arxiv.org/abs/2406.08051,arxiv,ok,"ONNXim: A Fast, Cycle-level Multi-core NPU Simulator",2024,1.0,False
+han2017ese,10.1145/3020078.3021745,https://arxiv.org/abs/1612.00694,crossref,ok,ESE,2017,0.09,True
+ji2025art,10.1145/3716368.3735215,https://par.nsf.gov/biblio/10612758,crossref,ok,ART: Customizing Accelerators for DNN-Enabled Real-Time Safety-Critical Systems,2025,1.0,True
+kalagi2026fpga,10.1007/s44163-026-02003-7,,crossref,ok,FPGA validated RISC V system on chip with a custom systolic array accelerator for edge AI inference,2026,1.0,False
+kirschner2024wip,10.1109/RTSS62706.2024.00043,https://arxiv.org/abs/2410.10340,crossref,ok,Work-in-Progress: Real-Time Neural Network Inference on a Custom RISC-V Multicore Vector Processor,2024,1.0,True
+kirschner2026multivic,10.1007/978-3-032-19099-4_14,https://arxiv.org/abs/2511.05321,crossref,ok,MultiVic: A Time-Predictable RISC-V Multi-core Processor Optimized for Neural Network Inference,2026,0.994,True
+krithivasan2020sparsity,10.1109/tcad.2020.3013077,https://arxiv.org/abs/2006.08020,crossref,ok,Sparsity Turns Adversarial: Energy and Latency Attacks on Deep Neural Networks,2020,1.0,True
+kwon2021herald,10.1109/hpca51647.2021.00016,https://arxiv.org/abs/1909.07437,crossref,ok,Heterogeneous Dataflow Accelerators for Multi-DNN Workloads,2021,1.0,True
+lubeck2025automatic,10.1145/3715122,https://arxiv.org/abs/2409.08595,crossref,ok,Automatic Generation of Fast and Accurate Performance Models for Deep Neural Network Accelerators,2025,1.0,True
+lym2020flexsa,,https://arxiv.org/abs/2004.13027,arxiv,ok,FlexSA: Flexible Systolic Array Architecture for Efficient Pruned DNN Model Training,2020,1.0,True
+ma2020performance,10.1109/TCAD.2019.2897634,,crossref,ok,Performance Modeling for CNN Inference Accelerators on FPGA,2020,1.0,False
+minnella2023resnet,,https://arxiv.org/abs/2309.15631,arxiv,ok,Design and Optimization of Residual Neural Network Accelerators for Low-Power FPGAs Using High-Level Synthesis,2023,1.0,True
+munozmartinez2023flexagon,10.1145/3582016.3582069,https://arxiv.org/abs/2301.10852,crossref,ok,Flexagon: A Multi-dataflow Sparse-Sparse Matrix Multiplication Accelerator for Efficient DNN Processing,2023,1.0,False
+platzer2021vicuna,10.4230/LIPIcs.ECRTS.2021.1,https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.ECRTS.2021.1,crossref,error:HTTPError:HTTP Error 404: Not Found,,,0.0,
+rahman2026edge,,https://arxiv.org/abs/2604.25799,arxiv,ok,At the Edge of the Heart: ULP FPGA-Based CNN for On-Device Cardiac Feature Extraction in Smart Health Sensors for Astronauts,2026,1.0,False
+raj2025scalesimv3,10.1109/ispass64960.2025.00026,https://arxiv.org/abs/2504.15377,crossref,ok,SCALE-Sim V3: a Modular Cycle-Accurate Systolic Accelerator Simulator for End-To-End System Analysis,2025,1.0,True
+samajdar2018scalesim,,https://arxiv.org/abs/1811.02883,arxiv,ok,SCALE-Sim: Systolic CNN Accelerator Simulator,2018,1.0,False
+samajdar2022sara,10.1145/3489517.3530506,https://arxiv.org/abs/2101.04799,crossref,ok,Self adaptive reconfigurable arrays (SARA),2022,0.516,True
+toupas2023harflow3d,10.1109/FCCM57271.2023.00024,https://arxiv.org/abs/2303.17218,crossref,ok,HARFLOW3D: A Latency-Oriented 3D-CNN Accelerator Toolflow for HAR on FPGA Devices,2023,1.0,True
+wu2022sparseloop,10.1109/micro56248.2022.00096,https://arxiv.org/abs/2205.05826,crossref,ok,Sparseloop: An Analytical Approach To Sparse Tensor Accelerator Modeling,2022,1.0,True
+zarei2026sparhixcel,,https://arxiv.org/abs/2607.19248,arxiv,ok,A Flexible Sparsity-Aware FPGA Accelerator with Column-Wise Compression for Efficient CNN Inference,2026,1.0,True
+zeng2024automatic,10.1145/3676536.3676657,,crossref,ok,Automatic Generation of Cycle-Accurate Timing Models from RTL for Hardware Accelerators,2024,1.0,False
+zhang2020dnnexplorer,10.1145/3400302.3415609,https://arxiv.org/abs/2008.12745,crossref,ok,DNNExplorer,2020,0.206,True
+abarajithan2026firebridge,,https://arxiv.org/abs/2603.25969,arxiv,ok,FireBridge: Cycle-Accurate Hardware + Firmware Co-Verification for Modern Accelerators,2026,1.0,True
+amd2022vitisaimodelzoo,,https://github.com/Xilinx/Vitis-AI/blob/v2.5/model_zoo/README.md,http,http200,,,0.0,
+bernardo2020ultratrail,10.1109/TCAD.2020.3012320,https://doi.org/10.1109/TCAD.2020.3012320,crossref,ok,UltraTrail: A Configurable Ultralow-Power TC-ResNet AI Accelerator for Efficient Keyword Spotting,2020,1.0,True
+cerioli2025timepredictable,10.1109/ISORC65339.2025.00062,https://www.jopdesign.com/doc/rt_neuralcasting.pdf,crossref,ok,Time-Predictable Deep Noise Suppression on an Edge Device,2025,1.0,True
+cilardo2024systematic,10.1145/3611015,https://dl.acm.org/doi/full/10.1145/3611015,crossref,ok,An Approach to the Systematic Characterization of Multitask Accelerated CNN Inference in Edge MPSoCs,2024,1.0,True
+costa2026throughput,10.1007/s11554-026-01889-x,,crossref,ok,Throughput impact of software multithreading for deep-learning inference on the AMD Kria KV260,2026,1.0,True
+dave2019dmazerunner,10.1145/3358198,https://doi.org/10.1145/3358198,crossref,ok,dMazeRunner,2019,0.275,True
+deng2021gospa,10.1109/isca52012.2021.00090,,crossref,ok,GoSPA: An Energy-efficient High-performance Globally Optimized SParse Convolutional Neural Network Accelerator,2021,1.0,True
+dong2021hao,10.1109/FCCM51124.2021.00014,https://arxiv.org/abs/2104.12766,crossref,ok,HAO: Hardware-aware Neural Architecture Optimization for Efficient Inference,2021,1.0,True
+faure2025opensource,10.1109/DASC66011.2025.11257146,https://arxiv.org/abs/2509.19790,crossref,ok,Open-Source Stand-Alone Versatile Tensor Accelerator,2025,1.0,True
+finndocs2026analysis,,https://finn.readthedocs.io/en/latest/source_code/finn.analysis.fpgadataflow.html,http,http200,,,0.0,
+garofalo2025reliable,10.1109/TCSII.2025.3591225,https://arxiv.org/abs/2502.18953,crossref,ok,"A Reliable, Time-Predictable Heterogeneous SoC for AI-Enhanced Mixed-Criticality Edge Applications",2025,1.0,True
+gondimalla2019sparten,10.1145/3352460.3358291,,crossref,ok,SparTen,2019,0.184,True
+guo2020tilewise,10.1109/sc41405.2020.00020,,crossref,ok,Accelerating Sparse DNN Models without Hardware-Support via Tile-Wise Sparsity,2020,1.0,True
+hamanaka2023exploration,10.1109/ACCESS.2023.3236974,https://ieeexplore.ieee.org/document/10017269/,crossref,ok,An Exploration of State-of-the-Art Automation Frameworks for FPGA-Based DNN Acceleration,2023,1.0,True
+hanson2023dynnamic,10.1109/tc.2022.3184272,,crossref,ok,"DyNNamic: Dynamically Reshaping, High Data-Reuse Accelerator for Compact DNNs",2023,1.0,True
+hegde2018morph,10.1109/micro.2018.00080,https://arxiv.org/abs/1810.06807,crossref,ok,Morph: Flexible Acceleration for 3D CNN-Based Video Understanding,2018,1.0,True
+heo2022sparseperiodic,10.1145/3531437.3539715,https://arxiv.org/abs/2207.00068,crossref,ok,Sparse Periodic Systolic Dataflow for Lowering Latency and Power Dissipation of Convolutional Neural Network Accelerators,2022,1.0,True
+huang2021cosa,10.1109/isca52012.2021.00050,https://arxiv.org/abs/2105.01898,crossref,ok,CoSA: Scheduling by Constrained Optimization for Spatial Accelerators,2021,1.0,True
+hussein2026fpga,10.3390/electronics15122695,https://www.mdpi.com/2079-9292/15/12/2695,crossref,ok,FPGA-Based Reconfigurable SoCs for Safety-Critical AI Inference: A Systematic Literature Review,2026,1.0,True
+jeong2023vegeta,10.1109/hpca56546.2023.10071058,,crossref,ok,VEGETA: Vertically-Integrated Extensions for Sparse/Dense GEMM Tile Acceleration on CPUs,2023,1.0,True
+jiang2019superlinear,10.1145/3358192,https://arxiv.org/abs/1907.08985,crossref,ok,Achieving Super-Linear Speedup across Multi-FPGA for Real-Time DNN Inference,2019,1.0,True
+kao2022magma,10.1109/hpca53966.2022.00065,,crossref,ok,MAGMA: An Optimization Framework for Mapping Multiple DNNs on Multiple Accelerator Cores,2022,1.0,True
+kim2025realprobe,10.1109/FCCM62733.2025.00025,https://arxiv.org/abs/2504.03879,crossref,ok,RealProbe: An Automated and Lightweight Performance Profiler for In-FPGA Execution of High-Level Synthesis Designs,2025,1.0,True
+kwon2019understanding,10.1145/3352460.3358252,https://arxiv.org/abs/1805.02566,crossref,ok,"Understanding Reuse, Performance, and Hardware Cost of DNN Dataflow",2019,0.807,True
+li2021dynamic,10.1109/TCSI.2021.3078541,,crossref,ok,Dynamic Dataflow Scheduling and Computation Mapping Techniques for Efficient Depthwise Separable Convolution Acceleration,2021,1.0,True
+lu2019efficient,10.1109/fccm.2019.00013,,crossref,ok,An Efficient Hardware Accelerator for Sparse Convolutional Neural Networks on FPGAs,2019,1.0,True
+ma2020pconv,10.1609/aaai.v34i04.5954,,crossref,ok,PCONV: The Missing but Desirable Sparsity in DNN Weight Pruning for Real-Time Execution on Mobile Devices,2020,1.0,True
+mattheeuws2021analyzing,10.23919/DATE51398.2021.9473925,https://ieeexplore.ieee.org/document/9473925/,crossref,ok,Analyzing Memory Interference of FPGA Accelerators on Multicore Hosts in Heterogeneous Reconfigurable SoCs,2021,1.0,True
+mei2021zigzag,10.1109/tc.2021.3059962,https://arxiv.org/abs/2007.11360,crossref,ok,ZigZag: Enlarging Joint Architecture-Mapping Design Space Exploration for DNN Accelerators,2021,1.0,True
+mei2022uniform,10.23919/date54114.2022.9774728,https://lirias.kuleuven.be/retrieve/661303,crossref,ok,A Uniform Latency Model for DNN Accelerators with Diverse Architectures and Dataflows,2022,1.0,True
+mei2023defines,10.1109/HPCA56546.2023.10071098,https://arxiv.org/abs/2212.05344,crossref,ok,DeFiNES: Enabling Fast Exploration of the Depth-first Scheduling Space for DNN Accelerators through Analytical Modeling,2023,1.0,False
+mousouliotis2019software,10.1007/978-3-030-17227-5_6,https://arxiv.org/abs/1902.03192,crossref,ok,Software-Defined FPGA Accelerator Design for Mobile Deep Learning Applications,2019,1.0,True
+munozmartinez2020stonnearxiv,,https://arxiv.org/abs/2006.07137,arxiv,ok,STONNE: A Detailed Architectural Simulator for Flexible Neural Network Accelerators,2020,1.0,False
+munozmartinez2021stonne,10.1109/iiswc53511.2021.00028,,crossref,ok,STONNE: Enabling Cycle-Level Microarchitectural Simulation for DNN Inference Accelerators,2021,1.0,False
+nayak2023teaal,10.1145/3613424.3623791,https://arxiv.org/abs/2304.07931,crossref,ok,TeAAL: A Declarative Framework for Modeling Sparse Tensor Accelerators,2023,1.0,True
+niu2020patdnn,10.1145/3373376.3378534,https://arxiv.org/abs/2001.00138,crossref,ok,PatDNN: Achieving Real-Time DNN Execution on Mobile Devices with Pattern-based Weight Pruning,2020,1.0,True
+parashar2019timeloop,10.1109/ispass.2019.00042,https://accelergy.mit.edu/timeloop.pdf,crossref,ok,Timeloop: A Systematic Approach to DNN Accelerator Evaluation,2019,1.0,True
+pearce2021designing,10.1109/LES.2020.3009910,https://arxiv.org/abs/2008.11830,crossref,ok,Designing Neural Networks for Real-Time Systems,2021,1.0,True
+peltekis2023arrayflex,10.23919/date56975.2023.10136913,https://arxiv.org/abs/2211.12600,crossref,ok,ArrayFlex: A Systolic Array Architecture with Configurable Transparent Pipelining,2023,1.0,True
+qararyah2025mccm,10.1109/ISPASS64960.2025.00030,https://arxiv.org/abs/2503.07242,crossref,ok,An Analytical Cost Model for Fast Evaluation of Multiple Compute-Engine CNN Accelerators,2025,1.0,False
+qureshi2021sparsepe,10.1109/access.2021.3126708,https://people.cs.ksu.edu/~amunir/documents/publications/journal/Munir_Sparse-PE_CNN_Accelerator_IEEE_Access_2021.pdf,crossref,ok,Sparse-PE: A Performance-Efficient Processing Engine Core for Sparse Convolutional Neural Networks,2021,1.0,True
+selvam2021fuseconv,10.23919/date51398.2021.9473985,https://arxiv.org/abs/2105.13434,crossref,ok,FuSeConv: Fully Separable Convolutions for Fast Inference on Systolic Arrays,2021,1.0,True
+shumailov2021sponge,10.1109/eurosp51992.2021.00024,,crossref,ok,Sponge Examples: Energy-Latency Attacks on Neural Networks,2021,1.0,True
+silva2022acetone,10.4230/LIPIcs.ECRTS.2022.3,https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.ECRTS.2022.3,crossref,error:HTTPError:HTTP Error 404: Not Found,,,0.0,
+symons2025stream,10.1109/TC.2024.3477938,https://arxiv.org/abs/2212.10612,crossref,ok,Stream: Design Space Exploration of Layer-Fused DNNs on Heterogeneous Dataflow Accelerators,2025,1.0,False
+taka2025sst,10.1145/3706628.3708867,https://arxiv.org/abs/2502.03763,crossref,ok,Systolic Sparse Tensor Slices: FPGA Building Blocks for Sparse and Dense AI Acceleration,2025,1.0,True
+vestias2019fast,10.3390/electronics8111321,,crossref,ok,Fast Convolutional Neural Networks in Low Density FPGAs Using Zero-Skipping and Weight Pruning,2019,1.0,True
+wang2021dstc,10.1109/isca52012.2021.00088,,crossref,ok,Dual-side Sparse Tensor Core,2021,1.0,True
+wu2019mobilenets,10.1109/FPL.2019.00030,https://www.cse.wustl.edu/~roger/565M.s23/A_High-Performance_CNN_Processor_Based_on_FPGA_for_MobileNets.pdf,crossref,ok,A High-Performance CNN Processor Based on FPGA for MobileNets,2019,1.0,True
+wu2023highlight,10.1145/3613424.3623786,,crossref,ok,HighLight: Efficient and Flexible DNN Acceleration with Hierarchical Structured Sparsity,2023,1.0,True
+xing2020dnnvm,10.1109/TCAD.2019.2930577,https://arxiv.org/abs/1902.07463,crossref,ok,DNNVM: End-to-End Compiler Leveraging Heterogeneous Optimizations on FPGA-Based CNN Accelerators,2020,1.0,True
+xu2020autodnnchip,10.1145/3373087.3375306,https://arxiv.org/abs/2001.03535,crossref,ok,AutoDNNchip,2020,0.242,True
+yang2020interstellar,10.1145/3373376.3378514,https://arxiv.org/abs/1809.04070,crossref,ok,Interstellar,2020,0.279,True
+zhang2018dnnbuilder,10.1145/3240765.3240801,,crossref,ok,DNNBuilder,2018,0.194,False
+zhang2022wsqaddernet,10.1145/3508352.3549439,,crossref,ok,WSQ-AdderNet,2022,0.141,True
+zhao2020dnnchip,10.1109/ICASSP40776.2020.9053977,https://arxiv.org/abs/2002.11270,crossref,ok,DNN-Chip Predictor: An Analytical Performance Predictor for DNN Accelerators with Various Dataflows and Hardware Architectures,2020,1.0,True
+baharani2021deepdive,10.1145/3453688.3461485,https://arxiv.org/abs/2007.09490,crossref,ok,DeepDive,2021,0.144,True
+bi2026ming,,https://arxiv.org/abs/2602.11966,arxiv,ok,MING: An Automated CNN-to-Edge MLIR HLS framework,2026,1.0,True
+blott2018finnr,10.1145/3242897,https://arxiv.org/abs/1809.04570,crossref,ok,"FINN-
+                    <i>R</i>",2018,0.125,True
+buttazzo2025toward,10.1007/s11241-025-09446-8,https://link.springer.com/article/10.1007/s11241-025-09446-8,crossref,ok,Toward predictable AI-based real-time systems,2025,1.0,True
+chauffour2026finnas,,https://arxiv.org/abs/2609.16367,arxiv,ok,FINNAS: FINN-Guided Hardware-Aware NAS and Pruning for FPGA Jet Substructure Classification,2026,1.0,False
+ferianc2020improving,10.1007/978-3-030-44534-8_1,https://arxiv.org/abs/2002.00190,crossref,ok,Improving Performance Estimation for FPGA-Based Accelerators for Convolutional Neural Networks,2020,1.0,False
+jiang2023fulldataflow,10.1109/TCAD.2022.3198246,,crossref,ok,A High-Throughput Full-Dataflow MobileNetv2 Accelerator on Edge FPGA,2023,1.0,True
+karandikar2018firesim,10.1109/ISCA.2018.00014,,crossref,ok,FireSim: FPGA-Accelerated Cycle-Exact Scale-Out System Simulation in the Public Cloud,2018,1.0,False
+lee2025timing,10.1007/s11241-025-09445-9,https://link.springer.com/article/10.1007/s11241-025-09445-9,crossref,ok,Timing guarantees for inference of AI models in embedded systems,2025,1.0,True
+li2025dpuv4e,10.1145/3706628.3708831,https://arxiv.org/abs/2506.11441,crossref,ok,DPUV4E: High-Throughput DPU Architecture Design for CNN on Versal ACAP,2025,1.0,True
+magalhaes2023benchmarking,10.1016/j.engappai.2022.105604,https://arxiv.org/abs/2211.11647,crossref,ok,Benchmarking edge computing devices for grape bunches and trunks detection using accelerated object detection single shot multibox deep learning models,2023,1.0,False
+moreau2019hardware,10.1109/MM.2019.2928962,https://arxiv.org/abs/1807.04188,crossref,ok,A Hardware–Software Blueprint for Flexible Deep Learning Specialization,2019,0.972,False
+saha2026potacc,10.1109/TCASAI.2026.3690415,https://arxiv.org/abs/2605.06082,crossref,ok,PoTAcc: A Pipeline for End-to-End Acceleration of Power-of-Two Quantized DNNs,2026,1.0,True
+salami2020undervolting,10.1109/DSN48063.2020.00032,https://arxiv.org/abs/2005.03451,crossref,ok,An Experimental Study of Reduced-Voltage Operation in Modern FPGAs for Neural Network Acceleration,2020,1.0,True
+sciangula2022hardware,10.1109/DSD57027.2022.00061,https://retis.sssup.it/~a.biondi/papers/DSD22-accel.pdf,crossref,ok,Hardware Acceleration of Deep Neural Networks for Autonomous Driving on FPGA-based SoC,2022,1.0,True
+silva2023extending,10.1007/s11241-023-09407-z,https://link.springer.com/article/10.1007/s11241-023-09407-z,crossref,ok,Extending a predictable machine learning framework with efficient gemm-based convolution routines,2023,1.0,True
+sun2022filmqnn,10.1145/3490422.3502364,,crossref,ok,"FILM-QNN: Efficient FPGA Acceleration of Deep Neural Networks with Intra-Layer, Mixed-Precision Quantization",2022,1.0,True
+takahashi2024efficiera,,https://arxiv.org/abs/2410.11553,arxiv,ok,Efficiera Residual Networks: Hardware-Friendly Fully Binary Weight with 2-bit Activation Model Achieves Practical ImageNet Accuracy,2024,1.0,True
+toupas2023fpgahart,10.1109/FPL60245.2023.00020,https://arxiv.org/abs/2305.19896,crossref,ok,fpgaHART: A Toolflow for Throughput-Oriented Acceleration of 3D CNNs for HAR onto FPGAs,2023,1.0,False
+wu2019accelergy,10.1109/ICCAD45719.2019.8942149,,crossref,ok,Accelergy: An Architecture-Level Energy Estimation Methodology for Accelerator Designs,2019,1.0,False
+yang2019synetgy,10.1145/3289602.3293902,https://arxiv.org/abs/1811.08634,crossref,ok,Synetgy,2019,0.167,True
+zhang2015optimizing,10.1145/2684746.2689060,,crossref,ok,Optimizing FPGA-based Accelerator Design for Deep Convolutional Neural Networks,2015,1.0,False
+zhang2021fracbnn,10.1145/3431920.3439296,https://arxiv.org/abs/2012.12206,crossref,ok,FracBNN: Accurate and FPGA-Efficient Binary Neural Networks with Fractional Activations,2021,1.0,True
+zhang2024addernet2,10.1145/3649329.3658487,,crossref,ok,AdderNet 2.0: Optimal FPGA Acceleration of AdderNet with Activation-Oriented Quantization and Fused Bias Removal based Memory Optimization,2024,1.0,True
+zhang2024llmcompass,10.1109/ISCA59077.2024.00082,https://arxiv.org/abs/2312.03134,crossref,ok,LLMCompass: Enabling Efficient Hardware Design for Large Language Model Inference,2024,1.0,False
