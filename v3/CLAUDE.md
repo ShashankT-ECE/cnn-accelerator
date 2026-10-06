@@ -1,8 +1,10 @@
 # V3 rules (take precedence under v3/)
 
-V3 = college major project: a larger, reconfigurable INT8 accelerator for ResNet-20 and a
-MobileNet-style CIFAR-10 net on the KV260 (levels A1 -> B1 -> C1 -> A2/B2 -> B3 -> C2 -> B4,
-see `docs/V3_SPEC.md`). Records of truth: `docs/DECISIONS.md` and the script-generated `results/*.csv`.
+V3 = college major project: a timing-predictable INT8 CNN accelerator on the KV260 for ResNet-20 and
+a MobileNet-style CIFAR-10 net (milestones M1 -> M5). **Source of truth for scope and direction:
+`docs/V3_PLAN.md`.** Records of truth: `docs/DECISIONS.md` (D4–D13 record the plan; the D1 level scheme
+and the D2 3.000 ns target are superseded) and the script-generated `results/*.csv`. Detailed contracts
+go in `docs/V3_SPEC.md`.
 
 - **Scope:** edit only files under `v3/` (plus the V3 pointer section in the root CLAUDE.md).
   `v2/`, its tags (`v2-paper-freeze`, `v2-paper-final`) and the legacy dirs are read-only
@@ -16,8 +18,9 @@ see `docs/V3_SPEC.md`). Records of truth: `docs/DECISIONS.md` and the script-gen
 - **Do not invent** interfaces, formats, sizes, targets: unresolved choices are written as open decisions
   in DECISIONS.md and presented to the user; agreed ones are recorded there (V3 Dn numbering).
 - **Clock (V3 D2):** the KV260 PL clock comes from the 999.99 MHz IOPLL of the boot image: 249.9975 MHz
-  (/4) and 333.33 MHz (/3) are reachable, 300 MHz is not (V2 D19). V3 timing targets are 4.000 ns and 3.000 ns;
-  board clock settings must request the PLL-reachable value and verify the read-back (V2 D19/D20).
+  (/4) and 333.33 MHz (/3) are reachable, 300 MHz is not (V2 D19). **Design target: 4.000 ns / 250 MHz
+  (V3 D5).** 3.000 ns / 333.33 MHz is a feasibility data point only, not a design option.
+  Board clock settings must request the PLL-reachable value and verify the read-back (V2 D19/D20).
 - **RTL (from Phase 1):** synthesizable SystemVerilog, single clock `clk`, synchronous active-high `rst`,
   always_ff/always_comb, no initial/# in synthesizable code, explicit widths/signedness, data and control
   travel together (no cycle-counting inference). Module prefix: decided in V3_SPEC.
